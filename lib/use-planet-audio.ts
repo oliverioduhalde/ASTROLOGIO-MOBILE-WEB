@@ -41,6 +41,19 @@ interface PlanetData {
   declination?: number
 }
 
+const MAIN_PLANETS = new Set([
+  "sun",
+  "moon",
+  "mercury",
+  "venus",
+  "mars",
+  "jupiter",
+  "saturn",
+  "uranus",
+  "neptune",
+  "pluto",
+])
+
 function polarToCartesian3D(azimuthDeg: number, elevationDeg: number): Position3D {
   const distance = 5
   const azimuthRad = (azimuthDeg * Math.PI) / 180
@@ -400,6 +413,9 @@ export function usePlanetAudio(
           const eclipticDegrees = planetData.ChartPosition.Ecliptic.DecimalDegrees
           playbackRate = getPlaybackRateFromZodiacPosition(eclipticDegrees)
           console.log(`[v0] ${planetName} at ${eclipticDegrees}° - playbackRate: ${playbackRate.toFixed(4)}`)
+        }
+        if (MAIN_PLANETS.has(planetName.toLowerCase())) {
+          playbackRate *= centsToPlaybackRate(-1200)
         }
         source.playbackRate.value = playbackRate
 

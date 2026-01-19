@@ -415,7 +415,7 @@ export function usePlanetAudio(
           console.log(`[v0] ${planetName} at ${eclipticDegrees}° - playbackRate: ${playbackRate.toFixed(4)}`)
         }
         if (MAIN_PLANETS.has(planetName.toLowerCase())) {
-          playbackRate *= centsToPlaybackRate(-1200)
+          playbackRate *= centsToPlaybackRate(700)
         }
         source.playbackRate.value = playbackRate
 

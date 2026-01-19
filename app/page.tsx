@@ -124,6 +124,7 @@ export default function AstrologyCalculator() {
 
   const [aspectsSoundVolume, setAspectsSoundVolume] = useState(33)
   const [masterVolume, setMasterVolume] = useState(100) // Nuevo estado para controlar volumen maestro (0-100%)
+  const [tuningCents, setTuningCents] = useState(0)
 
   const [glyphAnimationManager] = useState(() => new GlyphAnimationManager())
   const [animatedPlanets, setAnimatedPlanets] = useState<Record<string, number>>({})
@@ -149,6 +150,7 @@ export default function AstrologyCalculator() {
       backgroundVolume: backgroundVolume,
       aspectsSoundVolume: aspectsSoundVolume,
       masterVolume: masterVolume,
+      tuningCents: tuningCents,
       dynAspectsFadeIn: dynAspectsFadeIn,
       dynAspectsSustain: dynAspectsSustain,
       dynAspectsFadeOut: dynAspectsFadeOut,
@@ -871,6 +873,24 @@ export default function AstrologyCalculator() {
                         className="flex-1 h-1 bg-gray-600 rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7px] w-8 text-right">{masterVolume}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">
+                        Tuning
+                      </label>
+                      <input
+                        type="range"
+                        min="-1200"
+                        max="1200"
+                        step="100"
+                        value={tuningCents}
+                        onChange={(e) => setTuningCents(Number(e.target.value))}
+                        className="flex-1 h-1 bg-gray-600 rounded cursor-pointer appearance-none"
+                      />
+                      <span className="font-mono text-[7px] w-12 text-right">
+                        {tuningCents / 100} st
+                      </span>
                     </div>
                   </div>
 

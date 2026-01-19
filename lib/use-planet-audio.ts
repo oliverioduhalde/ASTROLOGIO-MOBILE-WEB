@@ -8,6 +8,7 @@ interface AudioTrack {
   startTime: number
   endTime: number
   planetName: string
+  basePlaybackRate?: number
   panner?: any
 }
 
@@ -17,6 +18,7 @@ interface AudioEnvelope {
   backgroundVolume?: number
   aspectsSoundVolume?: number
   masterVolume?: number
+  tuningCents?: number
   dynAspectsFadeIn?: number
   dynAspectsSustain?: number
   dynAspectsFadeOut?: number
@@ -41,19 +43,6 @@ interface PlanetData {
   declination?: number
 }
 
-const MAIN_PLANETS = new Set([
-  "sun",
-  "moon",
-  "mercury",
-  "venus",
-  "mars",
-  "jupiter",
-  "saturn",
-  "uranus",
-  "neptune",
-  "pluto",
-])
-
 function polarToCartesian3D(azimuthDeg: number, elevationDeg: number): Position3D {
   const distance = 5
   const azimuthRad = (azimuthDeg * Math.PI) / 180
@@ -67,13 +56,11 @@ function polarToCartesian3D(azimuthDeg: number, elevationDeg: number): Position3
 }
 
 // Calculate playbackRate based on zodiacal position
-// Notes in order of fifths: Do, Sol, Re, La, Mi, Si, Fa#, Do#, Sol#, Re#, La#, Fa
-// Mapped to zodiac signs starting with Aries (Do3)
+// Notes in order of fifths anchored to C3:
+// C3, G2, D3, A2, E3, B2, F#3, C#3, G#2, D#3, A#2, F3
 function getPlaybackRateFromZodiacPosition(eclipticDegrees: number): number {
-  const zodiacSigns = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", 
-                       "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
-  const notesInFifths = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5] // Semitones from Do
-  
+  const notesInFifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5] // Semitones from C3
+
   // Get zodiac sign (0-11)
   const signIndex = Math.floor(eclipticDegrees / 30) % 12
   const positionInSign = eclipticDegrees % 30 // 0-30 degrees within sign
@@ -118,6 +105,7 @@ export function usePlanetAudio(
   const backgroundVolumeRef = useRef(envelope.backgroundVolume || 20)
   const aspectsSoundVolumeRef = useRef(envelope.aspectsSoundVolume || 33)
   const masterVolumeRef = useRef(envelope.masterVolume || 100)
+  const tuningCentsRef = useRef(envelope.tuningCents || 0)
   const masterGainNodeRef = useRef<GainNode | null>(null)
   const dynAspectsFadeInRef = useRef(envelope.dynAspectsFadeIn || 3)
   const dynAspectsSustainRef = useRef(envelope.dynAspectsSustain || 2)
@@ -129,6 +117,19 @@ export function usePlanetAudio(
       backgroundGainRef.current.gain.value = (envelope.backgroundVolume || 30) / 100
     }
   }, [envelope.backgroundVolume])
+
+  useEffect(() => {
+    tuningCentsRef.current = envelope.tuningCents || 0
+  }, [envelope.tuningCents])
+
+  useEffect(() => {
+    const tunedRate = centsToPlaybackRate(tuningCentsRef.current)
+    activeTracksRef.current.forEach((track) => {
+      if (track.basePlaybackRate !== undefined) {
+        track.source.playbackRate.value = track.basePlaybackRate * tunedRate
+      }
+    })
+  }, [envelope.tuningCents])
 
   useEffect(() => {
     aspectsSoundVolumeRef.current = envelope.aspectsSoundVolume || 33
@@ -408,16 +409,14 @@ export function usePlanetAudio(
 
         // Get playback rate based on zodiacal position
         const planetData = planets.find((p) => p.name === planetName)
-        let playbackRate = 1.0
+        let basePlaybackRate = 1.0
         if (planetData && planetData.ChartPosition?.Ecliptic?.DecimalDegrees !== undefined) {
           const eclipticDegrees = planetData.ChartPosition.Ecliptic.DecimalDegrees
-          playbackRate = getPlaybackRateFromZodiacPosition(eclipticDegrees)
-          console.log(`[v0] ${planetName} at ${eclipticDegrees}° - playbackRate: ${playbackRate.toFixed(4)}`)
+          basePlaybackRate = getPlaybackRateFromZodiacPosition(eclipticDegrees)
+          console.log(`[v0] ${planetName} at ${eclipticDegrees}° - basePlaybackRate: ${basePlaybackRate.toFixed(4)}`)
         }
-        if (MAIN_PLANETS.has(planetName.toLowerCase())) {
-          playbackRate *= centsToPlaybackRate(700)
-        }
-        source.playbackRate.value = playbackRate
+        const tunedPlaybackRate = basePlaybackRate * centsToPlaybackRate(tuningCentsRef.current)
+        source.playbackRate.value = tunedPlaybackRate
 
         if (!resonanceSceneRef.current || !resonanceSceneRef.current.output) {
           console.error("[v0] Resonance Audio scene not properly initialized")
@@ -467,6 +466,7 @@ export function usePlanetAudio(
           startTime: currentTime,
           endTime,
           planetName,
+          basePlaybackRate,
           panner,
         })
 
@@ -505,7 +505,7 @@ export function usePlanetAudio(
 
             // Aspects inherit the zodiacal note (playbackRate) of the main planet
             // No additional pitch shift applied, just the main planet's note
-            const aspectPlaybackRate = playbackRate
+            const aspectPlaybackRate = basePlaybackRate * centsToPlaybackRate(tuningCentsRef.current)
 
             const aspectSource = ctx.createBufferSource() as AudioBufferSourceNode
             aspectSource.buffer = otherAudioBuffer
@@ -547,6 +547,7 @@ export function usePlanetAudio(
               startTime: aspectStartTime,
               endTime: aspectFadeOutEnd,
               planetName: `${planetName}-aspect`,
+              basePlaybackRate,
               panner: aspectPanner,
             })
 

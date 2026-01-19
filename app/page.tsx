@@ -1234,12 +1234,12 @@ export default function AstrologyCalculator() {
                             y={position.y}
                             textAnchor="middle"
                             dominantBaseline="middle"
-                            className={`fill-white font-sans text-xl select-none ${
-                              currentPlanetUnderPointer === planet.name ? "text-yellow-300" : ""
+                            className={`fill-[#7CFC00] font-sans text-xl select-none ${
+                              currentPlanetUnderPointer === planet.name ? "fill-[#B6FF5A]" : ""
                             }`}
                             style={{
                               paintOrder: "stroke fill",
-                              stroke: "white",
+                              stroke: "#7CFC00",
                               strokeWidth: "0.5px",
                               transform: `scale(${scale * (isHovered ? 1.2 : 1)})`, // Added hover scale
                               transformOrigin: `${position.x}px ${position.y}px`,

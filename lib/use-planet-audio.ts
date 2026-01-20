@@ -19,6 +19,7 @@ interface AudioEnvelope {
   aspectsSoundVolume?: number
   masterVolume?: number
   tuningCents?: number
+  elementSoundVolume?: number
   dynAspectsFadeIn?: number
   dynAspectsSustain?: number
   dynAspectsFadeOut?: number
@@ -80,6 +81,12 @@ function getPlaybackRateFromZodiacPosition(eclipticDegrees: number): number {
   return playbackRate
 }
 
+function getElementFromEclipticDegrees(eclipticDegrees: number): "fire" | "earth" | "air" | "water" {
+  const signIndex = Math.floor(eclipticDegrees / 30) % 12
+  const elements = ["fire", "earth", "air", "water"] as const
+  return elements[signIndex % 4]
+}
+
 function centsToPlaybackRate(cents: number): number {
   return Math.pow(2, cents / 1200)
 }
@@ -107,6 +114,7 @@ export function usePlanetAudio(
   const aspectsSoundVolumeRef = useRef(envelope.aspectsSoundVolume || 33)
   const masterVolumeRef = useRef(envelope.masterVolume || 100)
   const tuningCentsRef = useRef(envelope.tuningCents || 0)
+  const elementSoundVolumeRef = useRef(envelope.elementSoundVolume || 40)
   const masterGainNodeRef = useRef<GainNode | null>(null)
   const dynAspectsFadeInRef = useRef(envelope.dynAspectsFadeIn || 3)
   const dynAspectsSustainRef = useRef(envelope.dynAspectsSustain || 2)
@@ -122,6 +130,10 @@ export function usePlanetAudio(
   useEffect(() => {
     tuningCentsRef.current = envelope.tuningCents || 0
   }, [envelope.tuningCents])
+
+  useEffect(() => {
+    elementSoundVolumeRef.current = envelope.elementSoundVolume || 40
+  }, [envelope.elementSoundVolume])
 
   useEffect(() => {
     const tunedRate = centsToPlaybackRate(tuningCentsRef.current)
@@ -586,6 +598,51 @@ export function usePlanetAudio(
                 }
               }
             }, 100)
+
+            const elementKey = getElementFromEclipticDegrees(otherPlanetDegrees)
+            const elementAudioBuffer = audioBuffersRef.current[elementKey]
+            if (elementAudioBuffer) {
+              const elementSource = ctx.createBufferSource() as AudioBufferSourceNode
+              elementSource.buffer = elementAudioBuffer
+
+              const elementPanner = resonanceSceneRef.current.createSource()
+              elementPanner.setPosition(aspectPosition.x, aspectPosition.y, aspectPosition.z)
+
+              const elementGainNode = ctx.createGain()
+              elementSource.connect(elementGainNode)
+              elementGainNode.connect(elementPanner.input)
+
+              const elementVolume = elementSoundVolumeRef.current / 100
+              elementGainNode.gain.setValueAtTime(0, aspectStartTime)
+              elementGainNode.gain.linearRampToValueAtTime(elementVolume, aspectFadeInEnd)
+              elementGainNode.gain.setValueAtTime(elementVolume, aspectSustainEnd)
+              elementGainNode.gain.linearRampToValueAtTime(0, aspectFadeOutEnd)
+
+              elementSource.start(currentTime, startOffset)
+
+              const elementTrackId = `${planetName}-element-${otherPlanetName}-${currentTime}`
+              activeTracksRef.current.set(elementTrackId, {
+                audioContext: ctx,
+                source: elementSource,
+                startTime: aspectStartTime,
+                endTime: aspectFadeOutEnd,
+                planetName: `${planetName}-element`,
+                basePlaybackRate: 1,
+                panner: elementPanner,
+              })
+
+              const elementCheckInterval = setInterval(() => {
+                if (ctx.currentTime >= aspectFadeOutEnd) {
+                  clearInterval(elementCheckInterval)
+                  activeTracksRef.current.delete(elementTrackId)
+                  try {
+                    elementSource.stop()
+                  } catch (e) {
+                    // Already stopped
+                  }
+                }
+              }, 100)
+            }
           }
         }
 

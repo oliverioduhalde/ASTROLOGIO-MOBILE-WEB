@@ -118,6 +118,7 @@ export default function AstrologyCalculator() {
   const [audioFadeIn, setAudioFadeIn] = useState(5)
   const [audioFadeOut, setAudioFadeOut] = useState(10)
   const [backgroundVolume, setBackgroundVolume] = useState(20)
+  const [elementSoundVolume, setElementSoundVolume] = useState(40)
   const [dynAspectsFadeIn, setDynAspectsFadeIn] = useState(3)
   const [dynAspectsSustain, setDynAspectsSustain] = useState(2)
   const [dynAspectsFadeOut, setDynAspectsFadeOut] = useState(15)
@@ -148,6 +149,7 @@ export default function AstrologyCalculator() {
       fadeIn: audioFadeIn,
       fadeOut: audioFadeOut,
       backgroundVolume: backgroundVolume,
+      elementSoundVolume: elementSoundVolume,
       aspectsSoundVolume: aspectsSoundVolume,
       masterVolume: masterVolume,
       tuningCents: tuningCents,
@@ -618,7 +620,18 @@ export default function AstrologyCalculator() {
       <main className="min-h-screen bg-black text-white flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="mb-8">
-            <h1 className="font-mono text-xl uppercase tracking-widest text-center mb-12">ASTRO.LOG.IO</h1>
+            <div className="mx-auto inline-block text-center">
+              <h1 className="font-mono text-xl uppercase tracking-widest text-center">ASTRO.LOG.IO</h1>
+              <div className="mt-2 h-[2px] w-full bg-white/20">
+                <div
+                  className="h-full bg-white"
+                  style={{
+                    width: `${loadingProgress}%`,
+                    transition: "width 0.05s linear",
+                  }}
+                ></div>
+              </div>
+            </div>
             <div className="mt-3 flex items-center justify-between font-mono text-[7px] uppercase tracking-widest text-white/70">
               <span>loading...</span>
               <span>{loadingProgress}%</span>
@@ -837,6 +850,21 @@ export default function AstrologyCalculator() {
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7px] w-8 text-right">{backgroundVolume}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">
+                        LmentBck
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={elementSoundVolume}
+                        onChange={(e) => setElementSoundVolume(Number(e.target.value))}
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
+                      />
+                      <span className="font-mono text-[7px] w-8 text-right">{elementSoundVolume}%</span>
                     </div>
 
                     <div className="flex items-center gap-1">

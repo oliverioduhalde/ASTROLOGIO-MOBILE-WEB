@@ -150,6 +150,10 @@ export default function AstrologyCalculator() {
   const [glyphHoverOpacity, setGlyphHoverOpacity] = useState(0)
   const [showAspectIndicator, setShowAspectIndicator] = useState(false) // Declared showAspectIndicator
   const aspectClickTimersRef = useRef<Record<string, NodeJS.Timeout[]>>({})
+  const affectedScaleTimersRef = useRef<Record<string, { start: NodeJS.Timeout | null; end: NodeJS.Timeout | null }>>(
+    {},
+  )
+  const glyphScaleTriggerLockRef = useRef<Record<string, number>>({})
 
   // Added hook for planet audio
   const {
@@ -614,23 +618,92 @@ export default function AstrologyCalculator() {
     }
   }, [horoscopeData])
 
-  const handlePlanetMouseDown = (planetName: string, degrees: number) => {
-    // Added hover detection logic and start animation
-    setHoveredGlyph(planetName)
-    setGlyphHoverOpacity(0) // Reset opacity to start fade in
-    // ... existing animation code ...
-    glyphAnimationManager.startAnimation(planetName)
-
-    const planet = horoscopeData?.planets?.find((p) => p.name === planetName)
-    if (!planet || !horoscopeData?.planets) return
-
+  const getAspectsForPlanet = (planetName: string) => {
     const allowedAspects = ["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"]
-    const aspectsForPlanet =
+    return (
       horoscopeData?.aspects?.filter(
         (aspect) =>
           (aspect.point1.name === planetName || aspect.point2.name === planetName) &&
           allowedAspects.includes(aspect.aspectType),
       ) || []
+    )
+  }
+
+  const triggerPlanetGlyphScale = (planetName: string, aspectsForPlanet: any[]) => {
+    if (!horoscopeData?.planets) return
+    const now = Date.now()
+    const lastTriggeredAt = glyphScaleTriggerLockRef.current[planetName] ?? 0
+    if (now - lastTriggeredAt < 500) return
+    glyphScaleTriggerLockRef.current[planetName] = now
+
+    glyphAnimationManager.startAnimation(planetName)
+
+    const affectedPlanets = new Set(
+      aspectsForPlanet
+        .map((aspect) => (aspect.point1.name === planetName ? aspect.point2.name : aspect.point1.name))
+        .filter((name) => name !== planetName && horoscopeData.planets.some((p) => p.name === name)),
+    )
+    const mainAnimationDurationMs = 15000
+    const affectedStartDelayMs = 2000
+    const affectedScaleDurationMs = Math.max(0, mainAnimationDurationMs - 2 * affectedStartDelayMs)
+
+    if (affectedPlanets.size > 0) {
+      affectedPlanets.forEach((name) => {
+        const existingTimers = affectedScaleTimersRef.current[name]
+        if (existingTimers?.start) clearTimeout(existingTimers.start)
+        if (existingTimers?.end) clearTimeout(existingTimers.end)
+
+        const startTimer = setTimeout(() => {
+          setAnimatedPlanets((prev) => {
+            const next = { ...prev }
+            next[name] = Math.max(next[name] ?? 1, 1.3)
+            return next
+          })
+        }, affectedStartDelayMs)
+
+        const endTimer = setTimeout(() => {
+          setAnimatedPlanets((prev) => {
+            if (!prev[name] || prev[name] <= 1) return prev
+            const next = { ...prev }
+            delete next[name]
+            return next
+          })
+          affectedScaleTimersRef.current[name] = { start: null, end: null }
+        }, affectedStartDelayMs + affectedScaleDurationMs)
+
+        affectedScaleTimersRef.current[name] = { start: startTimer, end: endTimer }
+      })
+    }
+
+    // Update animation state every frame
+    const interval = setInterval(() => {
+      const scale = glyphAnimationManager.getScale(planetName)
+      setAnimatedPlanets((prev) => ({
+        ...prev,
+        [planetName]: scale,
+      }))
+
+      // Check if animation is complete and a certain time has passed to ensure it has been visible
+      if (
+        scale === 1 &&
+        glyphAnimationManager["animations"]?.get(planetName)?.startTime &&
+        Date.now() - glyphAnimationManager["animations"].get(planetName).startTime > 20000
+      ) {
+        clearInterval(interval)
+      }
+    }, 16) // ~60fps
+  }
+
+  const handlePlanetMouseDown = (planetName: string, degrees: number) => {
+    // Added hover detection logic and start animation
+    setHoveredGlyph(planetName)
+    setGlyphHoverOpacity(0) // Reset opacity to start fade in
+
+    const planet = horoscopeData?.planets?.find((p) => p.name === planetName)
+    if (!planet) return
+
+    const aspectsForPlanet = getAspectsForPlanet(planetName)
+    triggerPlanetGlyphScale(planetName, aspectsForPlanet)
 
     const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
     const mcDegrees = horoscopeData?.mc?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
@@ -714,24 +787,6 @@ export default function AstrologyCalculator() {
       }, fadeOutStart)
       aspectClickTimersRef.current[planetName].push(fadeOutStartTimeout)
     }
-
-    // Update animation state every frame
-    const interval = setInterval(() => {
-      const scale = glyphAnimationManager.getScale(planetName)
-      setAnimatedPlanets((prev) => ({
-        ...prev,
-        [planetName]: scale,
-      }))
-
-      // Check if animation is complete and a certain time has passed to ensure it has been visible
-      if (
-        scale === 1 &&
-        glyphAnimationManager["animations"]?.get(planetName)?.startTime &&
-        Date.now() - glyphAnimationManager["animations"].get(planetName).startTime > 20000
-      ) {
-        clearInterval(interval)
-      }
-    }, 16) // ~60fps
   }
 
   const isPlanetUnderPointer = (planetDegrees: number, pointerAngle: number): boolean => {
@@ -801,12 +856,12 @@ export default function AstrologyCalculator() {
                       setShowAstroChart(false)
                       setShowAspects(false)
                     }}
-                    className="w-full text-left font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400 border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
+                    className="w-full text-left font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400 border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
                   >
                     Minimal
                   </button>
                   <div className="border-t border-gray-600 my-1"></div>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showSubject}
@@ -815,7 +870,7 @@ export default function AstrologyCalculator() {
                     />
                     Subject
                   </label>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showPlanets}
@@ -824,7 +879,7 @@ export default function AstrologyCalculator() {
                     />
                     Planets
                   </label>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showAspects}
@@ -833,7 +888,7 @@ export default function AstrologyCalculator() {
                     />
                     Aspects
                   </label>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showDynAspects}
@@ -845,7 +900,7 @@ export default function AstrologyCalculator() {
                     />
                     DynAspects
                   </label>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showChart}
@@ -854,7 +909,7 @@ export default function AstrologyCalculator() {
                     />
                     Chart
                   </label>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showMatrix}
@@ -863,7 +918,7 @@ export default function AstrologyCalculator() {
                     />
                     Matrix
                   </label>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showCircle}
@@ -872,7 +927,7 @@ export default function AstrologyCalculator() {
                     />
                     Circle
                   </label>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showDegrees}
@@ -881,7 +936,7 @@ export default function AstrologyCalculator() {
                     />
                     Degrees
                   </label>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showAngles}
@@ -890,7 +945,7 @@ export default function AstrologyCalculator() {
                     />
                     Angles
                   </label>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showAstroChart}
@@ -899,7 +954,7 @@ export default function AstrologyCalculator() {
                     />
                     AstroChart
                   </label>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showPointerInfo}
@@ -908,7 +963,7 @@ export default function AstrologyCalculator() {
                     />
                     Pointer Info
                   </label>
-                  <label className="flex items-center gap-2 font-mono text-[7px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                  <label className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
                       checked={showAspectIndicator}
@@ -922,17 +977,17 @@ export default function AstrologyCalculator() {
 
                   {/* LOOP Duration Control */}
                   <div className="flex items-center gap-1 py-1 px-2">
-                    <div className="font-mono text-[7px] uppercase tracking-wide whitespace-nowrap">Loop</div>
+                    <div className="font-mono text-[10.5px] uppercase tracking-wide whitespace-nowrap">Loop</div>
                     <button
                       onClick={() => setLoopDuration(Math.max(60, loopDuration - 5))}
-                      className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 text-[6px]"
+                      className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 text-[9px]"
                     >
                       −
                     </button>
-                    <span className="text-[7px] w-8 text-center">{loopDuration}s</span>
+                    <span className="text-[10.5px] w-8 text-center">{loopDuration}s</span>
                     <button
                       onClick={() => setLoopDuration(Math.min(300, loopDuration + 5))}
-                      className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 text-[6px]"
+                      className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 text-[9px]"
                     >
                       +
                     </button>
@@ -941,10 +996,10 @@ export default function AstrologyCalculator() {
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[7px] uppercase tracking-wide">Audio Envelope</div>
+                    <div className="font-mono text-[10.5px] uppercase tracking-wide">Audio Envelope</div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">Fade In</label>
+                      <label className="font-mono text-[10.5px] uppercase tracking-wide w-12 flex-shrink-0">Fade In</label>
                       <input
                         type="range"
                         min="0"
@@ -953,11 +1008,11 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setAudioFadeIn(Number(e.target.value))}
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
-                      <span className="font-mono text-[7px] w-6 text-right">{audioFadeIn}s</span>
+                      <span className="font-mono text-[10.5px] w-6 text-right">{audioFadeIn}s</span>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">
+                      <label className="font-mono text-[10.5px] uppercase tracking-wide w-12 flex-shrink-0">
                         Fade Out
                       </label>
                       <input
@@ -968,11 +1023,11 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setAudioFadeOut(Number(e.target.value))}
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
-                      <span className="font-mono text-[7px] w-6 text-right">{audioFadeOut}s</span>
+                      <span className="font-mono text-[10.5px] w-6 text-right">{audioFadeOut}s</span>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">BG Vol</label>
+                      <label className="font-mono text-[10.5px] uppercase tracking-wide w-12 flex-shrink-0">BG Vol</label>
                       <input
                         type="range"
                         min="0"
@@ -981,11 +1036,11 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setBackgroundVolume(Number(e.target.value))}
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
-                      <span className="font-mono text-[7px] w-8 text-right">{backgroundVolume}%</span>
+                      <span className="font-mono text-[10.5px] w-8 text-right">{backgroundVolume}%</span>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">
+                      <label className="font-mono text-[10.5px] uppercase tracking-wide w-12 flex-shrink-0">
                         Elemento
                       </label>
                       <input
@@ -996,11 +1051,11 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setElementSoundVolume(Number(e.target.value))}
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
-                      <span className="font-mono text-[7px] w-8 text-right">{elementSoundVolume}%</span>
+                      <span className="font-mono text-[10.5px] w-8 text-right">{elementSoundVolume}%</span>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">
+                      <label className="font-mono text-[10.5px] uppercase tracking-wide w-12 flex-shrink-0">
                         Aspect Vol
                       </label>
                       <input
@@ -1011,12 +1066,12 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setAspectsSoundVolume(Number(e.target.value))}
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
-                      <span className="font-mono text-[7px] w-8 text-right">{aspectsSoundVolume}%</span>
+                      <span className="font-mono text-[10.5px] w-8 text-right">{aspectsSoundVolume}%</span>
                     </div>
 
                     {/* MASTER VOLUME CONTROL */}
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">
+                      <label className="font-mono text-[10.5px] uppercase tracking-wide w-12 flex-shrink-0">
                         Master Vol
                       </label>
                       <input
@@ -1027,11 +1082,11 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setMasterVolume(Number(e.target.value))}
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
-                      <span className="font-mono text-[7px] w-8 text-right">{masterVolume}%</span>
+                      <span className="font-mono text-[10.5px] w-8 text-right">{masterVolume}%</span>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">
+                      <label className="font-mono text-[10.5px] uppercase tracking-wide w-12 flex-shrink-0">
                         Tuning
                       </label>
                       <input
@@ -1043,7 +1098,7 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setTuningCents(Number(e.target.value))}
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
-                      <span className="font-mono text-[7px] w-12 text-right">
+                      <span className="font-mono text-[10.5px] w-12 text-right">
                         {tuningCents / 100} st
                       </span>
                     </div>
@@ -1052,10 +1107,10 @@ export default function AstrologyCalculator() {
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[7px] uppercase tracking-wide">Dynamic Aspects</div>
+                    <div className="font-mono text-[10.5px] uppercase tracking-wide">Dynamic Aspects</div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">Fade In</label>
+                      <label className="font-mono text-[10.5px] uppercase tracking-wide w-12 flex-shrink-0">Fade In</label>
                       <input
                         type="range"
                         min="0"
@@ -1064,11 +1119,11 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setDynAspectsFadeIn(Number(e.target.value))}
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
-                      <span className="font-mono text-[7px] w-6 text-right">{dynAspectsFadeIn}s</span>
+                      <span className="font-mono text-[10.5px] w-6 text-right">{dynAspectsFadeIn}s</span>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">Sustain</label>
+                      <label className="font-mono text-[10.5px] uppercase tracking-wide w-12 flex-shrink-0">Sustain</label>
                       <input
                         type="range"
                         min="0"
@@ -1077,11 +1132,11 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setDynAspectsSustain(Number(e.target.value))}
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
-                      <span className="font-mono text-[7px] w-6 text-right">{dynAspectsSustain}s</span>
+                      <span className="font-mono text-[10.5px] w-6 text-right">{dynAspectsSustain}s</span>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">
+                      <label className="font-mono text-[10.5px] uppercase tracking-wide w-12 flex-shrink-0">
                         Fade Out
                       </label>
                       <input
@@ -1092,12 +1147,12 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setDynAspectsFadeOut(Number(e.target.value))}
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
-                      <span className="font-mono text-[7px] w-6 text-right">{dynAspectsFadeOut}s</span>
+                      <span className="font-mono text-[10.5px] w-6 text-right">{dynAspectsFadeOut}s</span>
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[7px] uppercase tracking-wide">VU Meter</div>
+                    <div className="font-mono text-[10.5px] uppercase tracking-wide">VU Meter</div>
                     <div className="border border-white/50 bg-black">
                       <div className="relative h-2 border-b border-white/20 overflow-hidden">
                         <div
@@ -1329,13 +1384,8 @@ export default function AstrologyCalculator() {
                           onMouseEnter={() => {
                             setHoveredGlyph(planet.name)
                             setGlyphHoverOpacity(0) // Reset opacity to start fade in
-                          }}
-                          onMouseLeave={() => {
-                            setHoveredGlyph(null)
-                            setGlyphHoverOpacity(0) // Start fade out
-                          }}
-                          // Add dynamic aspect calculation and display on hover
-                          onMouseEnter={() => {
+                            triggerPlanetGlyphScale(planet.name, getAspectsForPlanet(planet.name))
+
                             if (isLoopRunning && showDynAspects) {
                               const planetAspects = horoscopeData.aspects.filter(
                                 (aspect) =>
@@ -1362,6 +1412,8 @@ export default function AstrologyCalculator() {
                             }
                           }}
                           onMouseLeave={() => {
+                            setHoveredGlyph(null)
+                            setGlyphHoverOpacity(0) // Start fade out
                             if (isLoopRunning && showDynAspects) {
                               // Remove the aspect map for the hovered glyph
                               setActivePlanetAspectsMap((prevMap) => {

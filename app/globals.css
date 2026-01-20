@@ -197,7 +197,7 @@
 .menu-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 2px;
-  height: 12px;
+  height: 10px;
   background: #ffffff;
   border-radius: 0;
   margin-top: -4px;
@@ -205,20 +205,20 @@
 
 .menu-slider::-moz-range-thumb {
   width: 2px;
-  height: 12px;
+  height: 10px;
   background: #ffffff;
   border: none;
   border-radius: 0;
 }
 
 .menu-slider::-moz-range-track {
-  height: 4px;
+  height: 2px;
   background: #ffffff;
   border-radius: 9999px;
 }
 
 .menu-slider::-webkit-slider-runnable-track {
-  height: 4px;
+  height: 2px;
   background: #ffffff;
   border-radius: 9999px;
 }

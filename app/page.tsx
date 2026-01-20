@@ -619,17 +619,6 @@ export default function AstrologyCalculator() {
         <div className="w-full max-w-md">
           <div className="mb-8">
             <h1 className="font-mono text-xl uppercase tracking-widest text-center mb-12">ASTRO.LOG.IO</h1>
-            <div className="bg-black border border-white/60 w-full" style={{ height: "2px" }}>
-              <div
-                className="bg-white/90 h-full"
-                style={{
-                  width: "100%",
-                  transform: `scaleX(${loadingProgress / 100})`,
-                  transformOrigin: "left",
-                  transition: "transform 0.05s linear",
-                }}
-              ></div>
-            </div>
             <div className="mt-3 flex items-center justify-between font-mono text-[7px] uppercase tracking-widest text-white/70">
               <span>loading...</span>
               <span>{loadingProgress}%</span>
@@ -817,7 +806,7 @@ export default function AstrologyCalculator() {
                         max="15"
                         value={audioFadeIn}
                         onChange={(e) => setAudioFadeIn(Number(e.target.value))}
-                        className="menu-slider flex-1 h-1 bg-white rounded cursor-pointer appearance-none"
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7px] w-6 text-right">{audioFadeIn}s</span>
                     </div>
@@ -832,7 +821,7 @@ export default function AstrologyCalculator() {
                         max="15"
                         value={audioFadeOut}
                         onChange={(e) => setAudioFadeOut(Number(e.target.value))}
-                        className="menu-slider flex-1 h-1 bg-white rounded cursor-pointer appearance-none"
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7px] w-6 text-right">{audioFadeOut}s</span>
                     </div>
@@ -845,7 +834,7 @@ export default function AstrologyCalculator() {
                         max="100"
                         value={backgroundVolume}
                         onChange={(e) => setBackgroundVolume(Number(e.target.value))}
-                        className="menu-slider flex-1 h-1 bg-white rounded cursor-pointer appearance-none"
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7px] w-8 text-right">{backgroundVolume}%</span>
                     </div>
@@ -860,7 +849,7 @@ export default function AstrologyCalculator() {
                         max="100"
                         value={aspectsSoundVolume}
                         onChange={(e) => setAspectsSoundVolume(Number(e.target.value))}
-                        className="menu-slider flex-1 h-1 bg-white rounded cursor-pointer appearance-none"
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7px] w-8 text-right">{aspectsSoundVolume}%</span>
                     </div>
@@ -876,7 +865,7 @@ export default function AstrologyCalculator() {
                         max="100"
                         value={masterVolume}
                         onChange={(e) => setMasterVolume(Number(e.target.value))}
-                        className="menu-slider flex-1 h-1 bg-white rounded cursor-pointer appearance-none"
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7px] w-8 text-right">{masterVolume}%</span>
                     </div>
@@ -892,7 +881,7 @@ export default function AstrologyCalculator() {
                         step="100"
                         value={tuningCents}
                         onChange={(e) => setTuningCents(Number(e.target.value))}
-                        className="menu-slider flex-1 h-1 bg-white rounded cursor-pointer appearance-none"
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7px] w-12 text-right">
                         {tuningCents / 100} st
@@ -913,7 +902,7 @@ export default function AstrologyCalculator() {
                         max="15"
                         value={dynAspectsFadeIn}
                         onChange={(e) => setDynAspectsFadeIn(Number(e.target.value))}
-                        className="menu-slider flex-1 h-1 bg-white rounded cursor-pointer appearance-none min-w-[40px]"
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7px] w-6 text-right">{dynAspectsFadeIn}s</span>
                     </div>
@@ -926,7 +915,7 @@ export default function AstrologyCalculator() {
                         max="15"
                         value={dynAspectsSustain}
                         onChange={(e) => setDynAspectsSustain(Number(e.target.value))}
-                        className="menu-slider flex-1 h-1 bg-white rounded cursor-pointer appearance-none min-w-[40px]"
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7px] w-6 text-right">{dynAspectsSustain}s</span>
                     </div>
@@ -941,7 +930,7 @@ export default function AstrologyCalculator() {
                         max="15"
                         value={dynAspectsFadeOut}
                         onChange={(e) => setDynAspectsFadeOut(Number(e.target.value))}
-                        className="menu-slider flex-1 h-1 bg-white rounded cursor-pointer appearance-none min-w-[40px]"
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7px] w-6 text-right">{dynAspectsFadeOut}s</span>
                     </div>

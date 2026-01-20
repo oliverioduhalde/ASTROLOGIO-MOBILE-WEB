@@ -59,29 +59,23 @@ function polarToCartesian3D(azimuthDeg: number, elevationDeg: number): Position3
   }
 }
 
-// Calculate playbackRate based on zodiacal position
-// Notes in order of fifths anchored to C3:
-// C3, G2, D3, A2, E3, B2, F#3, C#3, G#2, D#3, A#2, F3
-function getPlaybackRateFromZodiacPosition(eclipticDegrees: number): number {
-  const notesInFifths = [0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5] // Semitones from C3
+// Fixed pitch mapping per planet (C major) with samples tuned at C4.
+function getPlaybackRateFromPlanet(planetName: string): number {
+  const semitoneOffsetsFromC4: Record<string, number> = {
+    pluto: 0, // C4
+    saturn: 2, // D4
+    neptune: 4, // E4
+    jupiter: 5, // F4
+    moon: 9, // A4
+    venus: 11, // B4
+    sun: 12, // C5
+    mars: 14, // D5
+    mercury: 16, // E5
+    uranus: 19, // G5
+  }
 
-  // Get zodiac sign (0-11)
-  const signIndex = Math.floor(eclipticDegrees / 30) % 12
-  const positionInSign = eclipticDegrees % 30 // 0-30 degrees within sign
-  
-  // Get note for this sign
-  const noteOffset = notesInFifths[signIndex]
-  
-  // Add microtonal variation within the sign (0-1 semitone spread across 30 degrees)
-  const microtonalOffset = (positionInSign / 30) * 1
-  
-  // Total semitones from Do3 (C3)
-  const totalSemitones = noteOffset + microtonalOffset
-  
-  // Convert semitones to playbackRate (each semitone = 2^(1/12))
-  const playbackRate = Math.pow(2, totalSemitones / 12)
-  
-  return playbackRate
+  const semitones = semitoneOffsetsFromC4[planetName] ?? 0
+  return Math.pow(2, semitones / 12)
 }
 
 function centsToPlaybackRate(cents: number): number {
@@ -621,14 +615,9 @@ export function usePlanetAudio(
         const source = ctx.createBufferSource() as AudioBufferSourceNode
         source.buffer = audioBuffer
 
-        // Get playback rate based on zodiacal position
-        const planetData = planets.find((p) => p.name === planetName)
         let basePlaybackRate = 1.0
-        if (planetData && planetData.ChartPosition?.Ecliptic?.DecimalDegrees !== undefined) {
-          const eclipticDegrees = planetData.ChartPosition.Ecliptic.DecimalDegrees
-          basePlaybackRate = getPlaybackRateFromZodiacPosition(eclipticDegrees)
-          console.log(`[v0] ${planetName} at ${eclipticDegrees}° - basePlaybackRate: ${basePlaybackRate.toFixed(4)}`)
-        }
+        basePlaybackRate = getPlaybackRateFromPlanet(planetName)
+        console.log(`[v0] ${planetName} - basePlaybackRate: ${basePlaybackRate.toFixed(4)}`)
         const tunedPlaybackRate = basePlaybackRate * centsToPlaybackRate(tuningCentsRef.current)
         source.playbackRate.value = tunedPlaybackRate
 

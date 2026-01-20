@@ -95,6 +95,7 @@ export function usePlanetAudio(
   const resonanceSceneRef = useRef<any>(null)
 
   const [loadingProgress, setLoadingProgress] = useState(0)
+  const [loadingLabel, setLoadingLabel] = useState("Inicializando audio")
   const [audioLevel, setAudioLevel] = useState(0)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const dataArrayRef = useRef<Uint8Array | null>(null)
@@ -185,11 +186,13 @@ export function usePlanetAudio(
 
     initPromiseRef.current = (async () => {
       try {
+        setLoadingLabel("Inicializando audio")
         if (!audioContextRef.current) {
           audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
           console.log("[v0] AudioContext created")
 
           if (!(window as any).ResonanceAudio) {
+            setLoadingLabel("Cargando motor 3D")
             const script = document.createElement("script")
             script.src = "https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"
             script.async = true
@@ -254,10 +257,29 @@ export function usePlanetAudio(
           ...Object.entries(elementAudioMap),
         ]
 
+        const audioLabels: Record<string, string> = {
+          sun: "Sol",
+          moon: "Luna",
+          mercury: "Mercurio",
+          venus: "Venus",
+          mars: "Marte",
+          jupiter: "Jupiter",
+          saturn: "Saturno",
+          uranus: "Urano",
+          neptune: "Neptuno",
+          pluto: "Pluton",
+          background: "Fondo",
+          fire: "Fuego",
+          earth: "Tierra",
+          air: "Aire",
+          water: "Agua",
+        }
+
         let loadedCount = 0
 
         const loadAudioPromises = allAudios.map(async ([name, url]) => {
           try {
+            setLoadingLabel(`Cargando ${audioLabels[name] || name}`)
             console.log(`[v0] Fetching audio: ${name} from URL: ${url}`)
             let response = await fetch(url, { mode: 'cors' })
             
@@ -294,9 +316,11 @@ export function usePlanetAudio(
 
         backgroundBufferRef.current = audioBuffersRef.current["background"] || null
 
+        setLoadingLabel("Finalizando")
         setLoadingProgress(100)
       } catch (error) {
         console.error("[v0] Audio initialization failed:", error)
+        setLoadingLabel("Listo")
         setLoadingProgress(100)
       }
     })()
@@ -627,5 +651,5 @@ export function usePlanetAudio(
     }
   }, [])
 
-  return { playPlanetSound, stopAll, playBackgroundSound, stopBackgroundSound, loadingProgress, audioLevel }
+  return { playPlanetSound, stopAll, playBackgroundSound, stopBackgroundSound, loadingProgress, loadingLabel, audioLevel }
 }

@@ -406,6 +406,7 @@ export function usePlanetAudio(
       planets: PlanetData[] = [],
       ascendantDegrees = 0,
       mcDegrees = 0,
+      aspectVolumeOverride?: number,
     ) => {
       await initializeAudio()
 
@@ -555,7 +556,9 @@ export function usePlanetAudio(
             aspectSource.connect(aspectGainNode)
             aspectGainNode.connect(aspectPanner.input)
 
-            const baseVolume = 0.33 * (aspectsSoundVolumeRef.current / 100)
+            const aspectVolume =
+              typeof aspectVolumeOverride === "number" ? aspectVolumeOverride : aspectsSoundVolumeRef.current
+            const baseVolume = 0.33 * (aspectVolume / 100)
 
             // Use dynAspects times instead of planet times
             const aspectFadeInTime = dynAspectsFadeInRef.current

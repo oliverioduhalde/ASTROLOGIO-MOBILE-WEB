@@ -583,6 +583,31 @@ export default function AstrologyCalculator() {
     // ... existing animation code ...
     glyphAnimationManager.startAnimation(planetName)
 
+    const planet = horoscopeData?.planets?.find((p) => p.name === planetName)
+    if (!planet || !horoscopeData?.planets) return
+
+    const allowedAspects = ["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"]
+    const aspectsForPlanet =
+      horoscopeData?.aspects?.filter(
+        (aspect) =>
+          (aspect.point1.name === planetName || aspect.point2.name === planetName) &&
+          allowedAspects.includes(aspect.aspectType),
+      ) || []
+
+    const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
+    const mcDegrees = horoscopeData?.mc?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
+
+    playPlanetSound(
+      planetName,
+      degrees,
+      planet.declination || 0,
+      aspectsForPlanet,
+      horoscopeData.planets,
+      ascDegrees,
+      mcDegrees,
+      40,
+    )
+
     // Update animation state every frame
     const interval = setInterval(() => {
       const scale = glyphAnimationManager.getScale(planetName)
@@ -620,9 +645,9 @@ export default function AstrologyCalculator() {
       <main className="min-h-screen bg-black text-white flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="mb-8">
-            <div className="mx-auto inline-block text-center">
-              <h1 className="font-mono text-xl uppercase tracking-widest text-center">ASTRO.LOG.IO</h1>
-              <div className="mt-2 h-[2px] w-full bg-white/20">
+            <div className="w-full text-center">
+              <h1 className="font-mono text-3xl md:text-4xl uppercase tracking-widest text-center">ASTRO.LOG.IO</h1>
+              <div className="mt-3 h-[3px] w-full bg-white/20">
                 <div
                   className="h-full bg-white"
                   style={{

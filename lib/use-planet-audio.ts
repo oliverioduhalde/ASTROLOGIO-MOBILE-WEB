@@ -106,9 +106,12 @@ export function usePlanetAudio(
 
   const [loadingProgress, setLoadingProgress] = useState(0)
   const [loadingLabel, setLoadingLabel] = useState("Inicializando audio")
-  const [audioLevel, setAudioLevel] = useState(0)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const dataArrayRef = useRef<Uint8Array | null>(null)
+  const [audioLevelLeft, setAudioLevelLeft] = useState(0)
+  const [audioLevelRight, setAudioLevelRight] = useState(0)
+  const leftAnalyserRef = useRef<AnalyserNode | null>(null)
+  const rightAnalyserRef = useRef<AnalyserNode | null>(null)
+  const leftDataArrayRef = useRef<Uint8Array | null>(null)
+  const rightDataArrayRef = useRef<Uint8Array | null>(null)
 
   const backgroundSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const backgroundGainRef = useRef<GainNode | null>(null)
@@ -182,18 +185,30 @@ export function usePlanetAudio(
     let intervalId: NodeJS.Timeout
     
     const updateVuMeter = () => {
-      if (analyserRef.current && dataArrayRef.current) {
-        analyserRef.current.getByteFrequencyData(dataArrayRef.current)
-        const sum = dataArrayRef.current.reduce((acc, val) => acc + val, 0)
-        const average = sum / dataArrayRef.current.length
-        // Convert to dBFS (0-255 to -60dB to 0dB range)
-        const normalizedLevel = average / 255
-        const dbfs = normalizedLevel > 0 ? 20 * Math.log10(normalizedLevel) : -60
-        // Convert dBFS to percentage (0-100) where -60dB = 0%, 0dB = 100%
-        const percentage = Math.max(0, Math.min(100, ((dbfs + 60) / 60) * 100))
-        setAudioLevel(percentage)
+      if (
+        leftAnalyserRef.current &&
+        rightAnalyserRef.current &&
+        leftDataArrayRef.current &&
+        rightDataArrayRef.current
+      ) {
+        leftAnalyserRef.current.getByteFrequencyData(leftDataArrayRef.current)
+        rightAnalyserRef.current.getByteFrequencyData(rightDataArrayRef.current)
+
+        const leftSum = leftDataArrayRef.current.reduce((acc, val) => acc + val, 0)
+        const rightSum = rightDataArrayRef.current.reduce((acc, val) => acc + val, 0)
+
+        const leftAverage = leftSum / leftDataArrayRef.current.length
+        const rightAverage = rightSum / rightDataArrayRef.current.length
+
+        const toDbfsPercent = (avg: number) => {
+          const normalizedLevel = avg / 255
+          const dbfs = normalizedLevel > 0 ? 20 * Math.log10(normalizedLevel) : -60
+          return Math.max(0, Math.min(100, ((dbfs + 60) / 60) * 100))
+        }
+
+        setAudioLevelLeft(toDbfsPercent(leftAverage))
+        setAudioLevelRight(toDbfsPercent(rightAverage))
       }
-      // Update every 50ms instead of using requestAnimationFrame
       intervalId = setTimeout(updateVuMeter, 50)
     }
     
@@ -242,15 +257,23 @@ export function usePlanetAudio(
           dynamicsCompressor.attack.value = 0.003
           dynamicsCompressor.release.value = 0.25
 
-          const analyser = audioContextRef.current.createAnalyser()
-          analyser.fftSize = 256
-          analyserRef.current = analyser
-          dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount)
+          const leftAnalyser = audioContextRef.current.createAnalyser()
+          const rightAnalyser = audioContextRef.current.createAnalyser()
+          leftAnalyser.fftSize = 256
+          rightAnalyser.fftSize = 256
+          leftAnalyserRef.current = leftAnalyser
+          rightAnalyserRef.current = rightAnalyser
+          leftDataArrayRef.current = new Uint8Array(leftAnalyser.frequencyBinCount)
+          rightDataArrayRef.current = new Uint8Array(rightAnalyser.frequencyBinCount)
+
+          const splitter = audioContextRef.current.createChannelSplitter(2)
 
           resonanceSceneRef.current.output.connect(masterGainNode)
           masterGainNode.connect(dynamicsCompressor)
-          dynamicsCompressor.connect(analyser)
-          analyser.connect(audioContextRef.current.destination)
+          dynamicsCompressor.connect(audioContextRef.current.destination)
+          dynamicsCompressor.connect(splitter)
+          splitter.connect(leftAnalyser, 0)
+          splitter.connect(rightAnalyser, 1)
 
           resonanceSceneRef.current.setListenerPosition(0, 0, 0)
           console.log("[v0] Resonance Audio scene initialized with 18dB gain and limiter")
@@ -712,22 +735,14 @@ export function usePlanetAudio(
     }
   }, [stopAll, stopBackgroundSound])
 
-  useEffect(() => {
-    if (analyserRef.current && dataArrayRef.current) {
-      const analyser = analyserRef.current
-      const dataArray = dataArrayRef.current
-
-      const updateAudioLevel = () => {
-        analyser.getByteTimeDomainData(dataArray)
-        const sum = dataArray.reduce((acc, val) => acc + val, 0)
-        const average = sum / dataArray.length
-        setAudioLevel(average)
-      }
-
-      const interval = setInterval(updateAudioLevel, 100)
-      return () => clearInterval(interval)
-    }
-  }, [])
-
-  return { playPlanetSound, stopAll, playBackgroundSound, stopBackgroundSound, loadingProgress, loadingLabel, audioLevel }
+  return {
+    playPlanetSound,
+    stopAll,
+    playBackgroundSound,
+    stopBackgroundSound,
+    loadingProgress,
+    loadingLabel,
+    audioLevelLeft,
+    audioLevelRight,
+  }
 }

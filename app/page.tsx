@@ -95,7 +95,8 @@ export default function AstrologyCalculator() {
   const [showDegrees, setShowDegrees] = useState(false)
   const [showAngles, setShowAngles] = useState(false)
   const [showAstroChart, setShowAstroChart] = useState(false)
-  const [peakLevel, setPeakLevel] = useState(0)
+  const [peakLevelLeft, setPeakLevelLeft] = useState(0)
+  const [peakLevelRight, setPeakLevelRight] = useState(0)
   const [showPointer, setShowPointer] = useState(true)
   const [showPointerInfo, setShowPointerInfo] = useState(false)
   const [isSidereal, setIsSidereal] = useState(false)
@@ -144,7 +145,15 @@ export default function AstrologyCalculator() {
   const [showAspectIndicator, setShowAspectIndicator] = useState(false) // Declared showAspectIndicator
 
   // Added hook for planet audio
-  const { playPlanetSound, stopAll, playBackgroundSound, stopBackgroundSound, loadingProgress, audioLevel } =
+  const {
+    playPlanetSound,
+    stopAll,
+    playBackgroundSound,
+    stopBackgroundSound,
+    loadingProgress,
+    audioLevelLeft,
+    audioLevelRight,
+  } =
     usePlanetAudio({
       fadeIn: audioFadeIn,
       fadeOut: audioFadeOut,
@@ -184,14 +193,18 @@ export default function AstrologyCalculator() {
 
   // Track peak audio level and reset every 5 seconds
   useEffect(() => {
-    if (audioLevel > peakLevel) {
-      setPeakLevel(audioLevel)
+    if (audioLevelLeft > peakLevelLeft) {
+      setPeakLevelLeft(audioLevelLeft)
     }
-  }, [audioLevel, peakLevel])
+    if (audioLevelRight > peakLevelRight) {
+      setPeakLevelRight(audioLevelRight)
+    }
+  }, [audioLevelLeft, audioLevelRight, peakLevelLeft, peakLevelRight])
 
   useEffect(() => {
     const peakResetInterval = setInterval(() => {
-      setPeakLevel(0)
+      setPeakLevelLeft(0)
+      setPeakLevelRight(0)
     }, 5000)
     
     return () => clearInterval(peakResetInterval)
@@ -990,59 +1003,31 @@ export default function AstrologyCalculator() {
                   </div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[7px] uppercase tracking-wide">VU Meter Stereo</div>
-                    <div className="space-y-1">
-                      {/* Left Channel */}
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[7px] w-6">L</span>
-                        <div className="flex-1 h-2 bg-gray-800 border border-gray-600 rounded relative overflow-hidden">
+                    <div className="font-mono text-[7px] uppercase tracking-wide">VU Meter</div>
+                    <div className="border border-white/50 bg-black">
+                      <div className="relative h-2 border-b border-white/20 overflow-hidden">
+                        <div
+                          className="h-full bg-white transition-all duration-75"
+                          style={{ width: `${audioLevelLeft}%` }}
+                        />
+                        {peakLevelLeft > 0 && (
                           <div
-                            className={`h-full transition-all duration-75 ${audioLevel > 95 ? 'bg-red-500' : audioLevel > 75 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                            style={{
-                              width: `${audioLevel * 0.5}%`,
-                            }}
+                            className="absolute top-0 bottom-0 w-px bg-white/60"
+                            style={{ left: `${peakLevelLeft}%` }}
                           />
-                          {peakLevel > 0 && (
-                            <div
-                              className="absolute top-0 bottom-0 w-px bg-white opacity-50"
-                              style={{
-                                left: `${peakLevel * 0.5}%`,
-                              }}
-                            />
-                          )}
-                        </div>
-                        <span className="font-mono text-[7px] w-12 text-right tabular-nums">
-                          {audioLevel > 0 ? `${Math.round((audioLevel / 100) * 60 - 60)}dB` : '-60dB'}
-                        </span>
+                        )}
                       </div>
-                      {/* Right Channel */}
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[7px] w-6">R</span>
-                        <div className="flex-1 h-2 bg-gray-800 border border-gray-600 rounded relative overflow-hidden">
+                      <div className="relative h-2 overflow-hidden">
+                        <div
+                          className="h-full bg-white transition-all duration-75"
+                          style={{ width: `${audioLevelRight}%` }}
+                        />
+                        {peakLevelRight > 0 && (
                           <div
-                            className={`h-full transition-all duration-75 ${audioLevel > 95 ? 'bg-red-500' : audioLevel > 75 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                            style={{
-                              width: `${audioLevel * 0.5}%`,
-                            }}
+                            className="absolute top-0 bottom-0 w-px bg-white/60"
+                            style={{ left: `${peakLevelRight}%` }}
                           />
-                          {peakLevel > 0 && (
-                            <div
-                              className="absolute top-0 bottom-0 w-px bg-white opacity-50"
-                              style={{
-                                left: `${peakLevel * 0.5}%`,
-                              }}
-                            />
-                          )}
-                        </div>
-                        <span className="font-mono text-[7px] w-12 text-right tabular-nums">
-                          {audioLevel > 0 ? `${Math.round((audioLevel / 100) * 60 - 60)}dB` : '-60dB'}
-                        </span>
-                      </div>
-                      {/* Peak Label */}
-                      <div className="text-right">
-                        <span className="font-mono text-[7px] text-yellow-400">
-                          Peak: {peakLevel > 0 ? `${Math.round((peakLevel / 100) * 60 - 60)}dB` : '-60dB'}
-                        </span>
+                        )}
                       </div>
                     </div>
                   </div>

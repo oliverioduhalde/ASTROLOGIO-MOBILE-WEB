@@ -124,8 +124,8 @@ export default function AstrologyCalculator() {
 
   const [audioFadeIn, setAudioFadeIn] = useState(5)
   const [audioFadeOut, setAudioFadeOut] = useState(10)
-  const [backgroundVolume, setBackgroundVolume] = useState(20)
-  const [elementSoundVolume, setElementSoundVolume] = useState(40)
+  const [backgroundVolume, setBackgroundVolume] = useState(25)
+  const [elementSoundVolume, setElementSoundVolume] = useState(3)
   const [dynAspectsFadeIn, setDynAspectsFadeIn] = useState(3)
   const [dynAspectsSustain, setDynAspectsSustain] = useState(2)
   const [dynAspectsFadeOut, setDynAspectsFadeOut] = useState(15)
@@ -149,6 +149,7 @@ export default function AstrologyCalculator() {
   const [hoveredGlyph, setHoveredGlyph] = useState<string | null>(null)
   const [glyphHoverOpacity, setGlyphHoverOpacity] = useState(0)
   const [showAspectIndicator, setShowAspectIndicator] = useState(false) // Declared showAspectIndicator
+  const aspectClickTimersRef = useRef<Record<string, NodeJS.Timeout[]>>({})
 
   // Added hook for planet audio
   const {
@@ -645,6 +646,75 @@ export default function AstrologyCalculator() {
       40,
     )
 
+    if (showDynAspects && aspectsForPlanet.length > 0) {
+      const existingTimers = aspectClickTimersRef.current[planetName]
+      if (existingTimers) {
+        existingTimers.forEach((timerId) => clearTimeout(timerId))
+      }
+      aspectClickTimersRef.current[planetName] = []
+
+      const targetOpacity = 0.8
+      setActivePlanetAspectsMap((prevMap) => ({
+        ...prevMap,
+        [planetName]: {
+          aspects: aspectsForPlanet,
+          opacity: 0,
+        },
+      }))
+
+      const fadeInInterval = setInterval(() => {
+        setActivePlanetAspectsMap((prevMap) => {
+          const current = prevMap[planetName]
+          if (!current) return prevMap
+          const increment = targetOpacity / Math.max(1, dynAspectsFadeIn * 10)
+          const newOpacity = Math.min(current.opacity + increment, targetOpacity)
+          return {
+            ...prevMap,
+            [planetName]: {
+              aspects: current.aspects,
+              opacity: newOpacity,
+            },
+          }
+        })
+      }, 100)
+
+      const fadeInTimeout = setTimeout(() => {
+        clearInterval(fadeInInterval)
+      }, dynAspectsFadeIn * 1000)
+      aspectClickTimersRef.current[planetName].push(fadeInInterval, fadeInTimeout)
+
+      const fadeOutStart = (dynAspectsFadeIn + dynAspectsSustain) * 1000
+      const fadeOutStartTimeout = setTimeout(() => {
+        const fadeOutInterval = setInterval(() => {
+          setActivePlanetAspectsMap((prevMap) => {
+            const current = prevMap[planetName]
+            if (!current) return prevMap
+            const decrement = targetOpacity / Math.max(1, dynAspectsFadeOut * 10)
+            const newOpacity = Math.max(current.opacity - decrement, 0)
+            if (newOpacity <= 0) {
+              const updated = { ...prevMap }
+              delete updated[planetName]
+              return updated
+            }
+            return {
+              ...prevMap,
+              [planetName]: {
+                aspects: current.aspects,
+                opacity: newOpacity,
+              },
+            }
+          })
+        }, 100)
+
+        const fadeOutTimeout = setTimeout(() => {
+          clearInterval(fadeOutInterval)
+        }, dynAspectsFadeOut * 1000)
+
+        aspectClickTimersRef.current[planetName].push(fadeOutInterval, fadeOutTimeout)
+      }, fadeOutStart)
+      aspectClickTimersRef.current[planetName].push(fadeOutStartTimeout)
+    }
+
     // Update animation state every frame
     const interval = setInterval(() => {
       const scale = glyphAnimationManager.getScale(planetName)
@@ -717,7 +787,7 @@ export default function AstrologyCalculator() {
             </button>
 
             {menuOpen && (
-              <div className="absolute top-full left-0 mt-2 bg-black border border-white p-3 z-10 min-w-[200px]">
+              <div className="absolute top-full left-0 mt-2 bg-black border border-white p-3 z-10 min-w-[200px] md:scale-[2.3] md:origin-top-left">
                 <div className="space-y-1">
                   <button
                     onClick={() => {

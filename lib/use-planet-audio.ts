@@ -9,6 +9,9 @@ interface AudioTrack {
   endTime: number
   planetName: string
   basePlaybackRate?: number
+  baseGain?: number
+  gainNode?: GainNode
+  kind?: "planet" | "aspect" | "element"
   panner?: any
 }
 
@@ -133,6 +136,16 @@ export function usePlanetAudio(
 
   useEffect(() => {
     elementSoundVolumeRef.current = envelope.elementSoundVolume || 40
+  }, [envelope.elementSoundVolume])
+
+  useEffect(() => {
+    const elementGain = elementSoundVolumeRef.current / 100
+    activeTracksRef.current.forEach((track) => {
+      if (track.kind === "element" && track.gainNode) {
+        track.baseGain = elementGain
+        track.gainNode.gain.setTargetAtTime(elementGain, track.audioContext.currentTime, 0.05)
+      }
+    })
   }, [envelope.elementSoundVolume])
 
   useEffect(() => {
@@ -504,6 +517,7 @@ export function usePlanetAudio(
           endTime,
           planetName,
           basePlaybackRate,
+          kind: "planet",
           panner,
         })
 
@@ -587,6 +601,7 @@ export function usePlanetAudio(
               endTime: aspectFadeOutEnd,
               planetName: `${planetName}-aspect`,
               basePlaybackRate,
+              kind: "aspect",
               panner: aspectPanner,
             })
 
@@ -631,6 +646,9 @@ export function usePlanetAudio(
                 endTime: aspectFadeOutEnd,
                 planetName: `${planetName}-element`,
                 basePlaybackRate: 1,
+                baseGain: elementVolume,
+                gainNode: elementGainNode,
+                kind: "element",
                 panner: elementPanner,
               })
 

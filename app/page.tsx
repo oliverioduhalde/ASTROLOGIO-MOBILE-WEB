@@ -619,12 +619,14 @@ export default function AstrologyCalculator() {
         <div className="w-full max-w-md">
           <div className="mb-8">
             <h1 className="font-mono text-xl uppercase tracking-widest text-center mb-12">ASTRO.LOG.IO</h1>
-            <div className="bg-black border border-white/60" style={{ height: "2px" }}>
+            <div className="bg-black border border-white/60 w-full" style={{ height: "2px" }}>
               <div
                 className="bg-white/90 h-full"
                 style={{
-                  width: `${loadingProgress}%`,
-                  transition: "width 0.05s linear",
+                  width: "100%",
+                  transform: `scaleX(${loadingProgress / 100})`,
+                  transformOrigin: "left",
+                  transition: "transform 0.05s linear",
                 }}
               ></div>
             </div>

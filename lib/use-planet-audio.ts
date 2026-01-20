@@ -84,12 +84,6 @@ function getPlaybackRateFromZodiacPosition(eclipticDegrees: number): number {
   return playbackRate
 }
 
-function getElementFromEclipticDegrees(eclipticDegrees: number): "fire" | "earth" | "air" | "water" {
-  const signIndex = Math.floor(eclipticDegrees / 30) % 12
-  const elements = ["fire", "earth", "air", "water"] as const
-  return elements[signIndex % 4]
-}
-
 function centsToPlaybackRate(cents: number): number {
   return Math.pow(2, cents / 1200)
 }
@@ -116,6 +110,11 @@ export function usePlanetAudio(
   const backgroundSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const backgroundGainRef = useRef<GainNode | null>(null)
   const backgroundBufferRef = useRef<AudioBuffer | null>(null)
+  const elementBackgroundSourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const elementBackgroundGainRef = useRef<GainNode | null>(null)
+  const elementBackgroundNextSourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const elementBackgroundNextGainRef = useRef<GainNode | null>(null)
+  const elementBackgroundTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const backgroundVolumeRef = useRef(envelope.backgroundVolume || 20)
   const aspectsSoundVolumeRef = useRef(envelope.aspectsSoundVolume || 33)
   const masterVolumeRef = useRef(envelope.masterVolume || 100)
@@ -143,12 +142,12 @@ export function usePlanetAudio(
 
   useEffect(() => {
     const elementGain = elementSoundVolumeRef.current / 100
-    activeTracksRef.current.forEach((track) => {
-      if (track.kind === "element" && track.gainNode) {
-        track.baseGain = elementGain
-        track.gainNode.gain.setTargetAtTime(elementGain, track.audioContext.currentTime, 0.05)
-      }
-    })
+    if (elementBackgroundGainRef.current && audioContextRef.current) {
+      elementBackgroundGainRef.current.gain.setTargetAtTime(elementGain, audioContextRef.current.currentTime, 0.05)
+    }
+    if (elementBackgroundNextGainRef.current && audioContextRef.current) {
+      elementBackgroundNextGainRef.current.gain.setTargetAtTime(elementGain, audioContextRef.current.currentTime, 0.05)
+    }
   }, [envelope.elementSoundVolume])
 
   useEffect(() => {
@@ -395,7 +394,8 @@ export function usePlanetAudio(
       backgroundSourceRef.current.loop = true
 
       backgroundSourceRef.current.connect(backgroundGainRef.current)
-      backgroundGainRef.current.connect(ctx.destination)
+      const masterNode = masterGainNodeRef.current || ctx.destination
+      backgroundGainRef.current.connect(masterNode)
 
       backgroundSourceRef.current.start(0)
       console.log("[v0] Background sound started")
@@ -431,6 +431,147 @@ export function usePlanetAudio(
         console.error("[v0] Error stopping background sound:", error)
       }
     }
+  }, [])
+
+  const playElementBackground = useCallback(
+    async (
+      primaryElement: "fire" | "earth" | "air" | "water",
+      secondaryElement?: "fire" | "earth" | "air" | "water",
+      crossfadeDelaySeconds = 0,
+      crossfadeDurationSeconds = 30,
+    ) => {
+      await initializeAudio()
+
+      const ctx = audioContextRef.current
+      if (!ctx) return
+
+      const primaryBuffer = audioBuffersRef.current[primaryElement]
+      if (!primaryBuffer) {
+        console.log(`[v0] No element buffer for ${primaryElement}`)
+        return
+      }
+
+      if (elementBackgroundTimeoutRef.current) {
+        clearTimeout(elementBackgroundTimeoutRef.current)
+        elementBackgroundTimeoutRef.current = null
+      }
+
+      if (elementBackgroundSourceRef.current) {
+        try {
+          elementBackgroundSourceRef.current.stop()
+        } catch (e) {
+          // Already stopped
+        }
+      }
+      if (elementBackgroundNextSourceRef.current) {
+        try {
+          elementBackgroundNextSourceRef.current.stop()
+        } catch (e) {
+          // Already stopped
+        }
+      }
+
+      const elementGain = elementSoundVolumeRef.current / 100
+
+      const primaryGain = ctx.createGain()
+      primaryGain.gain.value = elementGain
+
+      const primarySource = ctx.createBufferSource()
+      primarySource.buffer = primaryBuffer
+      primarySource.loop = true
+
+      primarySource.connect(primaryGain)
+      const masterNode = masterGainNodeRef.current || ctx.destination
+      primaryGain.connect(masterNode)
+      primarySource.start(0)
+
+      elementBackgroundSourceRef.current = primarySource
+      elementBackgroundGainRef.current = primaryGain
+      elementBackgroundNextSourceRef.current = null
+      elementBackgroundNextGainRef.current = null
+
+      if (secondaryElement) {
+        const secondaryBuffer = audioBuffersRef.current[secondaryElement]
+        if (!secondaryBuffer) {
+          console.log(`[v0] No element buffer for ${secondaryElement}`)
+          return
+        }
+
+        const startTime = ctx.currentTime + Math.max(0, crossfadeDelaySeconds)
+
+        const secondaryGain = ctx.createGain()
+        secondaryGain.gain.setValueAtTime(0, startTime)
+        secondaryGain.gain.linearRampToValueAtTime(elementGain, startTime + crossfadeDurationSeconds)
+
+        const secondarySource = ctx.createBufferSource()
+        secondarySource.buffer = secondaryBuffer
+        secondarySource.loop = true
+        secondarySource.connect(secondaryGain)
+        const masterNode = masterGainNodeRef.current || ctx.destination
+        secondaryGain.connect(masterNode)
+        secondarySource.start(startTime)
+
+        primaryGain.gain.setValueAtTime(primaryGain.gain.value, startTime)
+        primaryGain.gain.linearRampToValueAtTime(0, startTime + crossfadeDurationSeconds)
+
+        elementBackgroundNextSourceRef.current = secondarySource
+        elementBackgroundNextGainRef.current = secondaryGain
+
+        elementBackgroundTimeoutRef.current = setTimeout(() => {
+          try {
+            primarySource.stop()
+          } catch (e) {
+            // Already stopped
+          }
+          elementBackgroundSourceRef.current = secondarySource
+          elementBackgroundGainRef.current = secondaryGain
+          elementBackgroundNextSourceRef.current = null
+          elementBackgroundNextGainRef.current = null
+        }, (crossfadeDelaySeconds + crossfadeDurationSeconds) * 1000)
+      }
+    },
+    [initializeAudio],
+  )
+
+  const stopElementBackground = useCallback(() => {
+    const ctx = audioContextRef.current
+    if (!ctx) return
+
+    const FADE_OUT_TIME = 5
+    const currentTime = ctx.currentTime
+
+    if (elementBackgroundGainRef.current) {
+      elementBackgroundGainRef.current.gain.setValueAtTime(elementBackgroundGainRef.current.gain.value, currentTime)
+      elementBackgroundGainRef.current.gain.linearRampToValueAtTime(0, currentTime + FADE_OUT_TIME)
+    }
+    if (elementBackgroundNextGainRef.current) {
+      elementBackgroundNextGainRef.current.gain.setValueAtTime(
+        elementBackgroundNextGainRef.current.gain.value,
+        currentTime,
+      )
+      elementBackgroundNextGainRef.current.gain.linearRampToValueAtTime(0, currentTime + FADE_OUT_TIME)
+    }
+
+    setTimeout(() => {
+      if (elementBackgroundSourceRef.current) {
+        try {
+          elementBackgroundSourceRef.current.stop()
+        } catch (e) {
+          // Already stopped
+        }
+        elementBackgroundSourceRef.current = null
+      }
+      if (elementBackgroundNextSourceRef.current) {
+        try {
+          elementBackgroundNextSourceRef.current.stop()
+        } catch (e) {
+          // Already stopped
+        }
+        elementBackgroundNextSourceRef.current = null
+      }
+      elementBackgroundGainRef.current = null
+      elementBackgroundNextGainRef.current = null
+    }, FADE_OUT_TIME * 1000)
   }, [])
 
   const playPlanetSound = useCallback(
@@ -640,53 +781,6 @@ export function usePlanetAudio(
               }
             }, 100)
 
-            const elementKey = getElementFromEclipticDegrees(otherPlanetDegrees)
-            const elementAudioBuffer = audioBuffersRef.current[elementKey]
-            if (elementAudioBuffer) {
-              const elementSource = ctx.createBufferSource() as AudioBufferSourceNode
-              elementSource.buffer = elementAudioBuffer
-
-              const elementPanner = resonanceSceneRef.current.createSource()
-              elementPanner.setPosition(aspectPosition.x, aspectPosition.y, aspectPosition.z)
-
-              const elementGainNode = ctx.createGain()
-              elementSource.connect(elementGainNode)
-              elementGainNode.connect(elementPanner.input)
-
-              const elementVolume = elementSoundVolumeRef.current / 100
-              elementGainNode.gain.setValueAtTime(0, aspectStartTime)
-              elementGainNode.gain.linearRampToValueAtTime(elementVolume, aspectFadeInEnd)
-              elementGainNode.gain.setValueAtTime(elementVolume, aspectSustainEnd)
-              elementGainNode.gain.linearRampToValueAtTime(0, aspectFadeOutEnd)
-
-              elementSource.start(currentTime, startOffset)
-
-              const elementTrackId = `${planetName}-element-${otherPlanetName}-${currentTime}`
-              activeTracksRef.current.set(elementTrackId, {
-                audioContext: ctx,
-                source: elementSource,
-                startTime: aspectStartTime,
-                endTime: aspectFadeOutEnd,
-                planetName: `${planetName}-element`,
-                basePlaybackRate: 1,
-                baseGain: elementVolume,
-                gainNode: elementGainNode,
-                kind: "element",
-                panner: elementPanner,
-              })
-
-              const elementCheckInterval = setInterval(() => {
-                if (ctx.currentTime >= aspectFadeOutEnd) {
-                  clearInterval(elementCheckInterval)
-                  activeTracksRef.current.delete(elementTrackId)
-                  try {
-                    elementSource.stop()
-                  } catch (e) {
-                    // Already stopped
-                  }
-                }
-              }, 100)
-            }
           }
         }
 
@@ -729,17 +823,20 @@ export function usePlanetAudio(
     return () => {
       stopAll()
       stopBackgroundSound()
+      stopElementBackground()
       if (audioContextRef.current) {
         audioContextRef.current.close()
       }
     }
-  }, [stopAll, stopBackgroundSound])
+  }, [stopAll, stopBackgroundSound, stopElementBackground])
 
   return {
     playPlanetSound,
     stopAll,
     playBackgroundSound,
     stopBackgroundSound,
+    playElementBackground,
+    stopElementBackground,
     loadingProgress,
     loadingLabel,
     audioLevelLeft,

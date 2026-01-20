@@ -50,6 +50,12 @@ function norm360(x: number): number {
   return ((x % 360) + 360) % 360
 }
 
+function getElementFromDegrees(degrees: number): "fire" | "earth" | "air" | "water" {
+  const signIndex = Math.floor(norm360(degrees) / 30) % 12
+  const elements = ["fire", "earth", "air", "water"] as const
+  return elements[signIndex % 4]
+}
+
 // Convertir coordenadas polares a cartesianas (método AstroChart)
 function polarToCartesian(cx: number, cy: number, r: number, thetaDeg: number) {
   const thetaRad = (thetaDeg * Math.PI) / 180
@@ -150,6 +156,8 @@ export default function AstrologyCalculator() {
     stopAll,
     playBackgroundSound,
     stopBackgroundSound,
+    playElementBackground,
+    stopElementBackground,
     loadingProgress,
     audioLevelLeft,
     audioLevelRight,
@@ -257,8 +265,9 @@ export default function AstrologyCalculator() {
       lastPlayedPlanetRef.current = null
       // When loop ends, stop background sound
       stopBackgroundSound()
+      stopElementBackground()
     }
-  }, [isLoopRunning, stopBackgroundSound])
+  }, [isLoopRunning, stopBackgroundSound, stopElementBackground])
 
   useEffect(() => {
     if (hoveredGlyph && isLoopRunning) {
@@ -392,6 +401,7 @@ export default function AstrologyCalculator() {
       glyphAnimationManager["animations"]?.clear()
       setAnimatedPlanets({})
       stopBackgroundSound() // Stop background sound on reset
+      stopElementBackground()
       setHoveredGlyph(null) // Clear hovered glyph on reset
       setGlyphHoverOpacity(0) // Clear hover opacity on reset
       setActivePlanetAspectsMap({}) // Clear accumulated aspects map on reset
@@ -455,6 +465,7 @@ export default function AstrologyCalculator() {
             intervalIdRef.current = null
           }
           stopBackgroundSound() // Stop background sound when loop finishes
+          stopElementBackground()
         }
       }, 50)
       return
@@ -508,10 +519,23 @@ export default function AstrologyCalculator() {
           intervalIdRef.current = null
         }
         stopBackgroundSound() // Stop background sound when loop finishes
+        stopElementBackground()
       }
     }, 50)
     // START BACKGROUND SOUND: Start background sound when loop begins
     playBackgroundSound()
+    if (horoscopeData?.planets && horoscopeData?.ascendant) {
+      const sunDegrees = horoscopeData.planets.find((p) => p.name === "sun")?.ChartPosition.Ecliptic.DecimalDegrees
+      const ascDegrees = horoscopeData.ascendant.ChartPosition.Ecliptic.DecimalDegrees
+      if (sunDegrees !== undefined && ascDegrees !== undefined) {
+        playElementBackground(
+          getElementFromDegrees(sunDegrees),
+          getElementFromDegrees(ascDegrees),
+          loopDuration / 2,
+          30,
+        )
+      }
+    }
   }
 
   const handleCalculate = async () => {
@@ -892,7 +916,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7px] uppercase tracking-wide w-12 flex-shrink-0">
-                        LmentBck
+                        Elemento
                       </label>
                       <input
                         type="range"

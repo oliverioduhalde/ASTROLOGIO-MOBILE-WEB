@@ -120,7 +120,7 @@ export function usePlanetAudio(
   const aspectsSoundVolumeRef = useRef(envelope.aspectsSoundVolume || 33)
   const masterVolumeRef = useRef(envelope.masterVolume || 100)
   const tuningCentsRef = useRef(envelope.tuningCents || 0)
-  const elementSoundVolumeRef = useRef(envelope.elementSoundVolume || 40)
+  const elementSoundVolumeRef = useRef(envelope.elementSoundVolume ?? 40)
   const masterGainNodeRef = useRef<GainNode | null>(null)
   const dynAspectsFadeInRef = useRef(envelope.dynAspectsFadeIn || 3)
   const dynAspectsSustainRef = useRef(envelope.dynAspectsSustain || 2)
@@ -138,7 +138,7 @@ export function usePlanetAudio(
   }, [envelope.tuningCents])
 
   useEffect(() => {
-    elementSoundVolumeRef.current = envelope.elementSoundVolume || 40
+    elementSoundVolumeRef.current = envelope.elementSoundVolume ?? 40
   }, [envelope.elementSoundVolume])
 
   useEffect(() => {

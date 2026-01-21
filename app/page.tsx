@@ -101,8 +101,10 @@ export default function AstrologyCalculator() {
   const [showDegrees, setShowDegrees] = useState(false)
   const [showAngles, setShowAngles] = useState(false)
   const [showAstroChart, setShowAstroChart] = useState(false)
-  const [peakLevelLeft, setPeakLevelLeft] = useState(0)
-  const [peakLevelRight, setPeakLevelRight] = useState(0)
+  const [peakLevelLeftPre, setPeakLevelLeftPre] = useState(0)
+  const [peakLevelRightPre, setPeakLevelRightPre] = useState(0)
+  const [peakLevelLeftPost, setPeakLevelLeftPost] = useState(0)
+  const [peakLevelRightPost, setPeakLevelRightPost] = useState(0)
   const [showPointer, setShowPointer] = useState(true)
   const [showPointerInfo, setShowPointerInfo] = useState(false)
   const [isSidereal, setIsSidereal] = useState(false)
@@ -164,8 +166,11 @@ export default function AstrologyCalculator() {
     playElementBackground,
     stopElementBackground,
     loadingProgress,
-    audioLevelLeft,
-    audioLevelRight,
+    audioLevelLeftPre,
+    audioLevelRightPre,
+    audioLevelLeftPost,
+    audioLevelRightPost,
+    compressionReductionDb,
   } =
     usePlanetAudio({
       fadeIn: audioFadeIn,
@@ -204,24 +209,46 @@ export default function AstrologyCalculator() {
     }
   }, [])
 
-  // Track peak audio level and reset every 5 seconds
+  // Track peak audio level (pre/post) and reset every 5 seconds
   useEffect(() => {
-    if (audioLevelLeft > peakLevelLeft) {
-      setPeakLevelLeft(audioLevelLeft)
+    if (audioLevelLeftPre > peakLevelLeftPre) {
+      setPeakLevelLeftPre(audioLevelLeftPre)
     }
-    if (audioLevelRight > peakLevelRight) {
-      setPeakLevelRight(audioLevelRight)
+    if (audioLevelRightPre > peakLevelRightPre) {
+      setPeakLevelRightPre(audioLevelRightPre)
     }
-  }, [audioLevelLeft, audioLevelRight, peakLevelLeft, peakLevelRight])
+    if (audioLevelLeftPost > peakLevelLeftPost) {
+      setPeakLevelLeftPost(audioLevelLeftPost)
+    }
+    if (audioLevelRightPost > peakLevelRightPost) {
+      setPeakLevelRightPost(audioLevelRightPost)
+    }
+  }, [
+    audioLevelLeftPre,
+    audioLevelRightPre,
+    audioLevelLeftPost,
+    audioLevelRightPost,
+    peakLevelLeftPre,
+    peakLevelRightPre,
+    peakLevelLeftPost,
+    peakLevelRightPost,
+  ])
 
   useEffect(() => {
     const peakResetInterval = setInterval(() => {
-      setPeakLevelLeft(0)
-      setPeakLevelRight(0)
+      setPeakLevelLeftPre(0)
+      setPeakLevelRightPre(0)
+      setPeakLevelLeftPost(0)
+      setPeakLevelRightPost(0)
     }, 5000)
     
     return () => clearInterval(peakResetInterval)
   }, [])
+
+  const percentToDb = (percent: number) => {
+    const db = (percent / 100) * 60 - 60
+    return Math.max(-60, Math.min(0, db))
+  }
 
   // Remove playPlanetSound from dependencies, use useCallback from hook instead
   const triggerPlanetSound = useCallback(
@@ -1153,30 +1180,78 @@ export default function AstrologyCalculator() {
 
                   <div className="space-y-1">
                     <div className="font-mono text-[10.5px] uppercase tracking-wide">VU Meter</div>
-                    <div className="border border-white/50 bg-black">
+                    <div className="border border-white/50 bg-black p-1 space-y-1">
+                      <div className="flex items-center justify-between text-[9px] font-mono uppercase tracking-wide">
+                        <span>Pre</span>
+                        <span>
+                          L {percentToDb(peakLevelLeftPre).toFixed(1)} dB / R {percentToDb(peakLevelRightPre).toFixed(1)} dB
+                        </span>
+                      </div>
                       <div className="relative h-2 border-b border-white/20 overflow-hidden">
                         <div
                           className="h-full bg-white transition-all duration-75"
-                          style={{ width: `${audioLevelLeft}%` }}
+                          style={{ width: `${audioLevelLeftPre}%` }}
                         />
-                        {peakLevelLeft > 0 && (
+                        {peakLevelLeftPre > 0 && (
                           <div
                             className="absolute top-0 bottom-0 w-px bg-white/60"
-                            style={{ left: `${peakLevelLeft}%` }}
+                            style={{ left: `${peakLevelLeftPre}%` }}
                           />
                         )}
                       </div>
                       <div className="relative h-2 overflow-hidden">
                         <div
                           className="h-full bg-white transition-all duration-75"
-                          style={{ width: `${audioLevelRight}%` }}
+                          style={{ width: `${audioLevelRightPre}%` }}
                         />
-                        {peakLevelRight > 0 && (
+                        {peakLevelRightPre > 0 && (
                           <div
                             className="absolute top-0 bottom-0 w-px bg-white/60"
-                            style={{ left: `${peakLevelRight}%` }}
+                            style={{ left: `${peakLevelRightPre}%` }}
                           />
                         )}
+                      </div>
+
+                      <div className="flex items-center justify-between text-[9px] font-mono uppercase tracking-wide pt-1">
+                        <span>Post</span>
+                        <span>
+                          L {percentToDb(peakLevelLeftPost).toFixed(1)} dB / R {percentToDb(peakLevelRightPost).toFixed(1)} dB
+                        </span>
+                      </div>
+                      <div className="relative h-2 border-b border-white/20 overflow-hidden">
+                        <div
+                          className="h-full bg-white transition-all duration-75"
+                          style={{ width: `${audioLevelLeftPost}%` }}
+                        />
+                        {peakLevelLeftPost > 0 && (
+                          <div
+                            className="absolute top-0 bottom-0 w-px bg-white/60"
+                            style={{ left: `${peakLevelLeftPost}%` }}
+                          />
+                        )}
+                      </div>
+                      <div className="relative h-2 overflow-hidden">
+                        <div
+                          className="h-full bg-white transition-all duration-75"
+                          style={{ width: `${audioLevelRightPost}%` }}
+                        />
+                        {peakLevelRightPost > 0 && (
+                          <div
+                            className="absolute top-0 bottom-0 w-px bg-white/60"
+                            style={{ left: `${peakLevelRightPost}%` }}
+                          />
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between text-[9px] font-mono uppercase tracking-wide pt-1">
+                        <span>Comp</span>
+                        <span>{compressionReductionDb.toFixed(1)} dB</span>
+                      </div>
+                      <div className="relative h-2 overflow-hidden border-t border-white/20">
+                        <div
+                          className="h-full bg-white/70 transition-all duration-75"
+                          style={{ width: `${Math.min(100, Math.max(0, (compressionReductionDb / 24) * 100))}%` }}
+                        />
                       </div>
                     </div>
                   </div>

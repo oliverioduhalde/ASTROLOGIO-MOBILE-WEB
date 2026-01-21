@@ -94,12 +94,20 @@ export function usePlanetAudio(
 
   const [loadingProgress, setLoadingProgress] = useState(0)
   const [loadingLabel, setLoadingLabel] = useState("Inicializando audio")
-  const [audioLevelLeft, setAudioLevelLeft] = useState(0)
-  const [audioLevelRight, setAudioLevelRight] = useState(0)
-  const leftAnalyserRef = useRef<AnalyserNode | null>(null)
-  const rightAnalyserRef = useRef<AnalyserNode | null>(null)
-  const leftDataArrayRef = useRef<Uint8Array | null>(null)
-  const rightDataArrayRef = useRef<Uint8Array | null>(null)
+  const [audioLevelLeftPre, setAudioLevelLeftPre] = useState(0)
+  const [audioLevelRightPre, setAudioLevelRightPre] = useState(0)
+  const [audioLevelLeftPost, setAudioLevelLeftPost] = useState(0)
+  const [audioLevelRightPost, setAudioLevelRightPost] = useState(0)
+  const [compressionReductionDb, setCompressionReductionDb] = useState(0)
+  const preLeftAnalyserRef = useRef<AnalyserNode | null>(null)
+  const preRightAnalyserRef = useRef<AnalyserNode | null>(null)
+  const postLeftAnalyserRef = useRef<AnalyserNode | null>(null)
+  const postRightAnalyserRef = useRef<AnalyserNode | null>(null)
+  const preLeftDataArrayRef = useRef<Uint8Array | null>(null)
+  const preRightDataArrayRef = useRef<Uint8Array | null>(null)
+  const postLeftDataArrayRef = useRef<Uint8Array | null>(null)
+  const postRightDataArrayRef = useRef<Uint8Array | null>(null)
+  const compressorRef = useRef<DynamicsCompressorNode | null>(null)
 
   const backgroundSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const backgroundGainRef = useRef<GainNode | null>(null)
@@ -173,34 +181,51 @@ export function usePlanetAudio(
     }
   }, [envelope.masterVolume])
 
-  // VU Meter update loop - 50ms refresh rate, stereo
+  // VU Meter update loop - 50ms refresh rate, pre/post compression
   useEffect(() => {
     let intervalId: NodeJS.Timeout
     
     const updateVuMeter = () => {
       if (
-        leftAnalyserRef.current &&
-        rightAnalyserRef.current &&
-        leftDataArrayRef.current &&
-        rightDataArrayRef.current
+        preLeftAnalyserRef.current &&
+        preRightAnalyserRef.current &&
+        postLeftAnalyserRef.current &&
+        postRightAnalyserRef.current &&
+        preLeftDataArrayRef.current &&
+        preRightDataArrayRef.current &&
+        postLeftDataArrayRef.current &&
+        postRightDataArrayRef.current
       ) {
-        leftAnalyserRef.current.getByteFrequencyData(leftDataArrayRef.current)
-        rightAnalyserRef.current.getByteFrequencyData(rightDataArrayRef.current)
-
-        const leftSum = leftDataArrayRef.current.reduce((acc, val) => acc + val, 0)
-        const rightSum = rightDataArrayRef.current.reduce((acc, val) => acc + val, 0)
-
-        const leftAverage = leftSum / leftDataArrayRef.current.length
-        const rightAverage = rightSum / rightDataArrayRef.current.length
-
         const toDbfsPercent = (avg: number) => {
           const normalizedLevel = avg / 255
           const dbfs = normalizedLevel > 0 ? 20 * Math.log10(normalizedLevel) : -60
           return Math.max(0, Math.min(100, ((dbfs + 60) / 60) * 100))
         }
 
-        setAudioLevelLeft(toDbfsPercent(leftAverage))
-        setAudioLevelRight(toDbfsPercent(rightAverage))
+        preLeftAnalyserRef.current.getByteFrequencyData(preLeftDataArrayRef.current)
+        preRightAnalyserRef.current.getByteFrequencyData(preRightDataArrayRef.current)
+        postLeftAnalyserRef.current.getByteFrequencyData(postLeftDataArrayRef.current)
+        postRightAnalyserRef.current.getByteFrequencyData(postRightDataArrayRef.current)
+
+        const preLeftSum = preLeftDataArrayRef.current.reduce((acc, val) => acc + val, 0)
+        const preRightSum = preRightDataArrayRef.current.reduce((acc, val) => acc + val, 0)
+        const postLeftSum = postLeftDataArrayRef.current.reduce((acc, val) => acc + val, 0)
+        const postRightSum = postRightDataArrayRef.current.reduce((acc, val) => acc + val, 0)
+
+        const preLeftAverage = preLeftSum / preLeftDataArrayRef.current.length
+        const preRightAverage = preRightSum / preRightDataArrayRef.current.length
+        const postLeftAverage = postLeftSum / postLeftDataArrayRef.current.length
+        const postRightAverage = postRightSum / postRightDataArrayRef.current.length
+
+        setAudioLevelLeftPre(toDbfsPercent(preLeftAverage))
+        setAudioLevelRightPre(toDbfsPercent(preRightAverage))
+        setAudioLevelLeftPost(toDbfsPercent(postLeftAverage))
+        setAudioLevelRightPost(toDbfsPercent(postRightAverage))
+
+        if (compressorRef.current) {
+          const reduction = Math.max(0, -compressorRef.current.reduction)
+          setCompressionReductionDb(reduction)
+        }
       }
       intervalId = setTimeout(updateVuMeter, 50)
     }
@@ -250,23 +275,36 @@ export function usePlanetAudio(
           dynamicsCompressor.attack.value = 0.003
           dynamicsCompressor.release.value = 0.25
 
-          const leftAnalyser = audioContextRef.current.createAnalyser()
-          const rightAnalyser = audioContextRef.current.createAnalyser()
-          leftAnalyser.fftSize = 256
-          rightAnalyser.fftSize = 256
-          leftAnalyserRef.current = leftAnalyser
-          rightAnalyserRef.current = rightAnalyser
-          leftDataArrayRef.current = new Uint8Array(leftAnalyser.frequencyBinCount)
-          rightDataArrayRef.current = new Uint8Array(rightAnalyser.frequencyBinCount)
+          const preLeftAnalyser = audioContextRef.current.createAnalyser()
+          const preRightAnalyser = audioContextRef.current.createAnalyser()
+          const postLeftAnalyser = audioContextRef.current.createAnalyser()
+          const postRightAnalyser = audioContextRef.current.createAnalyser()
+          preLeftAnalyser.fftSize = 256
+          preRightAnalyser.fftSize = 256
+          postLeftAnalyser.fftSize = 256
+          postRightAnalyser.fftSize = 256
+          preLeftAnalyserRef.current = preLeftAnalyser
+          preRightAnalyserRef.current = preRightAnalyser
+          postLeftAnalyserRef.current = postLeftAnalyser
+          postRightAnalyserRef.current = postRightAnalyser
+          preLeftDataArrayRef.current = new Uint8Array(preLeftAnalyser.frequencyBinCount)
+          preRightDataArrayRef.current = new Uint8Array(preRightAnalyser.frequencyBinCount)
+          postLeftDataArrayRef.current = new Uint8Array(postLeftAnalyser.frequencyBinCount)
+          postRightDataArrayRef.current = new Uint8Array(postRightAnalyser.frequencyBinCount)
 
-          const splitter = audioContextRef.current.createChannelSplitter(2)
+          const preSplitter = audioContextRef.current.createChannelSplitter(2)
+          const postSplitter = audioContextRef.current.createChannelSplitter(2)
 
           resonanceSceneRef.current.output.connect(masterGainNode)
           masterGainNode.connect(dynamicsCompressor)
+          masterGainNode.connect(preSplitter)
+          compressorRef.current = dynamicsCompressor
           dynamicsCompressor.connect(audioContextRef.current.destination)
-          dynamicsCompressor.connect(splitter)
-          splitter.connect(leftAnalyser, 0)
-          splitter.connect(rightAnalyser, 1)
+          dynamicsCompressor.connect(postSplitter)
+          preSplitter.connect(preLeftAnalyser, 0)
+          preSplitter.connect(preRightAnalyser, 1)
+          postSplitter.connect(postLeftAnalyser, 0)
+          postSplitter.connect(postRightAnalyser, 1)
 
           resonanceSceneRef.current.setListenerPosition(0, 0, 0)
           console.log("[v0] Resonance Audio scene initialized with 18dB gain and limiter")
@@ -828,7 +866,10 @@ export function usePlanetAudio(
     stopElementBackground,
     loadingProgress,
     loadingLabel,
-    audioLevelLeft,
-    audioLevelRight,
+    audioLevelLeftPre,
+    audioLevelRightPre,
+    audioLevelLeftPost,
+    audioLevelRightPost,
+    compressionReductionDb,
   }
 }

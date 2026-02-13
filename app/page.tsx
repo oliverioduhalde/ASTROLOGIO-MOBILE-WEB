@@ -1600,11 +1600,11 @@ export default function AstrologyCalculator() {
             <button
               onClick={handleCalculate}
               disabled={loading}
-              className={`w-[200%] -ml-1/2 bg-white text-black py-2 text-[18px] font-mono hover:bg-gray-200 transition-colors disabled:opacity-50 ${
+              className={`block w-full mx-auto bg-white text-black py-2 text-[18px] font-mono text-center hover:bg-gray-200 transition-colors disabled:opacity-50 ${
                 isManualSubjectReady ? "send-minimal-ready" : ""
               }`}
             >
-              {loading ? "..." : "SEND MINIMAL"}
+              {loading ? "..." : "SEND"}
             </button>
           </div>
         )}

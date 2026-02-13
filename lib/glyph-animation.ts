@@ -9,7 +9,7 @@ export class GlyphAnimationManager {
   private animations: Map<string, GlyphAnimation> = new Map()
   private animationFrameIds: Map<string, number> = new Map()
 
-  startAnimation(planetName: string): (progress: number) => void {
+  startAnimation(planetName: string): void {
     const animation: GlyphAnimation = {
       planetName,
       startTime: Date.now(),
@@ -21,8 +21,6 @@ export class GlyphAnimationManager {
     if (existingId) cancelAnimationFrame(existingId)
 
     this.animations.set(planetName, animation)
-
-    let callback: (progress: number) => void = () => {}
 
     const animate = () => {
       const elapsed = Date.now() - animation.startTime
@@ -49,16 +47,11 @@ export class GlyphAnimationManager {
         return
       }
 
-      callback(scale)
       const id = requestAnimationFrame(animate)
       this.animationFrameIds.set(planetName, id)
     }
 
     animate()
-
-    return (cb: (scale: number) => void) => {
-      callback = cb
-    }
   }
 
   getScale(planetName: string): number {

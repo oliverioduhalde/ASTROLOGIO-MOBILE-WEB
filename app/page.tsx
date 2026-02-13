@@ -1508,12 +1508,12 @@ export default function AstrologyCalculator() {
                             y={position.y}
                             textAnchor="middle"
                             dominantBaseline="middle"
-                            className={`fill-[#7CFC00] font-sans text-xl select-none ${
-                              currentPlanetUnderPointer === planet.name ? "fill-[#B6FF5A]" : ""
+                            className={`fill-white font-sans text-xl select-none ${
+                              currentPlanetUnderPointer === planet.name ? "fill-white" : ""
                             }`}
                             style={{
                               paintOrder: "stroke fill",
-                              stroke: "#7CFC00",
+                              stroke: "#ffffff",
                               strokeWidth: "0.5px",
                               transform: `scale(${scale * (isHovered ? 1.2 : 1)})`, // Added hover scale
                               transformOrigin: `${position.x}px ${position.y}px`,
@@ -1677,19 +1677,36 @@ export default function AstrologyCalculator() {
 
                     {showPointer && (
                       <>
-                        {/* START button - central circle 20px */}
-                        <circle
-                          cx="200"
-                          cy="200"
-                          r="10"
-                          fill="white"
-                          fillOpacity={isLoopRunning ? 1 : 0.1}
-                          stroke="white"
-                          strokeWidth="1"
-                          opacity="1"
-                          style={{ cursor: "pointer", pointerEvents: "auto" }}
-                          onClick={handleStartClick}
-                        />
+                        {/* START button - Earth symbol (circle + cross) */}
+                        <g style={{ cursor: "pointer", pointerEvents: "auto" }} onClick={handleStartClick}>
+                          <circle
+                            cx="200"
+                            cy="200"
+                            r="10"
+                            fill="none"
+                            stroke="white"
+                            strokeWidth="1.5"
+                            opacity={isLoopRunning ? 1 : 0.65}
+                          />
+                          <line
+                            x1="200"
+                            y1="192"
+                            x2="200"
+                            y2="208"
+                            stroke="white"
+                            strokeWidth="1.2"
+                            opacity={isLoopRunning ? 1 : 0.65}
+                          />
+                          <line
+                            x1="192"
+                            y1="200"
+                            x2="208"
+                            y2="200"
+                            stroke="white"
+                            strokeWidth="1.2"
+                            opacity={isLoopRunning ? 1 : 0.65}
+                          />
+                        </g>
 
                         {/* Animated pointer - rotates clockwise from ASC (180°) */}
                         {!isLoopRunning && showPointer && (

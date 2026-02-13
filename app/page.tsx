@@ -20,6 +20,41 @@ const PLANET_GLYPHS: Record<string, string> = {
   mc: "MC",
 }
 
+type SubjectFormData = {
+  datetime: string
+  location: string
+  latitude: string
+  longitude: string
+}
+
+const PRESET_BA_FORM: SubjectFormData = {
+  datetime: "1974-09-16T12:05",
+  location: "Buenos Aires, Argentina",
+  latitude: "-34.6037",
+  longitude: "-58.3816",
+}
+
+const PRESET_CAIRO_FORM: SubjectFormData = {
+  datetime: "1970-01-01T00:00",
+  location: "El Cairo, Egipto",
+  latitude: "30.0444",
+  longitude: "31.2357",
+}
+
+const PRESET_BA77_FORM: SubjectFormData = {
+  datetime: "1977-09-28T05:35",
+  location: "Buenos Aires, Argentina",
+  latitude: "-34.6037",
+  longitude: "-58.3816",
+}
+
+const EMPTY_SUBJECT_FORM: SubjectFormData = {
+  datetime: "",
+  location: "",
+  latitude: "",
+  longitude: "",
+}
+
 function adjustPlanetPositions(planets: { name: string; degrees: number }[], minSeparation = 12) {
   const sorted = [...planets].sort((a, b) => a.degrees - b.degrees)
   const adjusted: { name: string; adjustedDegrees: number }[] = []
@@ -84,7 +119,7 @@ const calculatePointerState = (elapsed: number, duration: number, ascDegrees: nu
 
 export default function AstrologyCalculator() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [showSubject, setShowSubject] = useState(false)
+  const [showSubject, setShowSubject] = useState(true)
   const [showPlanets, setShowPlanets] = useState(false)
   const [showAspects, setShowAspects] = useState(false) // changed to false - dynaspects is the main one
   const [showAspectGraph, setShowAspectGraph] = useState(false)
@@ -108,13 +143,8 @@ export default function AstrologyCalculator() {
   const [showPointer, setShowPointer] = useState(true)
   const [showPointerInfo, setShowPointerInfo] = useState(false)
   const [isSidereal, setIsSidereal] = useState(false)
-  const [selectedPreset, setSelectedPreset] = useState<"ba" | "cairo" | "manual" | "ba77">("ba77")
-  const [formData, setFormData] = useState({
-    datetime: "1977-09-28T05:35",
-    location: "Buenos Aires, Argentina",
-    latitude: -34.6037,
-    longitude: -58.3816,
-  })
+  const [selectedPreset, setSelectedPreset] = useState<"ba" | "cairo" | "manual" | "ba77">("manual")
+  const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
   const [horoscopeData, setHoroscopeData] = useState<HoroscopeData | null>(null)
   const [error, setError] = useState<string>("")
   const [loading, setLoading] = useState(false)
@@ -127,7 +157,7 @@ export default function AstrologyCalculator() {
   const [audioFadeIn, setAudioFadeIn] = useState(5)
   const [audioFadeOut, setAudioFadeOut] = useState(10)
   const [backgroundVolume, setBackgroundVolume] = useState(25)
-  const [elementSoundVolume, setElementSoundVolume] = useState(3)
+  const [elementSoundVolume, setElementSoundVolume] = useState(2)
   const [dynAspectsFadeIn, setDynAspectsFadeIn] = useState(3)
   const [dynAspectsSustain, setDynAspectsSustain] = useState(2)
   const [dynAspectsFadeOut, setDynAspectsFadeOut] = useState(15)
@@ -156,6 +186,7 @@ export default function AstrologyCalculator() {
     {},
   )
   const glyphScaleTriggerLockRef = useRef<Record<string, number>>({})
+  const skipNextAutoCalculateRef = useRef(false)
 
   // Added hook for planet audio
   const {
@@ -186,10 +217,20 @@ export default function AstrologyCalculator() {
     })
   const lastPlayedPlanetRef = useRef<string | null>(null)
 
-  const { datetime, latitude, longitude } = formData
-  const [birthDate, birthTime] = datetime.split("T")
-
   useEffect(() => {
+    if (showSubject) return
+    if (skipNextAutoCalculateRef.current) {
+      skipNextAutoCalculateRef.current = false
+      return
+    }
+
+    const birthDateTime = formData.datetime.trim()
+    const [birthDate, birthTime] = birthDateTime.split("T")
+    const latitude = Number.parseFloat(formData.latitude.replace(",", "."))
+    const longitude = Number.parseFloat(formData.longitude.replace(",", "."))
+
+    if (!birthDate || !birthTime || Number.isNaN(latitude) || Number.isNaN(longitude)) return
+
     const calculateHoroscope = async () => {
       console.log("[v0] Calculating with isSidereal:", isSidereal)
       const data = await calculateCustomHoroscope(birthDate, birthTime, latitude, longitude, isSidereal, selectedPreset)
@@ -199,7 +240,7 @@ export default function AstrologyCalculator() {
     }
 
     calculateHoroscope()
-  }, [birthDate, birthTime, latitude, longitude, isSidereal, selectedPreset])
+  }, [formData, isSidereal, selectedPreset, showSubject])
 
   useEffect(() => {
     return () => {
@@ -414,7 +455,7 @@ export default function AstrologyCalculator() {
 
   const handleStartClick = () => {
     const currentTime = Date.now()
-    const isDoubleClick = currentTime - lastClickTimeRef.current < 300
+    const isDoubleClick = currentTime - lastClickTimeRef.current < 1000
     lastClickTimeRef.current = currentTime
 
     // Double click: Reset everything
@@ -437,6 +478,30 @@ export default function AstrologyCalculator() {
       setHoveredGlyph(null) // Clear hovered glyph on reset
       setGlyphHoverOpacity(0) // Clear hover opacity on reset
       setActivePlanetAspectsMap({}) // Clear accumulated aspects map on reset
+      stopAll()
+      setFormData({ ...PRESET_BA77_FORM })
+      setSelectedPreset("ba77")
+      setShowSubject(true)
+      setError("")
+      setElementSoundVolume(2)
+      setBackgroundVolume(25)
+      setAspectsSoundVolume(33)
+      setMasterVolume(20)
+      setLoopDuration(120)
+      setShowDynAspects(true)
+      setShowAspectGraph(false)
+      setShowAspectBox(false)
+      setShowAspectIndicator(false)
+      setShowPlanets(false)
+      setShowAspects(false)
+      setShowMatrix(false)
+      setShowCircle(false)
+      setShowDegrees(false)
+      setShowAngles(false)
+      setShowAstroChart(false)
+      setShowPointer(true)
+      setShowPointerInfo(false)
+      setIsSidereal(false)
       return
     }
 
@@ -571,14 +636,49 @@ export default function AstrologyCalculator() {
   }
 
   const handleCalculate = async () => {
+    const trimmed = {
+      datetime: formData.datetime.trim(),
+      location: formData.location.trim(),
+      latitude: formData.latitude.trim(),
+      longitude: formData.longitude.trim(),
+    }
+    const isCompletelyEmpty = Object.values(trimmed).every((value) => value === "")
+    const isComplete = Object.values(trimmed).every((value) => value !== "")
+
+    let payload: SubjectFormData = trimmed
+    let presetToUse: "ba" | "cairo" | "manual" | "ba77" = selectedPreset
+
+    if (isCompletelyEmpty) {
+      payload = PRESET_BA77_FORM
+      presetToUse = "ba77"
+      setFormData({ ...PRESET_BA77_FORM })
+      setSelectedPreset("ba77")
+    } else if (!isComplete) {
+      setError("Completa todos los datos o deja todo vacío para usar el preset 28/09/1977.")
+      return
+    } else {
+      presetToUse = "manual"
+      setSelectedPreset("manual")
+    }
+
+    const [birthDate, birthTime] = payload.datetime.split("T")
+    const latitude = Number.parseFloat(payload.latitude.replace(",", "."))
+    const longitude = Number.parseFloat(payload.longitude.replace(",", "."))
+
+    if (!birthDate || !birthTime || Number.isNaN(latitude) || Number.isNaN(longitude)) {
+      setError("Formato inválido. Revisa fecha/hora, latitud y longitud.")
+      return
+    }
+
     try {
       setError("")
       setLoading(true)
       console.log("[v0] Calculating with isSidereal:", isSidereal)
-      const data = await calculateCustomHoroscope(birthDate, birthTime, latitude, longitude, isSidereal, selectedPreset)
+      const data = await calculateCustomHoroscope(birthDate, birthTime, latitude, longitude, isSidereal, presetToUse)
       console.log("[v0] Horoscope data received:", data)
       console.log("[v0] Aspects found:", data.aspects?.length || 0, data.aspects)
       setHoroscopeData(data)
+      skipNextAutoCalculateRef.current = true
       setShowSubject(false)
     } catch (err) {
       setError("Error al calcular el horóscopo. Verifica los datos ingresados.")
@@ -589,36 +689,22 @@ export default function AstrologyCalculator() {
   }
 
   const applyPresetBA = () => {
-    setFormData({
-      datetime: "1974-09-16T12:05",
-      location: "Buenos Aires, Argentina",
-      latitude: -34.6037,
-      longitude: -58.3816,
-    })
+    setFormData({ ...PRESET_BA_FORM })
     setSelectedPreset("ba")
   }
 
   const applyPresetCairo = () => {
-    setFormData({
-      datetime: "1970-01-01T00:00",
-      location: "El Cairo, Egipto",
-      latitude: 30.0444,
-      longitude: 31.2357,
-    })
+    setFormData({ ...PRESET_CAIRO_FORM })
     setSelectedPreset("cairo")
   }
 
   const applyPresetBA77 = () => {
-    setFormData({
-      datetime: "1977-09-28T05:35",
-      location: "Buenos Aires, Argentina",
-      latitude: -34.6037,
-      longitude: -58.3816,
-    })
+    setFormData({ ...PRESET_BA77_FORM })
     setSelectedPreset("ba77")
   }
 
   const setManualMode = () => {
+    setFormData({ ...EMPTY_SUBJECT_FORM })
     setSelectedPreset("manual")
   }
 
@@ -1337,12 +1423,7 @@ export default function AstrologyCalculator() {
                     type="number"
                     step="0.0001"
                     value={formData.latitude}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        latitude: Number.parseFloat(e.target.value),
-                      })
-                    }
+                    onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
                     className="w-full bg-black border border-gray-600 text-white p-1 text-[10px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
@@ -1352,12 +1433,7 @@ export default function AstrologyCalculator() {
                     type="number"
                     step="0.0001"
                     value={formData.longitude}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        longitude: Number.parseFloat(e.target.value),
-                      })
-                    }
+                    onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
                     className="w-full bg-black border border-gray-600 text-white p-1 text-[10px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
@@ -1369,7 +1445,7 @@ export default function AstrologyCalculator() {
               disabled={loading}
               className="w-full bg-white text-black py-1 text-[9px] font-mono hover:bg-gray-200 transition-colors disabled:opacity-50"
             >
-              {loading ? "..." : "Calcular"}
+              {loading ? "..." : "Avanzar"}
             </button>
           </div>
         )}
@@ -1690,17 +1766,17 @@ export default function AstrologyCalculator() {
                           />
                           <line
                             x1="200"
-                            y1="192"
+                            y1="190"
                             x2="200"
-                            y2="208"
+                            y2="210"
                             stroke="white"
                             strokeWidth="1.2"
                             opacity={isLoopRunning ? 1 : 0.65}
                           />
                           <line
-                            x1="192"
+                            x1="190"
                             y1="200"
-                            x2="208"
+                            x2="210"
                             y2="200"
                             stroke="white"
                             strokeWidth="1.2"

@@ -27,6 +27,15 @@ type SubjectFormData = {
   longitude: string
 }
 
+type GeoSuggestion = {
+  name: string
+  country: string
+  admin1?: string
+  latitude: number
+  longitude: number
+  display: string
+}
+
 const PRESET_BA_FORM: SubjectFormData = {
   datetime: "1974-09-16T12:05",
   location: "Buenos Aires, Argentina",
@@ -187,6 +196,8 @@ export default function AstrologyCalculator() {
   )
   const glyphScaleTriggerLockRef = useRef<Record<string, number>>({})
   const skipNextAutoCalculateRef = useRef(false)
+  const [locationSuggestions, setLocationSuggestions] = useState<GeoSuggestion[]>([])
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false)
 
   // Added hook for planet audio
   const {
@@ -290,6 +301,97 @@ export default function AstrologyCalculator() {
     const db = (percent / 100) * 60 - 60
     return Math.max(-60, Math.min(0, db))
   }
+
+  const formatSuggestion = (name: string, admin1: string | undefined, country: string) => {
+    return [name, admin1, country].filter(Boolean).join(", ")
+  }
+
+  const searchLocation = useCallback(async (query: string, count = 6): Promise<GeoSuggestion[]> => {
+    const trimmed = query.trim()
+    if (!trimmed) return []
+
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=${count}&language=es&format=json`
+    const response = await fetch(url)
+    if (!response.ok) return []
+
+    const payload = await response.json()
+    const results = Array.isArray(payload?.results) ? payload.results : []
+    return results
+      .filter((item: any) => item?.name && item?.country && Number.isFinite(item?.latitude) && Number.isFinite(item?.longitude))
+      .map((item: any) => ({
+        name: item.name,
+        country: item.country,
+        admin1: item.admin1,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        display: formatSuggestion(item.name, item.admin1, item.country),
+      }))
+  }, [])
+
+  const resolveLocationAndUpdateCoords = useCallback(
+    async (rawLocation: string) => {
+      const input = rawLocation.trim()
+      if (!input) return null
+
+      setIsResolvingLocation(true)
+      try {
+        const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, " ").replace(/\s*,\s*/g, ",").trim()
+        const normalizedInput = normalize(input)
+        const pool = locationSuggestions.length > 0 ? locationSuggestions : await searchLocation(input, 8)
+
+        let best = pool.find((item) => normalize(item.display) === normalizedInput)
+        if (!best) {
+          best = pool.find((item) => normalize(item.display).includes(normalizedInput))
+        }
+        if (!best) {
+          const fallback = await searchLocation(input, 1)
+          best = fallback[0]
+        }
+        if (!best) return null
+
+        setFormData((prev) => ({
+          ...prev,
+          location: best.display,
+          latitude: best.latitude.toFixed(4),
+          longitude: best.longitude.toFixed(4),
+        }))
+        setLocationSuggestions((prev) => (prev.length > 0 ? prev : [best]))
+        return best
+      } catch {
+        return null
+      } finally {
+        setIsResolvingLocation(false)
+      }
+    },
+    [locationSuggestions, searchLocation],
+  )
+
+  useEffect(() => {
+    if (!showSubject || selectedPreset !== "manual") return
+
+    const q = formData.location.trim()
+    if (q.length < 2) {
+      setLocationSuggestions([])
+      return
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const results = await searchLocation(q, 6)
+        setLocationSuggestions(results)
+      } catch {
+        setLocationSuggestions([])
+      }
+    }, 220)
+
+    return () => clearTimeout(timeoutId)
+  }, [formData.location, searchLocation, selectedPreset, showSubject])
+
+  useEffect(() => {
+    if (selectedPreset !== "manual" || !showSubject) {
+      setLocationSuggestions([])
+    }
+  }, [selectedPreset, showSubject])
 
   // Remove playPlanetSound from dependencies, use useCallback from hook instead
   const triggerPlanetSound = useCallback(
@@ -636,29 +738,42 @@ export default function AstrologyCalculator() {
   }
 
   const handleCalculate = async () => {
-    const trimmed = {
+    let trimmed = {
       datetime: formData.datetime.trim(),
       location: formData.location.trim(),
       latitude: formData.latitude.trim(),
       longitude: formData.longitude.trim(),
     }
-    const isCompletelyEmpty = Object.values(trimmed).every((value) => value === "")
-    const isComplete = Object.values(trimmed).every((value) => value !== "")
 
     let payload: SubjectFormData = trimmed
     let presetToUse: "ba" | "cairo" | "manual" | "ba77" = selectedPreset
 
-    if (isCompletelyEmpty) {
+    if (Object.values(trimmed).every((value) => value === "")) {
       payload = PRESET_BA77_FORM
       presetToUse = "ba77"
       setFormData({ ...PRESET_BA77_FORM })
       setSelectedPreset("ba77")
-    } else if (!isComplete) {
-      setError("Completa todos los datos o deja todo vacío para usar el preset 28/09/1977.")
-      return
     } else {
-      presetToUse = "manual"
-      setSelectedPreset("manual")
+      if (trimmed.location) {
+        const resolved = await resolveLocationAndUpdateCoords(trimmed.location)
+        if (resolved) {
+          const fresh = {
+            datetime: trimmed.datetime,
+            location: resolved.display,
+            latitude: resolved.latitude.toFixed(4),
+            longitude: resolved.longitude.toFixed(4),
+          }
+          trimmed = fresh
+          payload = fresh
+        }
+      }
+
+      const isComplete = Object.values(trimmed).every((value) => value !== "")
+      if (!isComplete) {
+        setError("Completa todos los datos o deja todo vacío para usar el preset 28/09/1977.")
+        return
+      }
+      payload = trimmed
     }
 
     const [birthDate, birthTime] = payload.datetime.split("T")
@@ -1397,44 +1512,79 @@ export default function AstrologyCalculator() {
             </div>
 
             {selectedPreset === "manual" && (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[9px] text-gray-400 mb-1 font-mono">Fecha y Hora</label>
+                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Fecha y Hora</label>
                   <input
                     type="datetime-local"
                     value={formData.datetime}
                     onChange={(e) => setFormData({ ...formData, datetime: e.target.value })}
-                    className="w-full bg-black border border-gray-600 text-white p-1 text-[10px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 text-white p-2 text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
-                <div>
-                  <label className="block text-[9px] text-gray-400 mb-1 font-mono">Lugar</label>
+                <div className="relative">
+                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Lugar</label>
                   <input
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full bg-black border border-gray-600 text-white p-1 text-[10px] font-mono focus:border-white focus:outline-none"
-                    placeholder="Ciudad, País"
+                    onBlur={() => {
+                      if (formData.location.trim()) {
+                        void resolveLocationAndUpdateCoords(formData.location)
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if ((e.key === "Enter" || e.key === "Tab") && formData.location.trim()) {
+                        void resolveLocationAndUpdateCoords(formData.location)
+                      }
+                    }}
+                    className="w-full bg-black border border-gray-500 text-white p-2 text-[20px] font-mono focus:border-white focus:outline-none"
+                    placeholder="Ciudad o País"
                   />
+                  {isResolvingLocation && (
+                    <div className="mt-1 text-[12px] font-mono text-white/70">Resolviendo ubicación...</div>
+                  )}
+                  {locationSuggestions.length > 0 && (
+                    <div className="absolute z-20 mt-1 w-full border border-gray-500 bg-black max-h-44 overflow-y-auto">
+                      {locationSuggestions.map((suggestion, index) => (
+                        <button
+                          key={`${suggestion.display}-${index}`}
+                          type="button"
+                          className="w-full text-left px-2 py-2 text-[15px] font-mono text-white hover:bg-white hover:text-black transition-colors border-b border-gray-700 last:border-b-0"
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              location: suggestion.display,
+                              latitude: suggestion.latitude.toFixed(4),
+                              longitude: suggestion.longitude.toFixed(4),
+                            }))
+                            setLocationSuggestions([])
+                          }}
+                        >
+                          {suggestion.display}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-[9px] text-gray-400 mb-1 font-mono">Latitud</label>
+                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Latitud</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={formData.latitude}
                     onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                    className="w-full bg-black border border-gray-600 text-white p-1 text-[10px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 text-white p-2 text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] text-gray-400 mb-1 font-mono">Longitud</label>
+                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Longitud</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={formData.longitude}
                     onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                    className="w-full bg-black border border-gray-600 text-white p-1 text-[10px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 text-white p-2 text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
               </div>

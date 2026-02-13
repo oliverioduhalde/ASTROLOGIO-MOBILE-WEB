@@ -171,7 +171,7 @@ export default function AstrologyCalculator() {
   const [dynAspectsSustain, setDynAspectsSustain] = useState(2)
   const [dynAspectsFadeOut, setDynAspectsFadeOut] = useState(15)
 
-  const [aspectsSoundVolume, setAspectsSoundVolume] = useState(50)
+  const [aspectsSoundVolume, setAspectsSoundVolume] = useState(40)
   const [masterVolume, setMasterVolume] = useState(50) // Nuevo estado para controlar volumen maestro (0-100%)
   const [tuningCents, setTuningCents] = useState(0)
 
@@ -588,7 +588,7 @@ export default function AstrologyCalculator() {
       setError("")
       setElementSoundVolume(2)
       setBackgroundVolume(2)
-      setAspectsSoundVolume(50)
+      setAspectsSoundVolume(40)
       setMasterVolume(50)
       setLoopDuration(120)
       setShowDynAspects(true)

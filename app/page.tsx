@@ -79,6 +79,8 @@ const MODE_NAME_BY_SIGN_INDEX: Record<number, string> = {
   11: "Locrio",
 }
 
+type AudioEngineMode = "samples" | "hybrid" | "fm_pad"
+
 function adjustPlanetPositions(planets: { name: string; degrees: number }[], minSeparation = 12) {
   const sorted = [...planets].sort((a, b) => a.degrees - b.degrees)
   const adjusted: { name: string; adjustedDegrees: number }[] = []
@@ -186,10 +188,11 @@ export default function AstrologyCalculator() {
   const [dynAspectsSustain, setDynAspectsSustain] = useState(2)
   const [dynAspectsFadeOut, setDynAspectsFadeOut] = useState(15)
 
-  const [aspectsSoundVolume, setAspectsSoundVolume] = useState(40)
+  const [aspectsSoundVolume, setAspectsSoundVolume] = useState(30)
   const [masterVolume, setMasterVolume] = useState(50) // Nuevo estado para controlar volumen maestro (0-100%)
   const [tuningCents, setTuningCents] = useState(0)
   const [modalEnabled, setModalEnabled] = useState(true)
+  const [audioEngineMode, setAudioEngineMode] = useState<AudioEngineMode>("samples")
 
   const [glyphAnimationManager] = useState(() => new GlyphAnimationManager())
   const [animatedPlanets, setAnimatedPlanets] = useState<Record<string, number>>({})
@@ -252,6 +255,7 @@ export default function AstrologyCalculator() {
       dynAspectsFadeOut: dynAspectsFadeOut,
       modalEnabled,
       modalSunSignIndex,
+      audioEngineMode,
     })
   const lastPlayedPlanetRef = useRef<string | null>(null)
 
@@ -375,15 +379,16 @@ export default function AstrologyCalculator() {
           best = fallback[0]
         }
         if (!best) return null
+        const selected = best
 
         setFormData((prev) => ({
           ...prev,
-          location: best.display,
-          latitude: best.latitude.toFixed(4),
-          longitude: best.longitude.toFixed(4),
+          location: selected.display,
+          latitude: selected.latitude.toFixed(4),
+          longitude: selected.longitude.toFixed(4),
         }))
-        setLocationSuggestions((prev) => (prev.length > 0 ? prev : [best]))
-        return best
+        setLocationSuggestions((prev) => (prev.length > 0 ? prev : [selected]))
+        return selected
       } catch {
         return null
       } finally {
@@ -615,9 +620,10 @@ export default function AstrologyCalculator() {
       setError("")
       setElementSoundVolume(2)
       setBackgroundVolume(2)
-      setAspectsSoundVolume(40)
+      setAspectsSoundVolume(30)
       setMasterVolume(50)
       setModalEnabled(true)
+      setAudioEngineMode("samples")
       setLoopDuration(180)
       setShowDynAspects(true)
       setShowAspectGraph(false)
@@ -939,6 +945,7 @@ export default function AstrologyCalculator() {
     // Update animation state every frame
     const interval = setInterval(() => {
       const scale = glyphAnimationManager.getScale(planetName)
+      const animation = glyphAnimationManager["animations"]?.get(planetName)
       setAnimatedPlanets((prev) => ({
         ...prev,
         [planetName]: scale,
@@ -947,8 +954,8 @@ export default function AstrologyCalculator() {
       // Check if animation is complete and a certain time has passed to ensure it has been visible
       if (
         scale === 1 &&
-        glyphAnimationManager["animations"]?.get(planetName)?.startTime &&
-        Date.now() - glyphAnimationManager["animations"].get(planetName).startTime > 20000
+        animation?.startTime &&
+        Date.now() - animation.startTime > 20000
       ) {
         clearInterval(interval)
       }
@@ -969,12 +976,14 @@ export default function AstrologyCalculator() {
     const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
     const mcDegrees = horoscopeData?.mc?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
 
+    const currentPlanets = horoscopeData?.planets ?? []
+
     playPlanetSound(
       planetName,
       degrees,
       planet.declination || 0,
       aspectsForPlanet,
-      horoscopeData.planets,
+      currentPlanets,
       ascDegrees,
       mcDegrees,
       40,
@@ -1267,6 +1276,20 @@ export default function AstrologyCalculator() {
 
                   <div className="space-y-1">
                     <div className="font-mono text-[7.5px] uppercase tracking-wide">Audio Envelope</div>
+
+                    <div className="flex items-center gap-1">
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">Engine</label>
+                      <select
+                        value={audioEngineMode}
+                        onChange={(e) => setAudioEngineMode(e.target.value as AudioEngineMode)}
+                        className="bg-black border border-white text-white text-[7px] px-1 py-0.5 w-32 font-mono"
+                      >
+                        <option value="samples">Samples</option>
+                        <option value="hybrid">Hybrid</option>
+                        <option value="fm_pad">FM Pad</option>
+                      </select>
+                      <span className="font-mono text-[6.5px] w-8 text-right uppercase">Mode</span>
+                    </div>
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">Fade In</label>

@@ -58,6 +58,7 @@
     "sonner": "^1.7.4",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "tone": "^15.1.22",
     "vaul": "^1.1.2",
     "zod": "3.25.76"
   },

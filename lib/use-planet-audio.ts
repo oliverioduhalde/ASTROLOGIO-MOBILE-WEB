@@ -15,6 +15,8 @@ interface AudioTrack {
   panner?: any
 }
 
+type AudioEngineMode = "samples" | "hybrid" | "fm_pad"
+
 interface AudioEnvelope {
   fadeIn: number
   fadeOut: number
@@ -28,6 +30,7 @@ interface AudioEnvelope {
   dynAspectsFadeOut?: number
   modalEnabled?: boolean
   modalSunSignIndex?: number | null
+  audioEngineMode?: AudioEngineMode
 }
 
 interface Position3D {
@@ -109,6 +112,14 @@ const SIGN_PLANET_PROXIMITY: Record<number, string[]> = {
 const INTERVAL_TARGET_BY_PROXIMITY = [0, 7, 5, 4, 3, 9, 8, 2, 10, 11, 1, 6]
 const CONSONANCE_PRIORITY = INTERVAL_TARGET_BY_PROXIMITY
 const DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES = -24 // Two octaves down by default
+const ASPECT_SEMITONE_OFFSETS: Record<string, number> = {
+  Conjunción: 0,
+  Oposición: 14,
+  Cuadrado: 6,
+  Cuadratura: 6,
+  Trígono: 7,
+  Sextil: 5,
+}
 
 function mod12(value: number): number {
   return ((value % 12) + 12) % 12
@@ -170,12 +181,17 @@ function getModalPlanetSemitoneOffset(planetName: string, sunSignIndex: number):
   return signRootPc + resolvedInterval + legacyOctave * 12
 }
 
-function getPlanetPrincipalPlaybackRate(planetName: string, modalEnabled: boolean, sunSignIndex: number | null): number {
+function getPlanetPrincipalSemitoneOffset(planetName: string, modalEnabled: boolean, sunSignIndex: number | null): number {
   const normalized = planetName.toLowerCase()
-  const semitones =
+  return (
     modalEnabled && sunSignIndex !== null
       ? getModalPlanetSemitoneOffset(normalized, sunSignIndex)
       : getLegacyPlanetSemitoneOffset(normalized)
+  )
+}
+
+function getPlanetPrincipalPlaybackRate(planetName: string, modalEnabled: boolean, sunSignIndex: number | null): number {
+  const semitones = getPlanetPrincipalSemitoneOffset(planetName, modalEnabled, sunSignIndex)
 
   return Math.pow(2, (semitones + DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES) / 12)
 }
@@ -276,6 +292,10 @@ export function usePlanetAudio(
   const modalSunSignIndexRef = useRef<number | null>(
     typeof envelope.modalSunSignIndex === "number" ? envelope.modalSunSignIndex : null,
   )
+  const audioEngineModeRef = useRef<AudioEngineMode>(envelope.audioEngineMode || "samples")
+  const toneModuleRef = useRef<any>(null)
+  const fmPadSynthRef = useRef<any>(null)
+  const fmPadGainRef = useRef<any>(null)
 
   useEffect(() => {
     backgroundVolumeRef.current = envelope.backgroundVolume || 20
@@ -331,12 +351,24 @@ export function usePlanetAudio(
   }, [envelope.modalSunSignIndex])
 
   useEffect(() => {
+    audioEngineModeRef.current = envelope.audioEngineMode || "samples"
+  }, [envelope.audioEngineMode])
+
+  useEffect(() => {
     const vol = envelope.masterVolume !== undefined ? envelope.masterVolume : 20
     masterVolumeRef.current = vol
     if (masterGainNodeRef.current) {
       // 28 dB base gain (18dB + 10dB) * masterVolume (0-100%)
       const baseGain = Math.pow(10, 28 / 20) // 28 dB = 25.1x
       masterGainNodeRef.current.gain.value = baseGain * (vol / 100)
+    }
+    if (fmPadGainRef.current?.gain) {
+      const fmGain = Math.max(0, (vol / 100) * 0.22)
+      if (typeof fmPadGainRef.current.gain.rampTo === "function") {
+        fmPadGainRef.current.gain.rampTo(fmGain, 0.05)
+      } else {
+        fmPadGainRef.current.gain.value = fmGain
+      }
     }
   }, [envelope.masterVolume])
 
@@ -774,6 +806,94 @@ export function usePlanetAudio(
     }, FADE_OUT_TIME * 1000)
   }, [])
 
+  const initializeFmPadSynth = useCallback(async () => {
+    if (fmPadSynthRef.current && toneModuleRef.current) {
+      return
+    }
+
+    const Tone = await import("tone")
+    toneModuleRef.current = Tone
+
+    await Tone.start()
+
+    const synth = new Tone.PolySynth(Tone.FMSynth, {
+      harmonicity: 1.8,
+      modulationIndex: 6,
+      oscillator: { type: "sine" },
+      envelope: {
+        attack: 0.9,
+        decay: 0.8,
+        sustain: 0.65,
+        release: 3.2,
+      },
+      modulation: { type: "triangle" },
+      modulationEnvelope: {
+        attack: 1.2,
+        decay: 1.0,
+        sustain: 0.55,
+        release: 2.6,
+      },
+    })
+    synth.volume.value = -8
+
+    const filter = new Tone.Filter({ type: "lowpass", frequency: 2200, rolloff: -24 })
+    const chorus = new Tone.Chorus({ frequency: 0.8, delayTime: 2.2, depth: 0.25, wet: 0.22 }).start()
+    const reverb = new Tone.Reverb({ decay: 2.6, preDelay: 0.03, wet: 0.24 })
+    await reverb.generate()
+
+    const gain = new Tone.Gain(Math.max(0, (masterVolumeRef.current / 100) * 0.22))
+
+    synth.connect(filter)
+    filter.connect(chorus)
+    chorus.connect(reverb)
+    reverb.connect(gain)
+    gain.toDestination()
+
+    fmPadSynthRef.current = synth
+    fmPadGainRef.current = gain
+  }, [])
+
+  const triggerFmPadNotes = useCallback(
+    async (
+      principalSemitoneOffset: number,
+      aspects: any[] = [],
+      aspectVolumeOverride?: number,
+    ) => {
+      await initializeFmPadSynth()
+      if (!toneModuleRef.current || !fmPadSynthRef.current) return
+
+      const Tone = toneModuleRef.current
+      const synth = fmPadSynthRef.current
+      const tunedRate = centsToPlaybackRate(tuningCentsRef.current)
+      const pitchShiftFromTuning = 12 * Math.log2(tunedRate)
+      const baseMidi = 60 + principalSemitoneOffset + DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES + pitchShiftFromTuning
+
+      const principalDuration = Math.max(
+        0.8,
+        (Number.isFinite(envelope.fadeIn) ? envelope.fadeIn : 7) + (Number.isFinite(envelope.fadeOut) ? envelope.fadeOut : 7),
+      )
+      const principalNote = Tone.Frequency(baseMidi, "midi").toNote()
+      synth.triggerAttackRelease(principalNote, principalDuration)
+
+      if (!aspects || aspects.length === 0) return
+
+      const aspectVolume =
+        typeof aspectVolumeOverride === "number" ? aspectVolumeOverride : aspectsSoundVolumeRef.current
+      const aspectGainFactor = Math.max(0.1, Math.min(1, aspectVolume / 100))
+      const aspectDuration = Math.max(0.6, dynAspectsFadeInRef.current + dynAspectsSustainRef.current + dynAspectsFadeOutRef.current)
+
+      aspects.forEach((aspect, index) => {
+        const semitoneOffset = ASPECT_SEMITONE_OFFSETS[aspect.aspectType] ?? null
+        if (semitoneOffset === null) return
+        const aspectMidi = baseMidi + semitoneOffset
+        const aspectNote = Tone.Frequency(aspectMidi, "midi").toNote()
+        const velocity = Math.max(0.08, Math.min(0.7, 0.45 * aspectGainFactor))
+        synth.triggerAttackRelease(aspectNote, aspectDuration, `+${index * 0.03}`, velocity)
+      })
+    },
+    [envelope.fadeIn, envelope.fadeOut, initializeFmPadSynth],
+  )
+
   const playPlanetSound = useCallback(
     async (
       planetName: string,
@@ -787,9 +907,35 @@ export function usePlanetAudio(
     ) => {
       await initializeAudio()
       const normalizedPlanetName = planetName.toLowerCase()
+      const audioMode = audioEngineModeRef.current || "samples"
 
       if (playingPlanetsRef.current.has(planetName)) {
         console.log(`[v0] Planet ${planetName} is already playing`)
+        return
+      }
+
+      const principalSemitoneOffset = getPlanetPrincipalSemitoneOffset(
+        normalizedPlanetName,
+        modalEnabledRef.current,
+        modalSunSignIndexRef.current,
+      )
+      const basePlaybackRate = getPlanetPrincipalPlaybackRate(
+        normalizedPlanetName,
+        modalEnabledRef.current,
+        modalSunSignIndexRef.current,
+      )
+      const fmTotalDuration =
+        (Number.isFinite(envelope.fadeIn) ? envelope.fadeIn : 7) + (Number.isFinite(envelope.fadeOut) ? envelope.fadeOut : 7)
+
+      if (audioMode === "hybrid" || audioMode === "fm_pad") {
+        await triggerFmPadNotes(principalSemitoneOffset, aspects, aspectVolumeOverride)
+      }
+
+      if (audioMode === "fm_pad") {
+        playingPlanetsRef.current.add(planetName)
+        setTimeout(() => {
+          playingPlanetsRef.current.delete(planetName)
+        }, Math.max(200, fmTotalDuration * 1000))
         return
       }
 
@@ -822,11 +968,6 @@ export function usePlanetAudio(
         const source = ctx.createBufferSource() as AudioBufferSourceNode
         source.buffer = audioBuffer
 
-        const basePlaybackRate = getPlanetPrincipalPlaybackRate(
-          normalizedPlanetName,
-          modalEnabledRef.current,
-          modalSunSignIndexRef.current,
-        )
         source.playbackRate.value = basePlaybackRate
 
         if (!resonanceSceneRef.current || !resonanceSceneRef.current.output) {
@@ -908,16 +1049,6 @@ export function usePlanetAudio(
         playingPlanetsRef.current.add(planetName)
 
         if (aspects && aspects.length > 0) {
-          // Aspect transposition map in semitones (requested tuning)
-          const aspectSemitoneOffsets: Record<string, number> = {
-            Conjunción: 0,
-            Oposición: 14,
-            Cuadrado: 6,
-            Cuadratura: 6,
-            Trígono: 7,
-            Sextil: 5,
-          }
-
           // Play aspects with inherited zodiacal playbackRate plus aspect transposition
           for (const aspect of aspects) {
             const otherPlanetName = aspect.point1.name === planetName ? aspect.point2.name : aspect.point1.name
@@ -942,7 +1073,7 @@ export function usePlanetAudio(
 
             if (otherPlanetDegrees === null) continue
 
-            const aspectSemitoneOffset = aspectSemitoneOffsets[aspect.aspectType] ?? 0
+            const aspectSemitoneOffset = ASPECT_SEMITONE_OFFSETS[aspect.aspectType] ?? 0
             const aspectTransposeRate = Math.pow(2, aspectSemitoneOffset / 12)
             const aspectPlaybackRate = basePlaybackRate * aspectTransposeRate
 
@@ -1025,7 +1156,7 @@ export function usePlanetAudio(
         console.error(`[v0] Error playing sound for ${planetName}:`, error)
       }
     },
-    [envelope.fadeIn, envelope.fadeOut, initializeAudio],
+    [envelope.fadeIn, envelope.fadeOut, initializeAudio, triggerFmPadNotes],
   )
 
   const stopAll = useCallback(() => {
@@ -1038,6 +1169,9 @@ export function usePlanetAudio(
     })
     activeTracksRef.current.clear()
     playingPlanetsRef.current.clear()
+    if (fmPadSynthRef.current && typeof fmPadSynthRef.current.releaseAll === "function") {
+      fmPadSynthRef.current.releaseAll()
+    }
   }, [])
 
   useEffect(() => {
@@ -1049,6 +1183,22 @@ export function usePlanetAudio(
       stopAll()
       stopBackgroundSound()
       stopElementBackground()
+      if (fmPadSynthRef.current) {
+        try {
+          fmPadSynthRef.current.dispose()
+        } catch (e) {
+          // ignore
+        }
+        fmPadSynthRef.current = null
+      }
+      if (fmPadGainRef.current) {
+        try {
+          fmPadGainRef.current.dispose()
+        } catch (e) {
+          // ignore
+        }
+        fmPadGainRef.current = null
+      }
       if (audioContextRef.current) {
         audioContextRef.current.close()
       }

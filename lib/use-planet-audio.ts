@@ -288,7 +288,7 @@ export function usePlanetAudio(
   const masterVolumeRef = useRef(envelope.masterVolume ?? 20)
   const tuningCentsRef = useRef(envelope.tuningCents ?? 0)
   const elementSoundVolumeRef = useRef(envelope.elementSoundVolume ?? 40)
-  const synthVolumeRef = useRef(envelope.synthVolume ?? 150)
+  const synthVolumeRef = useRef(envelope.synthVolume ?? 450)
   const masterGainNodeRef = useRef<GainNode | null>(null)
   const planetReverbImpulseRef = useRef<AudioBuffer | null>(null)
   const dynAspectsFadeInRef = useRef(envelope.dynAspectsFadeIn ?? 3)
@@ -348,7 +348,7 @@ export function usePlanetAudio(
   }, [envelope.dynAspectsFadeIn, envelope.dynAspectsSustain, envelope.dynAspectsFadeOut])
 
   useEffect(() => {
-    synthVolumeRef.current = envelope.synthVolume ?? 150
+    synthVolumeRef.current = envelope.synthVolume ?? 450
     if (fmPadGainRef.current?.gain) {
       const fmGain = getFmPadGainValue(masterVolumeRef.current, synthVolumeRef.current)
       if (typeof fmPadGainRef.current.gain.rampTo === "function") {
@@ -859,15 +859,17 @@ export function usePlanetAudio(
 
     const filter = new Tone.Filter({ type: "lowpass", frequency: 2200, rolloff: -24 })
     const chorus = new Tone.Chorus({ frequency: 0.8, delayTime: 2.2, depth: 0.25, wet: 0.22 }).start()
-    const reverb = new Tone.Reverb({ decay: 2.6, preDelay: 0.03, wet: 0.24 })
+    const reverb = new Tone.Reverb({ decay: 3, preDelay: 0.008, wet: 0.2 })
     await reverb.generate()
+    const reverbShelf = new Tone.Filter({ type: "highshelf", frequency: 800, gain: -6 })
 
     const gain = new Tone.Gain(getFmPadGainValue(masterVolumeRef.current, synthVolumeRef.current))
 
     synth.connect(filter)
     filter.connect(chorus)
     chorus.connect(reverb)
-    reverb.connect(gain)
+    reverb.connect(reverbShelf)
+    reverbShelf.connect(gain)
     gain.toDestination()
 
     fmPadSynthRef.current = synth

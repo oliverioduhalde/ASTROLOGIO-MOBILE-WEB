@@ -193,7 +193,7 @@ export default function AstrologyCalculator() {
   const [tuningCents, setTuningCents] = useState(0)
   const [modalEnabled, setModalEnabled] = useState(true)
   const [audioEngineMode, setAudioEngineMode] = useState<AudioEngineMode>("samples")
-  const [synthVolume, setSynthVolume] = useState(150)
+  const [synthVolume, setSynthVolume] = useState(450)
 
   const [glyphAnimationManager] = useState(() => new GlyphAnimationManager())
   const [animatedPlanets, setAnimatedPlanets] = useState<Record<string, number>>({})
@@ -624,7 +624,7 @@ export default function AstrologyCalculator() {
       setBackgroundVolume(2)
       setAspectsSoundVolume(30)
       setMasterVolume(50)
-      setSynthVolume(150)
+      setSynthVolume(450)
       setModalEnabled(true)
       setAudioEngineMode("samples")
       setLoopDuration(180)
@@ -1388,7 +1388,7 @@ export default function AstrologyCalculator() {
                       <input
                         type="range"
                         min="0"
-                        max="200"
+                        max="600"
                         value={synthVolume}
                         onChange={(e) => setSynthVolume(Number(e.target.value))}
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"

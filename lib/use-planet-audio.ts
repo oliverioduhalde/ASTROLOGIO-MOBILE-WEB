@@ -78,6 +78,18 @@ function getPlaybackRateFromPlanet(planetName: string): number {
   return Math.pow(2, semitones / 12)
 }
 
+function getPlanetVolumeMultiplier(planetName: string): number {
+  const normalized = planetName.toLowerCase()
+  const volumeMultipliers: Record<string, number> = {
+    sun: 1.2, // +20%
+    pluto: 1.25, // +25%
+    mercury: 0.8, // -20%
+    neptune: 1.2, // +20%
+  }
+
+  return volumeMultipliers[normalized] ?? 1
+}
+
 function centsToPlaybackRate(cents: number): number {
   return Math.pow(2, cents / 1200)
 }
@@ -686,11 +698,12 @@ export function usePlanetAudio(
         const totalDuration = fadeInTime + fadeOutTime
 
         const currentTime = ctx.currentTime
+        const planetVolumeMultiplier = getPlanetVolumeMultiplier(planetName)
 
         gainNode.gain.setValueAtTime(0, currentTime)
-        gainNode.gain.linearRampToValueAtTime(1, currentTime + fadeInTime)
+        gainNode.gain.linearRampToValueAtTime(planetVolumeMultiplier, currentTime + fadeInTime)
 
-        gainNode.gain.setValueAtTime(1, currentTime + fadeInTime)
+        gainNode.gain.setValueAtTime(planetVolumeMultiplier, currentTime + fadeInTime)
         gainNode.gain.linearRampToValueAtTime(0, currentTime + totalDuration)
 
         source.start(currentTime, startOffset)
@@ -764,7 +777,8 @@ export function usePlanetAudio(
 
             const aspectVolume =
               typeof aspectVolumeOverride === "number" ? aspectVolumeOverride : aspectsSoundVolumeRef.current
-            const baseVolume = 0.33 * (aspectVolume / 100)
+            const aspectPlanetVolumeMultiplier = getPlanetVolumeMultiplier(otherPlanetName)
+            const baseVolume = 0.33 * (aspectVolume / 100) * aspectPlanetVolumeMultiplier
 
             // Use dynAspects times instead of planet times
             const aspectFadeInTime = dynAspectsFadeInRef.current

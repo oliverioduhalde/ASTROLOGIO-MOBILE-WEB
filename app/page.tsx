@@ -165,7 +165,7 @@ export default function AstrologyCalculator() {
 
   const [audioFadeIn, setAudioFadeIn] = useState(5)
   const [audioFadeOut, setAudioFadeOut] = useState(10)
-  const [backgroundVolume, setBackgroundVolume] = useState(17)
+  const [backgroundVolume, setBackgroundVolume] = useState(2)
   const [elementSoundVolume, setElementSoundVolume] = useState(2)
   const [dynAspectsFadeIn, setDynAspectsFadeIn] = useState(3)
   const [dynAspectsSustain, setDynAspectsSustain] = useState(2)
@@ -587,7 +587,7 @@ export default function AstrologyCalculator() {
       setShowChart(false)
       setError("")
       setElementSoundVolume(2)
-      setBackgroundVolume(17)
+      setBackgroundVolume(2)
       setAspectsSoundVolume(50)
       setMasterVolume(50)
       setLoopDuration(120)
@@ -1682,8 +1682,7 @@ export default function AstrologyCalculator() {
                       const scale = animatedPlanets[planet.name] || 1
                       // Added hover detection for glyphs
                       const isHovered = hoveredGlyph === planet.name
-                      const hoverScale = isHovered ? 1.2 : 1
-                      const hoverGlowScale = isHovered ? 1.2 : 1
+                      const pointerScale = currentPlanetUnderPointer === planet.name ? 1.1 : 1
 
                       return (
                         <g
@@ -1751,7 +1750,7 @@ export default function AstrologyCalculator() {
                               paintOrder: "stroke fill",
                               stroke: "#ffffff",
                               strokeWidth: "0.5px",
-                              transform: `scale(${scale * (isHovered ? 1.2 : 1)})`, // Added hover scale
+                              transform: `scale(${scale * (isHovered ? 1.2 : 1) * pointerScale})`,
                               transformOrigin: `${position.x}px ${position.y}px`,
                               transition: "none",
                             }}

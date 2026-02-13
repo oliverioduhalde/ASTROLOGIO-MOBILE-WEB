@@ -712,11 +712,19 @@ export function usePlanetAudio(
         playingPlanetsRef.current.add(planetName)
 
         if (aspects && aspects.length > 0) {
-          // Play aspects with inherited playbackRate (zodiacal note of main planet)
+          // Aspect transposition map in semitones (requested tuning)
+          const aspectSemitoneOffsets: Record<string, number> = {
+            Conjunción: 0,
+            Oposición: 14,
+            Cuadrado: 6,
+            Cuadratura: 6,
+            Trígono: 7,
+            Sextil: 5,
+          }
+
+          // Play aspects with inherited zodiacal playbackRate plus aspect transposition
           for (const aspect of aspects) {
             const otherPlanetName = aspect.point1.name === planetName ? aspect.point2.name : aspect.point1.name
-
-            if (aspect.aspectType === "Conjunción") continue
 
             const otherAudioBuffer = audioBuffersRef.current[otherPlanetName.toLowerCase()]
             if (!otherAudioBuffer) continue
@@ -738,13 +746,9 @@ export function usePlanetAudio(
 
             if (otherPlanetDegrees === null) continue
 
-            // Don't use aspect-specific pitch shifts anymore
-            // Aspects now inherit the main planet's zodiacal note
-
-
-            // Aspects inherit the zodiacal note (playbackRate) of the main planet
-            // No additional pitch shift applied, just the main planet's note
-            const aspectPlaybackRate = 1.0
+            const aspectSemitoneOffset = aspectSemitoneOffsets[aspect.aspectType] ?? 0
+            const aspectTransposeRate = Math.pow(2, aspectSemitoneOffset / 12)
+            const aspectPlaybackRate = basePlaybackRate * aspectTransposeRate
 
             const aspectSource = ctx.createBufferSource() as AudioBufferSourceNode
             aspectSource.buffer = otherAudioBuffer

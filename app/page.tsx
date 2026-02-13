@@ -823,6 +823,13 @@ export default function AstrologyCalculator() {
     setSelectedPreset("manual")
   }
 
+  const isManualSubjectReady =
+    selectedPreset === "manual" &&
+    formData.datetime.trim() !== "" &&
+    formData.location.trim() !== "" &&
+    formData.latitude.trim() !== "" &&
+    formData.longitude.trim() !== ""
+
   const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
   const chartRotation = 180 - ascDegrees
   const adjustToCanvasAngle = (lambda: number) => norm360(lambda + chartRotation)
@@ -1593,9 +1600,11 @@ export default function AstrologyCalculator() {
             <button
               onClick={handleCalculate}
               disabled={loading}
-              className="w-full bg-white text-black py-1 text-[9px] font-mono hover:bg-gray-200 transition-colors disabled:opacity-50"
+              className={`w-[200%] -ml-1/2 bg-white text-black py-2 text-[18px] font-mono hover:bg-gray-200 transition-colors disabled:opacity-50 ${
+                isManualSubjectReady ? "send-minimal-ready" : ""
+              }`}
             >
-              {loading ? "..." : "Avanzar"}
+              {loading ? "..." : "SEND MINIMAL"}
             </button>
           </div>
         )}

@@ -222,3 +222,16 @@
   background: #ffffff;
   border-radius: 9999px;
 }
+
+@keyframes send-minimal-glow {
+  0% {
+    box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 24px rgba(255, 255, 255, 1);
+  }
+}
+
+.send-minimal-ready {
+  animation: send-minimal-glow 1s ease-in-out infinite alternate;
+}

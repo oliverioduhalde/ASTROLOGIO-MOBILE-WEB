@@ -1682,7 +1682,11 @@ export default function AstrologyCalculator() {
                       const scale = animatedPlanets[planet.name] || 1
                       // Added hover detection for glyphs
                       const isHovered = hoveredGlyph === planet.name
-                      const pointerScale = currentPlanetUnderPointer === planet.name ? 1.25 : 1
+                      const pointerLeadAngle = norm360(debugPointerAngle + 7)
+                      const glyphAngle = adjustToCanvasAngle(adjustedDegrees)
+                      const pointerGlyphDiff = Math.abs(pointerLeadAngle - glyphAngle)
+                      const pointerCircularDiff = Math.min(pointerGlyphDiff, 360 - pointerGlyphDiff)
+                      const pointerScale = pointerCircularDiff < 5 ? 1.5 : 1
 
                       return (
                         <g

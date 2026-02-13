@@ -90,6 +90,31 @@ function getPlanetVolumeMultiplier(planetName: string): number {
   return volumeMultipliers[normalized] ?? 1
 }
 
+function createLowDiffusionReverbImpulse(ctx: AudioContext, durationSeconds = 3): AudioBuffer {
+  const sampleRate = ctx.sampleRate
+  const length = Math.max(1, Math.floor(sampleRate * durationSeconds))
+  const impulse = ctx.createBuffer(1, length, sampleRate)
+  const data = impulse.getChannelData(0)
+
+  for (let i = 0; i < length; i++) {
+    data[i] = 0
+  }
+
+  // Sparse taps for low diffusion + linear decay envelope over 3 seconds.
+  const tapSpacingSamples = Math.max(1, Math.floor(sampleRate * 0.011))
+  for (let i = 0; i < length; i += tapSpacingSamples) {
+    const t = i / (length - 1)
+    const linearDecay = 1 - t
+    const noise = (Math.random() * 2 - 1) * 0.32
+    data[i] = noise * linearDecay
+    if (i + 1 < length) {
+      data[i + 1] = noise * 0.5 * linearDecay
+    }
+  }
+
+  return impulse
+}
+
 function centsToPlaybackRate(cents: number): number {
   return Math.pow(2, cents / 1200)
 }
@@ -135,6 +160,7 @@ export function usePlanetAudio(
   const tuningCentsRef = useRef(envelope.tuningCents || 0)
   const elementSoundVolumeRef = useRef(envelope.elementSoundVolume ?? 40)
   const masterGainNodeRef = useRef<GainNode | null>(null)
+  const planetReverbImpulseRef = useRef<AudioBuffer | null>(null)
   const dynAspectsFadeInRef = useRef(envelope.dynAspectsFadeIn || 3)
   const dynAspectsSustainRef = useRef(envelope.dynAspectsSustain || 2)
   const dynAspectsFadeOutRef = useRef(envelope.dynAspectsFadeOut || 15)
@@ -676,9 +702,31 @@ export function usePlanetAudio(
         const panner = resonanceSceneRef.current.createSource()
 
         const gainNode = ctx.createGain()
+        const dryGainNode = ctx.createGain()
+        const wetSendGainNode = ctx.createGain()
+        const reverbReturnGainNode = ctx.createGain()
+        const reverbShelfNode = ctx.createBiquadFilter()
+        const convolverNode = ctx.createConvolver()
+
+        if (!planetReverbImpulseRef.current) {
+          planetReverbImpulseRef.current = createLowDiffusionReverbImpulse(ctx, 3)
+        }
+        convolverNode.buffer = planetReverbImpulseRef.current
+        reverbShelfNode.type = "highshelf"
+        reverbShelfNode.frequency.value = 800
+        reverbShelfNode.gain.value = -6
+        dryGainNode.gain.value = 0.8
+        wetSendGainNode.gain.value = 0.2
+        reverbReturnGainNode.gain.value = 1
 
         source.connect(gainNode)
-        gainNode.connect(panner.input)
+        gainNode.connect(dryGainNode)
+        gainNode.connect(wetSendGainNode)
+        dryGainNode.connect(panner.input)
+        wetSendGainNode.connect(convolverNode)
+        convolverNode.connect(reverbShelfNode)
+        reverbShelfNode.connect(reverbReturnGainNode)
+        reverbReturnGainNode.connect(panner.input)
 
         const position = polarToCartesian3D(azimuth, elevation)
         panner.setPosition(position.x, position.y, position.z)

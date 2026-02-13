@@ -108,6 +108,7 @@ const SIGN_PLANET_PROXIMITY: Record<number, string[]> = {
 // Proximity -> harmonic target interval (semitones from fundamental)
 const INTERVAL_TARGET_BY_PROXIMITY = [0, 7, 5, 4, 3, 9, 8, 2, 10, 11, 1, 6]
 const CONSONANCE_PRIORITY = INTERVAL_TARGET_BY_PROXIMITY
+const DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES = -24 // Two octaves down by default
 
 function mod12(value: number): number {
   return ((value % 12) + 12) % 12
@@ -176,7 +177,7 @@ function getPlanetPrincipalPlaybackRate(planetName: string, modalEnabled: boolea
       ? getModalPlanetSemitoneOffset(normalized, sunSignIndex)
       : getLegacyPlanetSemitoneOffset(normalized)
 
-  return Math.pow(2, semitones / 12)
+  return Math.pow(2, (semitones + DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES) / 12)
 }
 
 function getPlanetVolumeMultiplier(planetName: string): number {

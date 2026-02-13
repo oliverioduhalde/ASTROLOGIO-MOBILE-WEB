@@ -180,6 +180,12 @@ function getPlanetPrincipalPlaybackRate(planetName: string, modalEnabled: boolea
   return Math.pow(2, (semitones + DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES) / 12)
 }
 
+function getSignRulerPlanetName(sunSignIndex: number | null): string {
+  if (sunSignIndex === null) return "sun"
+  const proximity = SIGN_PLANET_PROXIMITY[mod12(sunSignIndex)]
+  return proximity?.[0] ?? "sun"
+}
+
 function getPlanetVolumeMultiplier(planetName: string): number {
   const normalized = planetName.toLowerCase()
   const volumeMultipliers: Record<string, number> = {
@@ -624,6 +630,7 @@ export function usePlanetAudio(
       secondaryElement?: "fire" | "earth" | "air" | "water",
       crossfadeDelaySeconds = 0,
       crossfadeDurationSeconds = 30,
+      pedalOptions?: { modalEnabled?: boolean; sunSignIndex?: number | null },
     ) => {
       await initializeAudio()
 
@@ -657,6 +664,12 @@ export function usePlanetAudio(
       }
 
       const elementGain = elementSoundVolumeRef.current / 100
+      const pedalModalEnabled = pedalOptions?.modalEnabled ?? modalEnabledRef.current
+      const pedalSunSignIndex =
+        typeof pedalOptions?.sunSignIndex === "number" ? pedalOptions.sunSignIndex : modalSunSignIndexRef.current
+      const rulerPlanetName = getSignRulerPlanetName(pedalSunSignIndex)
+      const pedalBasePlaybackRate = getPlanetPrincipalPlaybackRate(rulerPlanetName, pedalModalEnabled, pedalSunSignIndex)
+      const pedalTunedPlaybackRate = pedalBasePlaybackRate * centsToPlaybackRate(tuningCentsRef.current)
 
       const primaryGain = ctx.createGain()
       primaryGain.gain.value = elementGain
@@ -664,6 +677,7 @@ export function usePlanetAudio(
       const primarySource = ctx.createBufferSource()
       primarySource.buffer = primaryBuffer
       primarySource.loop = true
+      primarySource.playbackRate.value = pedalTunedPlaybackRate
 
       primarySource.connect(primaryGain)
       const masterNode = masterGainNodeRef.current || ctx.destination
@@ -691,6 +705,7 @@ export function usePlanetAudio(
         const secondarySource = ctx.createBufferSource()
         secondarySource.buffer = secondaryBuffer
         secondarySource.loop = true
+        secondarySource.playbackRate.value = pedalTunedPlaybackRate
         secondarySource.connect(secondaryGain)
         const masterNode = masterGainNodeRef.current || ctx.destination
         secondaryGain.connect(masterNode)

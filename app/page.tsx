@@ -64,6 +64,21 @@ const EMPTY_SUBJECT_FORM: SubjectFormData = {
   longitude: "",
 }
 
+const MODE_NAME_BY_SIGN_INDEX: Record<number, string> = {
+  0: "Frigio dominante",
+  1: "Dorico",
+  2: "Lidio",
+  3: "Eolico",
+  4: "Jonico",
+  5: "Eolico",
+  6: "Jonico",
+  7: "Frigio",
+  8: "Mixolidio",
+  9: "Menor armonico",
+  10: "Lidio dominante",
+  11: "Locrio",
+}
+
 function adjustPlanetPositions(planets: { name: string; degrees: number }[], minSeparation = 12) {
   const sorted = [...planets].sort((a, b) => a.degrees - b.degrees)
   const adjusted: { name: string; adjustedDegrees: number }[] = []
@@ -205,6 +220,9 @@ export default function AstrologyCalculator() {
     if (typeof sunDegrees !== "number" || Number.isNaN(sunDegrees)) return null
     return Math.floor(norm360(sunDegrees) / 30) % 12
   }, [horoscopeData?.planets])
+
+  const currentModeLabel =
+    modalSunSignIndex !== null ? MODE_NAME_BY_SIGN_INDEX[modalSunSignIndex] || "Modal" : "Modal"
 
   // Added hook for planet audio
   const {
@@ -737,7 +755,10 @@ export default function AstrologyCalculator() {
     if (horoscopeData?.planets && horoscopeData?.ascendant) {
       const sunDegrees = horoscopeData.planets.find((p) => p.name === "sun")?.ChartPosition.Ecliptic.DecimalDegrees
       if (sunDegrees !== undefined) {
-        playElementBackground(getElementFromDegrees(sunDegrees))
+        playElementBackground(getElementFromDegrees(sunDegrees), undefined, 0, 30, {
+          modalEnabled,
+          sunSignIndex: modalSunSignIndex,
+        })
       }
     }
   }
@@ -1483,6 +1504,9 @@ export default function AstrologyCalculator() {
           </div>
 
           <h1 className="text-base md:text-lg font-mono absolute left-1/2 transform -translate-x-1/2">ASTRO.LOG.IO</h1>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 font-mono text-[6px] uppercase tracking-widest text-white/70">
+            {modalEnabled ? `Modo: ${currentModeLabel}` : "Modo: OFF"}
+          </div>
 
           {/* START button - Moved to within the chart's rendering logic */}
         </div>

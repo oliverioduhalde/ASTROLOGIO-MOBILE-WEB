@@ -171,8 +171,8 @@ export default function AstrologyCalculator() {
   const [dynAspectsSustain, setDynAspectsSustain] = useState(2)
   const [dynAspectsFadeOut, setDynAspectsFadeOut] = useState(15)
 
-  const [aspectsSoundVolume, setAspectsSoundVolume] = useState(33)
-  const [masterVolume, setMasterVolume] = useState(20) // Nuevo estado para controlar volumen maestro (0-100%)
+  const [aspectsSoundVolume, setAspectsSoundVolume] = useState(50)
+  const [masterVolume, setMasterVolume] = useState(50) // Nuevo estado para controlar volumen maestro (0-100%)
   const [tuningCents, setTuningCents] = useState(0)
 
   const [glyphAnimationManager] = useState(() => new GlyphAnimationManager())
@@ -587,8 +587,8 @@ export default function AstrologyCalculator() {
       setError("")
       setElementSoundVolume(2)
       setBackgroundVolume(25)
-      setAspectsSoundVolume(33)
-      setMasterVolume(20)
+      setAspectsSoundVolume(50)
+      setMasterVolume(50)
       setLoopDuration(120)
       setShowDynAspects(true)
       setShowAspectGraph(false)

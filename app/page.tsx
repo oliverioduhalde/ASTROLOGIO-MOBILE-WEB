@@ -584,6 +584,7 @@ export default function AstrologyCalculator() {
       setFormData({ ...PRESET_BA77_FORM })
       setSelectedPreset("ba77")
       setShowSubject(true)
+      setShowChart(false)
       setError("")
       setElementSoundVolume(2)
       setBackgroundVolume(17)

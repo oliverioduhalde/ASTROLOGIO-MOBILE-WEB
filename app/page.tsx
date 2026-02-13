@@ -1682,7 +1682,7 @@ export default function AstrologyCalculator() {
                       const scale = animatedPlanets[planet.name] || 1
                       // Added hover detection for glyphs
                       const isHovered = hoveredGlyph === planet.name
-                      const pointerScale = currentPlanetUnderPointer === planet.name ? 1.1 : 1
+                      const pointerScale = currentPlanetUnderPointer === planet.name ? 1.25 : 1
 
                       return (
                         <g
@@ -1752,7 +1752,7 @@ export default function AstrologyCalculator() {
                               strokeWidth: "0.5px",
                               transform: `scale(${scale * (isHovered ? 1.2 : 1) * pointerScale})`,
                               transformOrigin: `${position.x}px ${position.y}px`,
-                              transition: "none",
+                              transition: "transform 7s ease-in-out",
                             }}
                             filter={isHovered ? "url(#glow)" : undefined} // Applied glow filter on hover
                           >

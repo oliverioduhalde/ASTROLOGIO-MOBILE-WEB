@@ -726,14 +726,8 @@ export default function AstrologyCalculator() {
     playBackgroundSound()
     if (horoscopeData?.planets && horoscopeData?.ascendant) {
       const sunDegrees = horoscopeData.planets.find((p) => p.name === "sun")?.ChartPosition.Ecliptic.DecimalDegrees
-      const ascDegrees = horoscopeData.ascendant.ChartPosition.Ecliptic.DecimalDegrees
-      if (sunDegrees !== undefined && ascDegrees !== undefined) {
-        playElementBackground(
-          getElementFromDegrees(sunDegrees),
-          getElementFromDegrees(ascDegrees),
-          loopDuration / 2,
-          30,
-        )
+      if (sunDegrees !== undefined) {
+        playElementBackground(getElementFromDegrees(sunDegrees))
       }
     }
   }

@@ -193,6 +193,7 @@ export default function AstrologyCalculator() {
   const [tuningCents, setTuningCents] = useState(0)
   const [modalEnabled, setModalEnabled] = useState(true)
   const [audioEngineMode, setAudioEngineMode] = useState<AudioEngineMode>("samples")
+  const [synthVolume, setSynthVolume] = useState(150)
 
   const [glyphAnimationManager] = useState(() => new GlyphAnimationManager())
   const [animatedPlanets, setAnimatedPlanets] = useState<Record<string, number>>({})
@@ -256,6 +257,7 @@ export default function AstrologyCalculator() {
       modalEnabled,
       modalSunSignIndex,
       audioEngineMode,
+      synthVolume,
     })
   const lastPlayedPlanetRef = useRef<string | null>(null)
 
@@ -622,6 +624,7 @@ export default function AstrologyCalculator() {
       setBackgroundVolume(2)
       setAspectsSoundVolume(30)
       setMasterVolume(50)
+      setSynthVolume(150)
       setModalEnabled(true)
       setAudioEngineMode("samples")
       setLoopDuration(180)
@@ -1376,6 +1379,21 @@ export default function AstrologyCalculator() {
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7.5px] w-8 text-right">{masterVolume}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
+                        Synth Vol
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="200"
+                        value={synthVolume}
+                        onChange={(e) => setSynthVolume(Number(e.target.value))}
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
+                      />
+                      <span className="font-mono text-[7.5px] w-8 text-right">{synthVolume}%</span>
                     </div>
 
                     <div className="flex items-center gap-1">

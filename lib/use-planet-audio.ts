@@ -31,6 +31,7 @@ interface AudioEnvelope {
   modalEnabled?: boolean
   modalSunSignIndex?: number | null
   audioEngineMode?: AudioEngineMode
+  synthVolume?: number
 }
 
 interface Position3D {
@@ -214,6 +215,10 @@ function getPlanetVolumeMultiplier(planetName: string): number {
   return volumeMultipliers[normalized] ?? 1
 }
 
+function getFmPadGainValue(masterVolume: number, synthVolume: number): number {
+  return Math.max(0, (masterVolume / 100) * 0.22 * (synthVolume / 100))
+}
+
 function createLowDiffusionReverbImpulse(ctx: AudioContext, durationSeconds = 3): AudioBuffer {
   const sampleRate = ctx.sampleRate
   const length = Math.max(1, Math.floor(sampleRate * durationSeconds))
@@ -278,16 +283,17 @@ export function usePlanetAudio(
   const elementBackgroundNextSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const elementBackgroundNextGainRef = useRef<GainNode | null>(null)
   const elementBackgroundTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const backgroundVolumeRef = useRef(envelope.backgroundVolume || 20)
-  const aspectsSoundVolumeRef = useRef(envelope.aspectsSoundVolume || 33)
-  const masterVolumeRef = useRef(envelope.masterVolume || 20)
-  const tuningCentsRef = useRef(envelope.tuningCents || 0)
+  const backgroundVolumeRef = useRef(envelope.backgroundVolume ?? 20)
+  const aspectsSoundVolumeRef = useRef(envelope.aspectsSoundVolume ?? 33)
+  const masterVolumeRef = useRef(envelope.masterVolume ?? 20)
+  const tuningCentsRef = useRef(envelope.tuningCents ?? 0)
   const elementSoundVolumeRef = useRef(envelope.elementSoundVolume ?? 40)
+  const synthVolumeRef = useRef(envelope.synthVolume ?? 150)
   const masterGainNodeRef = useRef<GainNode | null>(null)
   const planetReverbImpulseRef = useRef<AudioBuffer | null>(null)
-  const dynAspectsFadeInRef = useRef(envelope.dynAspectsFadeIn || 3)
-  const dynAspectsSustainRef = useRef(envelope.dynAspectsSustain || 2)
-  const dynAspectsFadeOutRef = useRef(envelope.dynAspectsFadeOut || 15)
+  const dynAspectsFadeInRef = useRef(envelope.dynAspectsFadeIn ?? 3)
+  const dynAspectsSustainRef = useRef(envelope.dynAspectsSustain ?? 2)
+  const dynAspectsFadeOutRef = useRef(envelope.dynAspectsFadeOut ?? 15)
   const modalEnabledRef = useRef(envelope.modalEnabled ?? true)
   const modalSunSignIndexRef = useRef<number | null>(
     typeof envelope.modalSunSignIndex === "number" ? envelope.modalSunSignIndex : null,
@@ -298,14 +304,14 @@ export function usePlanetAudio(
   const fmPadGainRef = useRef<any>(null)
 
   useEffect(() => {
-    backgroundVolumeRef.current = envelope.backgroundVolume || 20
+    backgroundVolumeRef.current = envelope.backgroundVolume ?? 20
     if (backgroundGainRef.current) {
-      backgroundGainRef.current.gain.value = (envelope.backgroundVolume || 30) / 100
+      backgroundGainRef.current.gain.value = (envelope.backgroundVolume ?? 20) / 100
     }
   }, [envelope.backgroundVolume])
 
   useEffect(() => {
-    tuningCentsRef.current = envelope.tuningCents || 0
+    tuningCentsRef.current = envelope.tuningCents ?? 0
   }, [envelope.tuningCents])
 
   useEffect(() => {
@@ -332,14 +338,26 @@ export function usePlanetAudio(
   }, [envelope.tuningCents])
 
   useEffect(() => {
-    aspectsSoundVolumeRef.current = envelope.aspectsSoundVolume || 33
+    aspectsSoundVolumeRef.current = envelope.aspectsSoundVolume ?? 33
   }, [envelope.aspectsSoundVolume])
 
   useEffect(() => {
-    dynAspectsFadeInRef.current = envelope.dynAspectsFadeIn || 3
-    dynAspectsSustainRef.current = envelope.dynAspectsSustain || 2
-    dynAspectsFadeOutRef.current = envelope.dynAspectsFadeOut || 15
+    dynAspectsFadeInRef.current = envelope.dynAspectsFadeIn ?? 3
+    dynAspectsSustainRef.current = envelope.dynAspectsSustain ?? 2
+    dynAspectsFadeOutRef.current = envelope.dynAspectsFadeOut ?? 15
   }, [envelope.dynAspectsFadeIn, envelope.dynAspectsSustain, envelope.dynAspectsFadeOut])
+
+  useEffect(() => {
+    synthVolumeRef.current = envelope.synthVolume ?? 150
+    if (fmPadGainRef.current?.gain) {
+      const fmGain = getFmPadGainValue(masterVolumeRef.current, synthVolumeRef.current)
+      if (typeof fmPadGainRef.current.gain.rampTo === "function") {
+        fmPadGainRef.current.gain.rampTo(fmGain, 0.05)
+      } else {
+        fmPadGainRef.current.gain.value = fmGain
+      }
+    }
+  }, [envelope.synthVolume])
 
   useEffect(() => {
     modalEnabledRef.current = envelope.modalEnabled ?? true
@@ -363,7 +381,7 @@ export function usePlanetAudio(
       masterGainNodeRef.current.gain.value = baseGain * (vol / 100)
     }
     if (fmPadGainRef.current?.gain) {
-      const fmGain = Math.max(0, (vol / 100) * 0.22)
+      const fmGain = getFmPadGainValue(vol, synthVolumeRef.current)
       if (typeof fmPadGainRef.current.gain.rampTo === "function") {
         fmPadGainRef.current.gain.rampTo(fmGain, 0.05)
       } else {
@@ -610,7 +628,7 @@ export function usePlanetAudio(
       const ctx = audioContextRef.current
 
       backgroundGainRef.current = ctx.createGain()
-      backgroundGainRef.current.gain.value = (envelope.backgroundVolume || 30) / 100
+      backgroundGainRef.current.gain.value = (backgroundVolumeRef.current ?? 0) / 100
 
       backgroundSourceRef.current = ctx.createBufferSource()
       backgroundSourceRef.current.buffer = backgroundBufferRef.current
@@ -625,7 +643,7 @@ export function usePlanetAudio(
     } catch (error) {
       console.error("[v0] Error playing background sound:", error)
     }
-  }, [envelope.backgroundVolume, initializeAudio])
+  }, [initializeAudio])
 
   const stopBackgroundSound = useCallback(() => {
     if (backgroundSourceRef.current && backgroundGainRef.current) {
@@ -696,6 +714,9 @@ export function usePlanetAudio(
       }
 
       const elementGain = elementSoundVolumeRef.current / 100
+      if (elementGain <= 0) {
+        return
+      }
       const pedalModalEnabled = pedalOptions?.modalEnabled ?? modalEnabledRef.current
       const pedalSunSignIndex =
         typeof pedalOptions?.sunSignIndex === "number" ? pedalOptions.sunSignIndex : modalSunSignIndexRef.current
@@ -841,7 +862,7 @@ export function usePlanetAudio(
     const reverb = new Tone.Reverb({ decay: 2.6, preDelay: 0.03, wet: 0.24 })
     await reverb.generate()
 
-    const gain = new Tone.Gain(Math.max(0, (masterVolumeRef.current / 100) * 0.22))
+    const gain = new Tone.Gain(getFmPadGainValue(masterVolumeRef.current, synthVolumeRef.current))
 
     synth.connect(filter)
     filter.connect(chorus)

@@ -174,6 +174,7 @@ export default function AstrologyCalculator() {
   const [aspectsSoundVolume, setAspectsSoundVolume] = useState(40)
   const [masterVolume, setMasterVolume] = useState(50) // Nuevo estado para controlar volumen maestro (0-100%)
   const [tuningCents, setTuningCents] = useState(0)
+  const [modalEnabled, setModalEnabled] = useState(true)
 
   const [glyphAnimationManager] = useState(() => new GlyphAnimationManager())
   const [animatedPlanets, setAnimatedPlanets] = useState<Record<string, number>>({})
@@ -198,6 +199,12 @@ export default function AstrologyCalculator() {
   const skipNextAutoCalculateRef = useRef(false)
   const [locationSuggestions, setLocationSuggestions] = useState<GeoSuggestion[]>([])
   const [isResolvingLocation, setIsResolvingLocation] = useState(false)
+
+  const modalSunSignIndex = useMemo(() => {
+    const sunDegrees = horoscopeData?.planets?.find((p) => p.name === "sun")?.ChartPosition?.Ecliptic?.DecimalDegrees
+    if (typeof sunDegrees !== "number" || Number.isNaN(sunDegrees)) return null
+    return Math.floor(norm360(sunDegrees) / 30) % 12
+  }, [horoscopeData?.planets])
 
   // Added hook for planet audio
   const {
@@ -225,6 +232,8 @@ export default function AstrologyCalculator() {
       dynAspectsFadeIn: dynAspectsFadeIn,
       dynAspectsSustain: dynAspectsSustain,
       dynAspectsFadeOut: dynAspectsFadeOut,
+      modalEnabled,
+      modalSunSignIndex,
     })
   const lastPlayedPlanetRef = useRef<string | null>(null)
 
@@ -590,6 +599,7 @@ export default function AstrologyCalculator() {
       setBackgroundVolume(2)
       setAspectsSoundVolume(40)
       setMasterVolume(50)
+      setModalEnabled(true)
       setLoopDuration(120)
       setShowDynAspects(true)
       setShowAspectGraph(false)
@@ -1201,6 +1211,15 @@ export default function AstrologyCalculator() {
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
                     Aspect Box
+                  </label>
+                  <label className="flex items-center gap-2 font-mono text-[8.4px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={modalEnabled}
+                      onChange={(e) => setModalEnabled(e.target.checked)}
+                      className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
+                    />
+                    Modal
                   </label>
 
                   <div className="border-t border-gray-600 my-1"></div>

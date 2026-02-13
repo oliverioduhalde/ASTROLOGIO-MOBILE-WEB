@@ -26,6 +26,8 @@ interface AudioEnvelope {
   dynAspectsFadeIn?: number
   dynAspectsSustain?: number
   dynAspectsFadeOut?: number
+  modalEnabled?: boolean
+  modalSunSignIndex?: number | null
 }
 
 interface Position3D {
@@ -59,22 +61,121 @@ function polarToCartesian3D(azimuthDeg: number, elevationDeg: number): Position3
   }
 }
 
-// Fixed pitch mapping per planet (C major) with samples tuned at C4.
-function getPlaybackRateFromPlanet(planetName: string): number {
-  const semitoneOffsetsFromC4: Record<string, number> = {
-    pluto: 0, // C4
-    saturn: 2, // D4
-    neptune: 4, // E4
-    jupiter: 5, // F4
-    moon: 9, // A4
-    venus: 11, // B4
-    sun: 12, // C5
-    mars: 14, // D5
-    mercury: 16, // E5
-    uranus: 19, // G5
-  }
+const LEGACY_PLANET_SEMITONE_OFFSETS: Record<string, number> = {
+  pluto: 0, // C4
+  saturn: 2, // D4
+  neptune: 4, // E4
+  jupiter: 5, // F4
+  moon: 9, // A4
+  venus: 11, // B4
+  sun: 12, // C5
+  mars: 14, // D5
+  mercury: 16, // E5
+  uranus: 19, // G5
+}
 
-  const semitones = semitoneOffsetsFromC4[planetName] ?? 0
+// Sign index: Aries=0 ... Pisces=11
+const SIGN_MODE_PCS: Record<number, number[]> = {
+  0: [0, 1, 4, 5, 7, 8, 10], // Aries - Frigio dominante
+  1: [0, 2, 3, 5, 7, 9, 10], // Tauro - Dórico
+  2: [0, 2, 4, 6, 7, 9, 11], // Géminis - Lidio
+  3: [0, 2, 3, 5, 7, 8, 10], // Cáncer - Eólico
+  4: [0, 2, 4, 5, 7, 9, 11], // Leo - Jónico
+  5: [0, 2, 3, 5, 7, 8, 10], // Virgo - Eólico
+  6: [0, 2, 4, 5, 7, 9, 11], // Libra - Jónico
+  7: [0, 1, 3, 5, 7, 8, 10], // Escorpio - Frigio
+  8: [0, 2, 4, 5, 7, 9, 10], // Sagitario - Mixolidio
+  9: [0, 2, 3, 5, 7, 8, 11], // Capricornio - Menor armónico
+  10: [0, 2, 4, 6, 7, 9, 10], // Acuario - Lidio dominante
+  11: [0, 1, 3, 5, 6, 8, 10], // Piscis - Locrio
+}
+
+const SIGN_PLANET_PROXIMITY: Record<number, string[]> = {
+  0: ["mars", "pluto", "sun", "jupiter", "mercury", "venus", "uranus", "saturn", "moon", "neptune"], // Aries
+  1: ["venus", "moon", "saturn", "mercury", "jupiter", "mars", "neptune", "pluto", "uranus", "sun"], // Tauro
+  2: ["mercury", "uranus", "jupiter", "venus", "moon", "mars", "neptune", "saturn", "pluto", "sun"], // Géminis
+  3: ["moon", "neptune", "venus", "jupiter", "mercury", "pluto", "saturn", "mars", "uranus", "sun"], // Cáncer
+  4: ["sun", "jupiter", "mars", "venus", "mercury", "saturn", "pluto", "uranus", "neptune", "moon"], // Leo
+  5: ["mercury", "saturn", "moon", "venus", "jupiter", "mars", "neptune", "uranus", "pluto", "sun"], // Virgo
+  6: ["venus", "saturn", "moon", "mercury", "jupiter", "neptune", "mars", "uranus", "pluto", "sun"], // Libra
+  7: ["mars", "pluto", "neptune", "saturn", "venus", "moon", "mercury", "jupiter", "uranus", "sun"], // Escorpio
+  8: ["jupiter", "mars", "sun", "mercury", "uranus", "venus", "saturn", "moon", "neptune", "pluto"], // Sagitario
+  9: ["saturn", "mars", "pluto", "venus", "mercury", "jupiter", "moon", "neptune", "uranus", "sun"], // Capricornio
+  10: ["saturn", "uranus", "mercury", "jupiter", "venus", "mars", "moon", "neptune", "pluto", "sun"], // Acuario
+  11: ["jupiter", "neptune", "moon", "venus", "mercury", "pluto", "saturn", "mars", "uranus", "sun"], // Piscis
+}
+
+// Proximity -> harmonic target interval (semitones from fundamental)
+const INTERVAL_TARGET_BY_PROXIMITY = [0, 7, 5, 4, 3, 9, 8, 2, 10, 11, 1, 6]
+const CONSONANCE_PRIORITY = INTERVAL_TARGET_BY_PROXIMITY
+
+function mod12(value: number): number {
+  return ((value % 12) + 12) % 12
+}
+
+function getLegacyPlanetSemitoneOffset(planetName: string): number {
+  return LEGACY_PLANET_SEMITONE_OFFSETS[planetName] ?? 0
+}
+
+function getConsonanceRank(pc: number): number {
+  const idx = CONSONANCE_PRIORITY.indexOf(mod12(pc))
+  return idx === -1 ? Number.MAX_SAFE_INTEGER : idx
+}
+
+function circularDistancePc(a: number, b: number): number {
+  const diff = Math.abs(mod12(a) - mod12(b))
+  return Math.min(diff, 12 - diff)
+}
+
+function findClosestPitchClassByConsonance(targetPc: number, pcs: number[]): number {
+  if (!pcs || pcs.length === 0) return mod12(targetPc)
+
+  const normalizedTarget = mod12(targetPc)
+  return pcs
+    .map((pc) => mod12(pc))
+    .sort((a, b) => {
+      const da = circularDistancePc(a, normalizedTarget)
+      const db = circularDistancePc(b, normalizedTarget)
+      if (da !== db) return da - db
+
+      // Tie-break toward the most consonant option
+      const ca = getConsonanceRank(a)
+      const cb = getConsonanceRank(b)
+      if (ca !== cb) return ca - cb
+
+      return a - b
+    })[0]
+}
+
+function getModalPlanetSemitoneOffset(planetName: string, sunSignIndex: number): number {
+  const signIdx = mod12(sunSignIndex)
+  const proximity = SIGN_PLANET_PROXIMITY[signIdx]
+  const pcs = SIGN_MODE_PCS[signIdx]
+  if (!proximity || !pcs) return getLegacyPlanetSemitoneOffset(planetName)
+
+  const normalizedPlanet = planetName.toLowerCase()
+  const proximityIndex = proximity.indexOf(normalizedPlanet)
+  if (proximityIndex === -1) return getLegacyPlanetSemitoneOffset(normalizedPlanet)
+
+  const targetInterval = INTERVAL_TARGET_BY_PROXIMITY[proximityIndex] ?? INTERVAL_TARGET_BY_PROXIMITY[0]
+  const resolvedInterval = pcs.includes(targetInterval)
+    ? targetInterval
+    : findClosestPitchClassByConsonance(targetInterval, pcs)
+
+  // Root is fixed by sign; keep planet legacy octave register to preserve spacing.
+  const legacySemitone = getLegacyPlanetSemitoneOffset(normalizedPlanet)
+  const legacyOctave = Math.floor(legacySemitone / 12)
+  const signRootPc = signIdx
+  return signRootPc + resolvedInterval + legacyOctave * 12
+}
+
+function getPlanetPrincipalPlaybackRate(planetName: string, modalEnabled: boolean, sunSignIndex: number | null): number {
+  const normalized = planetName.toLowerCase()
+  const semitones =
+    modalEnabled && sunSignIndex !== null
+      ? getModalPlanetSemitoneOffset(normalized, sunSignIndex)
+      : getLegacyPlanetSemitoneOffset(normalized)
+
   return Math.pow(2, semitones / 12)
 }
 
@@ -164,6 +265,10 @@ export function usePlanetAudio(
   const dynAspectsFadeInRef = useRef(envelope.dynAspectsFadeIn || 3)
   const dynAspectsSustainRef = useRef(envelope.dynAspectsSustain || 2)
   const dynAspectsFadeOutRef = useRef(envelope.dynAspectsFadeOut || 15)
+  const modalEnabledRef = useRef(envelope.modalEnabled ?? true)
+  const modalSunSignIndexRef = useRef<number | null>(
+    typeof envelope.modalSunSignIndex === "number" ? envelope.modalSunSignIndex : null,
+  )
 
   useEffect(() => {
     backgroundVolumeRef.current = envelope.backgroundVolume || 20
@@ -208,6 +313,15 @@ export function usePlanetAudio(
     dynAspectsSustainRef.current = envelope.dynAspectsSustain || 2
     dynAspectsFadeOutRef.current = envelope.dynAspectsFadeOut || 15
   }, [envelope.dynAspectsFadeIn, envelope.dynAspectsSustain, envelope.dynAspectsFadeOut])
+
+  useEffect(() => {
+    modalEnabledRef.current = envelope.modalEnabled ?? true
+  }, [envelope.modalEnabled])
+
+  useEffect(() => {
+    modalSunSignIndexRef.current =
+      typeof envelope.modalSunSignIndex === "number" ? envelope.modalSunSignIndex : null
+  }, [envelope.modalSunSignIndex])
 
   useEffect(() => {
     const vol = envelope.masterVolume !== undefined ? envelope.masterVolume : 20
@@ -656,6 +770,7 @@ export function usePlanetAudio(
       aspectVolumeOverride?: number,
     ) => {
       await initializeAudio()
+      const normalizedPlanetName = planetName.toLowerCase()
 
       if (playingPlanetsRef.current.has(planetName)) {
         console.log(`[v0] Planet ${planetName} is already playing`)
@@ -667,7 +782,7 @@ export function usePlanetAudio(
         return
       }
 
-      const audioBuffer = audioBuffersRef.current[planetName]
+      const audioBuffer = audioBuffersRef.current[normalizedPlanetName]
       if (!audioBuffer || !audioContextRef.current) {
         console.log(`[v0] No audio buffer for ${planetName}`)
         return
@@ -691,7 +806,11 @@ export function usePlanetAudio(
         const source = ctx.createBufferSource() as AudioBufferSourceNode
         source.buffer = audioBuffer
 
-        const basePlaybackRate = 1.0
+        const basePlaybackRate = getPlanetPrincipalPlaybackRate(
+          normalizedPlanetName,
+          modalEnabledRef.current,
+          modalSunSignIndexRef.current,
+        )
         source.playbackRate.value = basePlaybackRate
 
         if (!resonanceSceneRef.current || !resonanceSceneRef.current.output) {

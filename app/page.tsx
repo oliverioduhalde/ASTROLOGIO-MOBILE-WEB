@@ -165,7 +165,7 @@ export default function AstrologyCalculator() {
 
   const [audioFadeIn, setAudioFadeIn] = useState(5)
   const [audioFadeOut, setAudioFadeOut] = useState(10)
-  const [backgroundVolume, setBackgroundVolume] = useState(25)
+  const [backgroundVolume, setBackgroundVolume] = useState(17)
   const [elementSoundVolume, setElementSoundVolume] = useState(2)
   const [dynAspectsFadeIn, setDynAspectsFadeIn] = useState(3)
   const [dynAspectsSustain, setDynAspectsSustain] = useState(2)
@@ -586,7 +586,7 @@ export default function AstrologyCalculator() {
       setShowSubject(true)
       setError("")
       setElementSoundVolume(2)
-      setBackgroundVolume(25)
+      setBackgroundVolume(17)
       setAspectsSoundVolume(50)
       setMasterVolume(50)
       setLoopDuration(120)

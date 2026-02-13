@@ -113,6 +113,8 @@ const SIGN_PLANET_PROXIMITY: Record<number, string[]> = {
 const INTERVAL_TARGET_BY_PROXIMITY = [0, 7, 5, 4, 3, 9, 8, 2, 10, 11, 1, 6]
 const CONSONANCE_PRIORITY = INTERVAL_TARGET_BY_PROXIMITY
 const DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES = -24 // Two octaves down by default
+const FM_PAD_OCTAVE_SHIFT_SEMITONES = 12 // One octave up vs current FM baseline
+const FM_PAD_GAIN_BOOST_FACTOR = 4 // +300% (4x total)
 const ASPECT_SEMITONE_OFFSETS: Record<string, number> = {
   Conjunción: 0,
   Oposición: 14,
@@ -216,7 +218,7 @@ function getPlanetVolumeMultiplier(planetName: string): number {
 }
 
 function getFmPadGainValue(masterVolume: number, synthVolume: number): number {
-  return Math.max(0, (masterVolume / 100) * 0.22 * (synthVolume / 100))
+  return Math.max(0, (masterVolume / 100) * 0.22 * FM_PAD_GAIN_BOOST_FACTOR * (synthVolume / 100))
 }
 
 function createLowDiffusionReverbImpulse(ctx: AudioContext, durationSeconds = 3): AudioBuffer {
@@ -837,6 +839,18 @@ export function usePlanetAudio(
 
     await Tone.start()
 
+    // Larger scheduling buffer to reduce crackles/dropouts on FM pad bursts.
+    const toneContext: any = Tone.getContext?.() ?? (Tone as any).context
+    if (toneContext) {
+      try {
+        toneContext.lookAhead = 0.25
+        toneContext.updateInterval = 0.05
+        toneContext.latencyHint = "playback"
+      } catch (e) {
+        // ignore context tuning issues
+      }
+    }
+
     const synth = new Tone.PolySynth(Tone.FMSynth, {
       harmonicity: 1.8,
       modulationIndex: 6,
@@ -856,6 +870,7 @@ export function usePlanetAudio(
       },
     })
     synth.volume.value = -8
+    ;(synth as any).maxPolyphony = 12
 
     const filter = new Tone.Filter({ type: "lowpass", frequency: 2200, rolloff: -24 })
     const chorus = new Tone.Chorus({ frequency: 0.8, delayTime: 2.2, depth: 0.25, wet: 0.22 }).start()
@@ -889,7 +904,12 @@ export function usePlanetAudio(
       const synth = fmPadSynthRef.current
       const tunedRate = centsToPlaybackRate(tuningCentsRef.current)
       const pitchShiftFromTuning = 12 * Math.log2(tunedRate)
-      const baseMidi = 60 + principalSemitoneOffset + DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES + pitchShiftFromTuning
+      const baseMidi =
+        60 +
+        principalSemitoneOffset +
+        DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES +
+        FM_PAD_OCTAVE_SHIFT_SEMITONES +
+        pitchShiftFromTuning
 
       const principalDuration = Math.max(
         0.8,

@@ -173,7 +173,7 @@ export default function AstrologyCalculator() {
   const [error, setError] = useState<string>("")
   const [loading, setLoading] = useState(false)
 
-  const [loopDuration, setLoopDuration] = useState(120)
+  const [loopDuration, setLoopDuration] = useState(180)
   const [isLoopRunning, setIsLoopRunning] = useState(false)
   const [pointerRotation, setPointerRotation] = useState(0)
   const [startButtonScale, setStartButtonScale] = useState(1)
@@ -618,7 +618,7 @@ export default function AstrologyCalculator() {
       setAspectsSoundVolume(40)
       setMasterVolume(50)
       setModalEnabled(true)
-      setLoopDuration(120)
+      setLoopDuration(180)
       setShowDynAspects(true)
       setShowAspectGraph(false)
       setShowAspectBox(false)
@@ -1504,7 +1504,7 @@ export default function AstrologyCalculator() {
           </div>
 
           <h1 className="text-base md:text-lg font-mono absolute left-1/2 transform -translate-x-1/2">ASTRO.LOG.IO</h1>
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 font-mono text-[6px] uppercase tracking-widest text-white/70">
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 font-mono text-[10px] uppercase tracking-widest text-white/80">
             {modalEnabled ? `Modo: ${currentModeLabel}` : "Modo: OFF"}
           </div>
 

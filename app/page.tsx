@@ -102,7 +102,7 @@ const CHORD_POINTER_RADIUS = 16
 const CHORD_ASPECTS_FADE_IN_MS = 7000
 
 const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
-  astral_chord: "ACCORD",
+  astral_chord: "CHORD",
   radial: "RADIAL",
   sequential: "CHART",
   aspectual: "ASPECT",
@@ -281,6 +281,7 @@ export default function AstrologyCalculator() {
   const skipNextAutoCalculateRef = useRef(false)
   const [locationSuggestions, setLocationSuggestions] = useState<GeoSuggestion[]>([])
   const [isResolvingLocation, setIsResolvingLocation] = useState(false)
+  const chartAspectsKeyRef = useRef("__chart__")
 
   const modalSunSignIndex = useMemo(() => {
     const sunDegrees = horoscopeData?.planets?.find((p) => p.name === "sun")?.ChartPosition?.Ecliptic?.DecimalDegrees
@@ -326,6 +327,12 @@ export default function AstrologyCalculator() {
       vuEnabled: showVuMeter,
     })
   const lastPlayedPlanetRef = useRef<string | null>(null)
+  const clearAspectTimers = useCallback(() => {
+    Object.values(aspectClickTimersRef.current).forEach((timers) => {
+      timers.forEach((timerId) => clearTimeout(timerId))
+    })
+    aspectClickTimersRef.current = {}
+  }, [])
 
   useEffect(() => {
     if (showSubject) return
@@ -372,12 +379,13 @@ export default function AstrologyCalculator() {
         navigationTimeoutsRef.current.forEach((timerId) => clearTimeout(timerId))
         navigationTimeoutsRef.current = []
       }
+      clearAspectTimers()
       if (startButtonPhaseTimeoutRef.current) {
         clearTimeout(startButtonPhaseTimeoutRef.current)
         startButtonPhaseTimeoutRef.current = null
       }
     }
-  }, [])
+  }, [clearAspectTimers])
 
   // Track peak audio level (pre/post) and reset every 5 seconds
   useEffect(() => {
@@ -704,7 +712,13 @@ export default function AstrologyCalculator() {
   }, [hoveredGlyph, isLoopRunning, glyphHoverOpacity])
 
   useEffect(() => {
-    if (navigationMode === "astral_chord" || !showDynAspects || !currentPlanetUnderPointer || !horoscopeData?.aspects) {
+    if (
+      navigationMode === "astral_chord" ||
+      navigationMode === "sequential" ||
+      !showDynAspects ||
+      !currentPlanetUnderPointer ||
+      !horoscopeData?.aspects
+    ) {
       return
     }
 
@@ -748,7 +762,7 @@ export default function AstrologyCalculator() {
   }, [currentPlanetUnderPointer, showDynAspects, dynAspectsFadeIn, horoscopeData?.aspects, navigationMode])
 
   useEffect(() => {
-    if (navigationMode === "astral_chord") {
+    if (navigationMode === "astral_chord" || navigationMode === "sequential") {
       return
     }
     if (showDynAspects && currentPlanetUnderPointer === null && Object.keys(activePlanetAspectsMap).length > 0) {
@@ -785,6 +799,7 @@ export default function AstrologyCalculator() {
 
   const resetToInitialState = () => {
     cancelAllNavigationSchedulers()
+    clearAspectTimers()
     loopStartTimeRef.current = 0
     loopElapsedBeforePauseMsRef.current = 0
     lastUiCommitTimeRef.current = 0
@@ -837,15 +852,35 @@ export default function AstrologyCalculator() {
     setIsSidereal(false)
   }
 
-  const startAmbientBed = () => {
-    playBackgroundSound()
+  const startAmbientBed = (options?: { playBackground?: boolean; playElement?: boolean; elementVolumeOverride?: number }) => {
+    const playBackground = options?.playBackground ?? true
+    const playElement = options?.playElement ?? true
+
+    if (playBackground) {
+      playBackgroundSound()
+    } else {
+      stopBackgroundSound()
+    }
+
+    if (!playElement) {
+      stopElementBackground()
+      return
+    }
+
     if (horoscopeData?.planets && horoscopeData?.ascendant) {
       const sunDegrees = horoscopeData.planets.find((p) => p.name === "sun")?.ChartPosition.Ecliptic.DecimalDegrees
       if (sunDegrees !== undefined) {
-        playElementBackground(getElementFromDegrees(sunDegrees), undefined, 0, 30, {
-          modalEnabled,
-          sunSignIndex: modalSunSignIndex,
-        })
+        playElementBackground(
+          getElementFromDegrees(sunDegrees),
+          undefined,
+          0,
+          30,
+          {
+            modalEnabled,
+            sunSignIndex: modalSunSignIndex,
+          },
+          options?.elementVolumeOverride,
+        )
       }
     }
   }
@@ -934,6 +969,7 @@ export default function AstrologyCalculator() {
       teleport?: boolean
       holdMs?: number
       crossfadeMs?: number
+      chartAspects?: boolean
     },
   ) => {
     const resolvedRoute = route
@@ -948,6 +984,7 @@ export default function AstrologyCalculator() {
     const teleport = options?.teleport ?? false
     const holdMs = Math.max(0, options?.holdMs ?? 0)
     const crossfadeMs = Math.max(0, options?.crossfadeMs ?? NAVIGATION_TRANSITION_MS)
+    const chartAspects = options?.chartAspects ?? false
     const runId = navigationRunIdRef.current
     const uiCommitIntervalMs = 33
     let lastUiCommitMs = 0
@@ -957,6 +994,9 @@ export default function AstrologyCalculator() {
     setPointerOpacityTransitionMs(0)
     setPointerAngle(resolvedRoute[0].angle, resolvedRoute[0].name)
     triggerPlanetAudioAtPointer(resolvedRoute[0].name, resolvedRoute[0].angle)
+    if (chartAspects) {
+      triggerChartPlanetAspects(resolvedRoute[0].name)
+    }
     lastPlayedPlanetRef.current = resolvedRoute[0].name
 
     const animateTransition = (fromAngle: number, toAngle: number, onDone: () => void) => {
@@ -1057,6 +1097,9 @@ export default function AstrologyCalculator() {
       }
 
       triggerPlanetAudioAtPointer(nextStep.name, nextStep.angle)
+      if (chartAspects) {
+        triggerChartPlanetAspects(nextStep.name)
+      }
       lastPlayedPlanetRef.current = nextStep.name
 
       if (teleport) {
@@ -1136,6 +1179,7 @@ export default function AstrologyCalculator() {
     if (!horoscopeData) return
     setNavigationMode(mode)
     cancelAllNavigationSchedulers()
+    clearAspectTimers()
     stopAll()
     stopBackgroundSound()
     stopElementBackground()
@@ -1155,23 +1199,27 @@ export default function AstrologyCalculator() {
       setStartButtonPhase("stable")
     }, 15000)
 
-    startAmbientBed()
     if (mode === "radial") {
+      startAmbientBed({ playBackground: true, playElement: true })
       beginPointerLoop(0)
       return
     }
     if (mode === "astral_chord") {
+      startAmbientBed({ playBackground: false, playElement: true })
       startAstralChordMode()
       return
     }
     if (mode === "sequential") {
+      startAmbientBed({ playBackground: false, playElement: true, elementVolumeOverride: 1 })
       startNonRadialRoute(buildSequentialRoute(), {
         teleport: true,
         holdMs: CHART_PLANET_HOLD_MS,
         crossfadeMs: NAVIGATION_TRANSITION_MS,
+        chartAspects: true,
       })
       return
     }
+    startAmbientBed({ playBackground: false, playElement: true })
     startNonRadialRoute(buildAspectualRoute())
   }
 
@@ -1263,6 +1311,7 @@ export default function AstrologyCalculator() {
       setLoading(true)
       setShowChart(true)
       cancelAllNavigationSchedulers()
+      clearAspectTimers()
       stopAll()
       stopBackgroundSound()
       stopElementBackground()
@@ -1355,6 +1404,97 @@ export default function AstrologyCalculator() {
       ) || []
     )
   }
+
+  const triggerChartPlanetAspects = useCallback(
+    (planetName: string) => {
+      const key = chartAspectsKeyRef.current
+      const existingTimers = aspectClickTimersRef.current[key]
+      if (existingTimers) {
+        existingTimers.forEach((timerId) => clearTimeout(timerId))
+      }
+      aspectClickTimersRef.current[key] = []
+
+      if (!showDynAspects) {
+        setActivePlanetAspectsMap((prevMap) => {
+          const updated = { ...prevMap }
+          delete updated[key]
+          return updated
+        })
+        return
+      }
+
+      const aspectsForPlanet = getAspectsForPlanet(planetName)
+      if (aspectsForPlanet.length === 0) {
+        setActivePlanetAspectsMap((prevMap) => {
+          const updated = { ...prevMap }
+          delete updated[key]
+          return updated
+        })
+        return
+      }
+
+      const targetOpacity = 0.8
+      setActivePlanetAspectsMap((prevMap) => ({
+        ...prevMap,
+        [key]: {
+          aspects: aspectsForPlanet,
+          opacity: 0,
+        },
+      }))
+
+      const fadeInInterval = setInterval(() => {
+        setActivePlanetAspectsMap((prevMap) => {
+          const current = prevMap[key]
+          if (!current) return prevMap
+          const increment = targetOpacity / Math.max(1, dynAspectsFadeIn * 10)
+          const newOpacity = Math.min(current.opacity + increment, targetOpacity)
+          return {
+            ...prevMap,
+            [key]: {
+              aspects: current.aspects,
+              opacity: newOpacity,
+            },
+          }
+        })
+      }, 100)
+
+      const fadeInTimeout = setTimeout(() => {
+        clearInterval(fadeInInterval)
+      }, dynAspectsFadeIn * 1000)
+      aspectClickTimersRef.current[key].push(fadeInInterval, fadeInTimeout)
+
+      const fadeOutStart = (dynAspectsFadeIn + dynAspectsSustain) * 1000
+      const fadeOutStartTimeout = setTimeout(() => {
+        const fadeOutInterval = setInterval(() => {
+          setActivePlanetAspectsMap((prevMap) => {
+            const current = prevMap[key]
+            if (!current) return prevMap
+            const decrement = targetOpacity / Math.max(1, dynAspectsFadeOut * 10)
+            const newOpacity = Math.max(current.opacity - decrement, 0)
+            if (newOpacity <= 0) {
+              const updated = { ...prevMap }
+              delete updated[key]
+              return updated
+            }
+            return {
+              ...prevMap,
+              [key]: {
+                aspects: current.aspects,
+                opacity: newOpacity,
+              },
+            }
+          })
+        }, 100)
+
+        const fadeOutTimeout = setTimeout(() => {
+          clearInterval(fadeOutInterval)
+        }, dynAspectsFadeOut * 1000)
+        aspectClickTimersRef.current[key].push(fadeOutInterval, fadeOutTimeout)
+      }, fadeOutStart)
+      aspectClickTimersRef.current[key].push(fadeOutStartTimeout)
+    },
+    [dynAspectsFadeIn, dynAspectsFadeOut, dynAspectsSustain, getAspectsForPlanet, showDynAspects],
+  )
 
   const triggerPlanetGlyphScale = (planetName: string, aspectsForPlanet: any[]) => {
     if (!horoscopeData?.planets) return

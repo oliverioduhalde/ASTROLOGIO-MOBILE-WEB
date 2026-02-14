@@ -719,6 +719,7 @@ export function usePlanetAudio(
       crossfadeDelaySeconds = 0,
       crossfadeDurationSeconds = 30,
       pedalOptions?: { modalEnabled?: boolean; sunSignIndex?: number | null },
+      gainOverridePercent?: number,
     ) => {
       await initializeAudio()
 
@@ -751,7 +752,11 @@ export function usePlanetAudio(
         }
       }
 
-      const elementGain = elementSoundVolumeRef.current / 100
+      const elementGainPercent =
+        typeof gainOverridePercent === "number"
+          ? Math.max(0, Math.min(100, gainOverridePercent))
+          : elementSoundVolumeRef.current
+      const elementGain = elementGainPercent / 100
       if (elementGain <= 0) {
         return
       }

@@ -202,10 +202,13 @@ export default function AstrologyCalculator() {
   const [currentPlanetUnderPointer, setCurrentPlanetUnderPointer] = useState<string | null>(null)
   const [showAstrofono, setShowAstrofono] = useState(false) // Declared showAstrofono
   const [debugPointerAngle, setDebugPointerAngle] = useState(0) // Added state to track pointer angle for debugging
-  const intervalIdRef = useRef<NodeJS.Timeout | null>(null)
+  const animationFrameIdRef = useRef<number | null>(null)
+  const loopStartTimeRef = useRef(0)
+  const loopElapsedBeforePauseMsRef = useRef(0)
+  const lastUiCommitTimeRef = useRef(0)
+  const startButtonPhaseTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastClickTimeRef = useRef<number>(0)
   const [isPaused, setIsPaused] = useState(false)
-  const [pausedRotation, setPausedRotation] = useState(0)
 
   const [hoveredGlyph, setHoveredGlyph] = useState<string | null>(null)
   const [glyphHoverOpacity, setGlyphHoverOpacity] = useState(0)
@@ -288,8 +291,13 @@ export default function AstrologyCalculator() {
 
   useEffect(() => {
     return () => {
-      if (intervalIdRef.current) {
-        clearInterval(intervalIdRef.current)
+      if (animationFrameIdRef.current !== null) {
+        cancelAnimationFrame(animationFrameIdRef.current)
+        animationFrameIdRef.current = null
+      }
+      if (startButtonPhaseTimeoutRef.current) {
+        clearTimeout(startButtonPhaseTimeoutRef.current)
+        startButtonPhaseTimeoutRef.current = null
       }
     }
   }, [])
@@ -427,47 +435,124 @@ export default function AstrologyCalculator() {
     }
   }, [selectedPreset, showSubject])
 
-  // Remove playPlanetSound from dependencies, use useCallback from hook instead
-  const triggerPlanetSound = useCallback(
-    (planetName: string | null, angle: number) => {
-      if (planetName && planetName !== lastPlayedPlanetRef.current) {
-        console.log(`[v0] Triggering sound for planet: ${planetName} at angle: ${angle}`)
-        lastPlayedPlanetRef.current = planetName
-        playPlanetSound(planetName)
-      } else if (!planetName) {
-        lastPlayedPlanetRef.current = null
+  const cancelPointerLoop = useCallback(() => {
+    if (animationFrameIdRef.current !== null) {
+      cancelAnimationFrame(animationFrameIdRef.current)
+      animationFrameIdRef.current = null
+    }
+  }, [])
+
+  const detectPlanetUnderPointer = useCallback(
+    (adjustedAngle: number, ascDegrees: number): string | null => {
+      if (!horoscopeData?.planets) return null
+      const chartRotation = 180 - ascDegrees
+
+      for (const planet of horoscopeData.planets) {
+        const planetDegrees = planet.ChartPosition.Ecliptic.DecimalDegrees
+        const planetCanvasAngle = norm360(planetDegrees + chartRotation)
+        const diff = Math.abs(adjustedAngle - planetCanvasAngle)
+        const circularDiff = Math.min(diff, 360 - diff)
+        if (circularDiff < 5) return planet.name
       }
+      return null
     },
-    [playPlanetSound],
-  ) // playPlanetSound is stable due to the hook
+    [horoscopeData?.planets],
+  )
 
-  useEffect(() => {
-    if (currentPlanetUnderPointer && currentPlanetUnderPointer !== lastPlayedPlanetRef.current) {
-      console.log(`[v0] Triggering sound for planet: ${currentPlanetUnderPointer} at angle: ${debugPointerAngle}`)
-
-      const planet = horoscopeData?.planets.find((p) => p.name === currentPlanetUnderPointer)
-      const declination = planet?.declination || 0
+  const triggerPlanetAudioAtPointer = useCallback(
+    (planetName: string, adjustedAngle: number) => {
+      const planet = horoscopeData?.planets?.find((p) => p.name === planetName)
+      if (!planet) return
 
       const aspectsForPlanet =
         horoscopeData?.aspects?.filter(
           (aspect) =>
-            (aspect.point1.name.toLowerCase() === currentPlanetUnderPointer.toLowerCase() ||
-              aspect.point2.name.toLowerCase() === currentPlanetUnderPointer.toLowerCase()) &&
+            (aspect.point1.name.toLowerCase() === planetName.toLowerCase() ||
+              aspect.point2.name.toLowerCase() === planetName.toLowerCase()) &&
             ["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"].includes(aspect.aspectType),
         ) || []
 
       playPlanetSound(
-        currentPlanetUnderPointer,
-        debugPointerAngle,
-        declination,
+        planetName,
+        adjustedAngle,
+        planet.declination || 0,
         aspectsForPlanet,
         horoscopeData?.planets || [],
         horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees || 0,
         horoscopeData?.mc?.ChartPosition?.Ecliptic?.DecimalDegrees || 0,
       )
-      lastPlayedPlanetRef.current = currentPlanetUnderPointer
-    }
-  }, [currentPlanetUnderPointer, debugPointerAngle, horoscopeData?.planets, horoscopeData?.aspects, playPlanetSound])
+    },
+    [
+      horoscopeData?.aspects,
+      horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees,
+      horoscopeData?.mc?.ChartPosition?.Ecliptic?.DecimalDegrees,
+      horoscopeData?.planets,
+      playPlanetSound,
+    ],
+  )
+
+  const beginPointerLoop = useCallback(
+    (initialElapsedMs: number) => {
+      if (!horoscopeData) return
+
+      const ascDegrees = horoscopeData.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
+      const totalDuration = loopDuration * 1000
+      const uiCommitIntervalMs = 66
+
+      loopStartTimeRef.current = performance.now() - Math.max(0, initialElapsedMs)
+      lastUiCommitTimeRef.current = 0
+
+      const tick = () => {
+        const now = performance.now()
+        const elapsed = now - loopStartTimeRef.current
+        const boundedElapsed = Math.min(elapsed, totalDuration)
+        const state = calculatePointerState(boundedElapsed, totalDuration, ascDegrees)
+        const detectedPlanet = detectPlanetUnderPointer(state.adjustedAngle, ascDegrees)
+
+        if (detectedPlanet && detectedPlanet !== lastPlayedPlanetRef.current) {
+          triggerPlanetAudioAtPointer(detectedPlanet, state.adjustedAngle)
+          lastPlayedPlanetRef.current = detectedPlanet
+        } else if (!detectedPlanet) {
+          lastPlayedPlanetRef.current = null
+        }
+
+        if (lastUiCommitTimeRef.current === 0 || now - lastUiCommitTimeRef.current >= uiCommitIntervalMs) {
+          lastUiCommitTimeRef.current = now
+          setPointerRotation(state.pointerRotation)
+          setDebugPointerAngle(Math.round(state.adjustedAngle))
+          setCurrentPlanetUnderPointer(detectedPlanet)
+        }
+
+        if (elapsed >= totalDuration) {
+          cancelPointerLoop()
+          loopElapsedBeforePauseMsRef.current = 0
+          setPointerRotation(180)
+          setIsLoopRunning(false)
+          setIsPaused(false)
+          setCurrentPlanetUnderPointer(null)
+          setDebugPointerAngle(0)
+          setStartButtonPhase("contracted")
+          stopBackgroundSound()
+          stopElementBackground()
+          return
+        }
+
+        animationFrameIdRef.current = requestAnimationFrame(tick)
+      }
+
+      cancelPointerLoop()
+      animationFrameIdRef.current = requestAnimationFrame(tick)
+    },
+    [
+      cancelPointerLoop,
+      detectPlanetUnderPointer,
+      horoscopeData,
+      loopDuration,
+      stopBackgroundSound,
+      stopElementBackground,
+      triggerPlanetAudioAtPointer,
+    ],
+  )
 
   useEffect(() => {
     if (!isLoopRunning) {
@@ -596,14 +681,17 @@ export default function AstrologyCalculator() {
 
     // Double click: Reset everything
     if (isDoubleClick) {
-      if (intervalIdRef.current) {
-        clearInterval(intervalIdRef.current)
-        intervalIdRef.current = null
+      cancelPointerLoop()
+      loopStartTimeRef.current = 0
+      loopElapsedBeforePauseMsRef.current = 0
+      lastUiCommitTimeRef.current = 0
+      if (startButtonPhaseTimeoutRef.current) {
+        clearTimeout(startButtonPhaseTimeoutRef.current)
+        startButtonPhaseTimeoutRef.current = null
       }
       setIsLoopRunning(false)
       setIsPaused(false)
       setPointerRotation(180)
-      setPausedRotation(0)
       setCurrentPlanetUnderPointer(null)
       setDebugPointerAngle(0)
       setStartButtonPhase("contracted")
@@ -646,12 +734,10 @@ export default function AstrologyCalculator() {
     }
 
     // Single click: Toggle pause/resume
-    if (isLoopRunning) {
+    if (isLoopRunning && !isPaused) {
       setIsPaused(true)
-      if (intervalIdRef.current) {
-        clearInterval(intervalIdRef.current)
-        intervalIdRef.current = null
-      }
+      cancelPointerLoop()
+      loopElapsedBeforePauseMsRef.current = Math.max(0, performance.now() - loopStartTimeRef.current)
       return
     }
 
@@ -659,106 +745,23 @@ export default function AstrologyCalculator() {
       // Resume from pause
       setIsPaused(false)
       setIsLoopRunning(true)
-
-      const startTime = Date.now()
-      const totalDuration = loopDuration * 1000
-      const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
-      const pauseOffset = pausedRotation * (loopDuration / 360)
-
-      intervalIdRef.current = setInterval(() => {
-        const elapsed = Date.now() - startTime + pauseOffset * 1000
-        const state = calculatePointerState(elapsed, loopDuration * 1000, ascDegrees)
-
-        setPointerRotation(state.pointerRotation)
-        setPausedRotation(state.pointerRotation)
-        setDebugPointerAngle(Math.round(state.adjustedAngle))
-        if (horoscopeData?.planets) {
-          let detectedPlanet = null
-          const chartRotation = 180 - ascDegrees
-
-          for (const planet of horoscopeData.planets) {
-            const planetDegrees = planet.ChartPosition.Ecliptic.DecimalDegrees
-            const planetCanvasAngle = norm360(planetDegrees + chartRotation)
-            const diff = Math.abs(state.adjustedAngle - planetCanvasAngle)
-            const circularDiff = Math.min(diff, 360 - diff)
-
-            if (circularDiff < 5) {
-              detectedPlanet = planet.name
-              break
-            }
-          }
-          setCurrentPlanetUnderPointer(detectedPlanet)
-        }
-
-        if (elapsed >= totalDuration) {
-          setPointerRotation(180)
-          setIsLoopRunning(false)
-          setIsPaused(false)
-          setCurrentPlanetUnderPointer(null)
-          setDebugPointerAngle(0)
-          setStartButtonPhase("contracted")
-          if (intervalIdRef.current) {
-            clearInterval(intervalIdRef.current)
-            intervalIdRef.current = null
-          }
-          stopBackgroundSound() // Stop background sound when loop finishes
-          stopElementBackground()
-        }
-      }, 50)
+      beginPointerLoop(loopElapsedBeforePauseMsRef.current)
       return
     }
 
     // Initial start
     setIsLoopRunning(true)
+    setIsPaused(false)
     setStartButtonPhase("expanding")
 
-    setTimeout(() => {
+    if (startButtonPhaseTimeoutRef.current) {
+      clearTimeout(startButtonPhaseTimeoutRef.current)
+    }
+    startButtonPhaseTimeoutRef.current = setTimeout(() => {
       setStartButtonPhase("stable")
     }, 15000)
-
-    const startTime = Date.now()
-    const totalDuration = loopDuration * 1000
-    const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
-
-    intervalIdRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime
-      const state = calculatePointerState(elapsed, loopDuration * 1000, ascDegrees)
-
-      setPointerRotation(state.pointerRotation)
-      setPausedRotation(state.pointerRotation)
-      setDebugPointerAngle(Math.round(state.adjustedAngle))
-      if (horoscopeData?.planets) {
-        let detectedPlanet = null
-        const chartRotation = 180 - ascDegrees
-
-        for (const planet of horoscopeData.planets) {
-          const planetDegrees = planet.ChartPosition.Ecliptic.DecimalDegrees
-          const planetCanvasAngle = norm360(planetDegrees + chartRotation)
-          const diff = Math.abs(state.adjustedAngle - planetCanvasAngle)
-          const circularDiff = Math.min(diff, 360 - diff)
-
-          if (circularDiff < 5) {
-            detectedPlanet = planet.name
-            break
-          }
-        }
-        setCurrentPlanetUnderPointer(detectedPlanet)
-      }
-
-      if (elapsed >= totalDuration) {
-        setPointerRotation(180)
-        setIsLoopRunning(false)
-        setCurrentPlanetUnderPointer(null)
-        setDebugPointerAngle(0)
-        setStartButtonPhase("contracted")
-        if (intervalIdRef.current) {
-          clearInterval(intervalIdRef.current)
-          intervalIdRef.current = null
-        }
-        stopBackgroundSound() // Stop background sound when loop finishes
-        stopElementBackground()
-      }
-    }, 50)
+    loopElapsedBeforePauseMsRef.current = 0
+    beginPointerLoop(0)
     // START BACKGROUND SOUND: Start background sound when loop begins
     playBackgroundSound()
     if (horoscopeData?.planets && horoscopeData?.ascendant) {

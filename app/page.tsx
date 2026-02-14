@@ -2013,16 +2013,17 @@ export default function AstrologyCalculator() {
 
                         // Determine color and width based on aspect type
                         let stroke = "#888"
-                        let strokeWidth = 0.5
+                        let strokeWidth = 1.5
                         if (aspect.aspectType === "Oposición") {
                           stroke = "#FF8C00"
-                          strokeWidth = 1
+                          strokeWidth = 2
                         } else if (aspect.aspectType === "Conjunción") {
                           stroke = "#9D4EDD"
                         } else if (aspect.aspectType === "Trígono") {
                           stroke = "#00FF00"
                         } else if (aspect.aspectType === "Cuadrado") {
                           stroke = "#FF0000"
+                          strokeWidth = 2.5
                         } else if (aspect.aspectType === "Sextil") {
                           stroke = "#0099FF"
                         }
@@ -2147,21 +2148,22 @@ export default function AstrologyCalculator() {
 
                           // Determine color and width based on aspect type
                           let aspectColor = "#888"
-                          let aspectWidth = 0.5
+                          let aspectWidth = 1.5
                           let aspectFilter = "none"
 
                           if (aspect.aspectType === "Oposición") {
                             aspectColor = "#FF8C00"
-                            aspectWidth = 1
+                            aspectWidth = 2
                           } else if (aspect.aspectType === "Oposición") {
                             aspectColor = "#FF8C00"
-                            aspectWidth = 1
+                            aspectWidth = 2
                           } else if (aspect.aspectType === "Conjunción") {
                             aspectColor = "#9D4EDD"
                           } else if (aspect.aspectType === "Trígono") {
                             aspectColor = "#00FF00"
                           } else if (aspect.aspectType === "Cuadrado") {
                             aspectColor = "#FF0000"
+                            aspectWidth = 2.5
                             aspectFilter = "blur(1px)" // Add subtle blur for squares
                           } else if (aspect.aspectType === "Sextil") {
                             aspectColor = "#0099FF"

@@ -1257,7 +1257,11 @@ export default function AstrologyCalculator() {
       return
     }
     startAmbientBed({ playBackground: false, playElement: true })
-    startNonRadialRoute(buildAspectualRoute())
+    startNonRadialRoute(buildAspectualRoute(), {
+      teleport: true,
+      holdMs: CHART_PLANET_HOLD_MS,
+      crossfadeMs: NAVIGATION_TRANSITION_MS,
+    })
   }
 
   const setNavigationModeFromMenu = (mode: NavigationMode) => {

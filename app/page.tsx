@@ -99,7 +99,9 @@ const SEQUENTIAL_PLANET_ORDER = [
 const NAVIGATION_TRANSITION_MS = 5000
 const CHART_PLANET_HOLD_MS = 15000
 const CHORD_POINTER_RADIUS = 16
-const CHORD_ASPECTS_FADE_IN_MS = 7000
+const CHORD_ASPECTS_FADE_IN_MS = 14000
+const CHORD_ASPECTS_HOLD_MS = 10000
+const CHORD_ASPECTS_FADE_OUT_MS = 10000
 
 const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
   astral_chord: "CHORD",
@@ -235,6 +237,7 @@ export default function AstrologyCalculator() {
   const [pointerRotation, setPointerRotation] = useState(0)
   const [pointerOpacity, setPointerOpacity] = useState(1)
   const [pointerOpacityTransitionMs, setPointerOpacityTransitionMs] = useState(0)
+  const [chordAspectsTransitionMs, setChordAspectsTransitionMs] = useState(CHORD_ASPECTS_FADE_IN_MS)
   const [startButtonScale, setStartButtonScale] = useState(1)
 
   const [audioFadeIn, setAudioFadeIn] = useState(5)
@@ -624,6 +627,7 @@ export default function AstrologyCalculator() {
           setPointerRotation(180)
           setPointerOpacity(1)
           setPointerOpacityTransitionMs(0)
+          setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
           setIsLoopRunning(false)
           setIsPaused(false)
           setCurrentPlanetUnderPointer(null)
@@ -812,6 +816,7 @@ export default function AstrologyCalculator() {
     setPointerRotation(180)
     setPointerOpacity(1)
     setPointerOpacityTransitionMs(0)
+    setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
     setCurrentPlanetUnderPointer(null)
     setDebugPointerAngle(0)
     setStartButtonPhase("contracted")
@@ -1124,6 +1129,7 @@ export default function AstrologyCalculator() {
       ) || []
 
     if (allMajorAspects.length > 0) {
+      setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
       setActivePlanetAspectsMap({
         all: {
           aspects: allMajorAspects,
@@ -1145,6 +1151,34 @@ export default function AstrologyCalculator() {
         })
       }, 40)
       navigationTimeoutsRef.current.push(chordFadeTimer)
+
+      const chordFadeOutTimer = setTimeout(() => {
+        if (navigationRunIdRef.current !== runId) return
+        setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_OUT_MS)
+        setActivePlanetAspectsMap((prevMap) => {
+          const current = prevMap.all
+          if (!current) return prevMap
+          return {
+            ...prevMap,
+            all: {
+              aspects: current.aspects,
+              opacity: 0,
+            },
+          }
+        })
+      }, CHORD_ASPECTS_FADE_IN_MS + CHORD_ASPECTS_HOLD_MS)
+      navigationTimeoutsRef.current.push(chordFadeOutTimer)
+
+      const chordCleanupTimer = setTimeout(() => {
+        if (navigationRunIdRef.current !== runId) return
+        setActivePlanetAspectsMap((prevMap) => {
+          if (!prevMap.all) return prevMap
+          const updated = { ...prevMap }
+          delete updated.all
+          return updated
+        })
+      }, CHORD_ASPECTS_FADE_IN_MS + CHORD_ASPECTS_HOLD_MS + CHORD_ASPECTS_FADE_OUT_MS + 80)
+      navigationTimeoutsRef.current.push(chordCleanupTimer)
     } else {
       setActivePlanetAspectsMap({})
     }
@@ -1164,6 +1198,7 @@ export default function AstrologyCalculator() {
     })
 
     const totalDurationSec = Math.max(audioFadeIn + audioFadeOut, dynAspectsFadeIn + dynAspectsSustain + dynAspectsFadeOut)
+    const chordVisualDurationMs = CHORD_ASPECTS_FADE_IN_MS + CHORD_ASPECTS_HOLD_MS + CHORD_ASPECTS_FADE_OUT_MS + 300
     const finishTimer = setTimeout(() => {
       if (navigationRunIdRef.current !== runId) return
       setIsLoopRunning(false)
@@ -1171,7 +1206,8 @@ export default function AstrologyCalculator() {
       setCurrentPlanetUnderPointer(null)
       setStartButtonPhase("contracted")
       setActivePlanetAspectsMap({})
-    }, Math.max(2000, totalDurationSec * 1000 + 300))
+      setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
+    }, Math.max(2000, totalDurationSec * 1000 + 300, chordVisualDurationMs))
     navigationTimeoutsRef.current.push(finishTimer)
   }
 
@@ -1187,6 +1223,7 @@ export default function AstrologyCalculator() {
     lastUiCommitTimeRef.current = 0
     setPointerOpacity(1)
     setPointerOpacityTransitionMs(0)
+    setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
     setActivePlanetAspectsMap({})
     setIsLoopRunning(true)
     setIsPaused(false)
@@ -1323,6 +1360,7 @@ export default function AstrologyCalculator() {
       setPointerRotation(180)
       setPointerOpacity(1)
       setPointerOpacityTransitionMs(0)
+      setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
       setDebugPointerAngle(0)
       setActivePlanetAspectsMap({})
       console.log("[v0] Calculating with isSidereal:", isSidereal)
@@ -2814,7 +2852,7 @@ export default function AstrologyCalculator() {
                                   opacity: aspectOpacity,
                                   transition:
                                     planetName === "all"
-                                      ? `opacity ${CHORD_ASPECTS_FADE_IN_MS / 1000}s linear`
+                                      ? `opacity ${chordAspectsTransitionMs / 1000}s linear`
                                       : "opacity 0.1s linear",
                                 }}
                               />

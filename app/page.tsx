@@ -105,6 +105,47 @@ const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
   aspectual: "ASPECT",
 }
 
+const EARTH_CENTER_X = 200
+const EARTH_CENTER_Y = 200
+const EARTH_RADIUS = 10
+
+const EARTH_QUADRANT_CONFIG: Array<{
+  mode: NavigationMode
+  startAngle: number
+  endAngle: number
+  fill: string
+}> = [
+  { mode: "astral_chord", startAngle: 180, endAngle: 270, fill: "#FFFFFF" },
+  { mode: "radial", startAngle: 270, endAngle: 360, fill: "#BDBDBD" },
+  { mode: "sequential", startAngle: 90, endAngle: 180, fill: "#6F6F6F" },
+  { mode: "aspectual", startAngle: 0, endAngle: 90, fill: "#1A1A1A" },
+]
+
+function pointOnScreenCircle(cx: number, cy: number, r: number, angleDeg: number) {
+  const theta = (angleDeg * Math.PI) / 180
+  return {
+    x: cx + r * Math.cos(theta),
+    y: cy + r * Math.sin(theta),
+  }
+}
+
+function buildEarthQuadrantPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
+  const start = pointOnScreenCircle(cx, cy, r, startAngle)
+  const end = pointOnScreenCircle(cx, cy, r, endAngle)
+  return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${end.x} ${end.y} Z`
+}
+
+function getEarthModeFromSvgPoint(x: number, y: number): NavigationMode | null {
+  const dx = x - EARTH_CENTER_X
+  const dy = y - EARTH_CENTER_Y
+  if (dx * dx + dy * dy > EARTH_RADIUS * EARTH_RADIUS) return null
+
+  if (dy <= 0) {
+    return dx <= 0 ? "astral_chord" : "radial"
+  }
+  return dx <= 0 ? "sequential" : "aspectual"
+}
+
 function adjustPlanetPositions(planets: { name: string; degrees: number }[], minSeparation = 12) {
   const sorted = [...planets].sort((a, b) => a.degrees - b.degrees)
   const adjusted: { name: string; adjustedDegrees: number }[] = []
@@ -251,6 +292,7 @@ export default function AstrologyCalculator() {
   const [currentPlanetUnderPointer, setCurrentPlanetUnderPointer] = useState<string | null>(null)
   const [showAstrofono, setShowAstrofono] = useState(false) // Declared showAstrofono
   const [debugPointerAngle, setDebugPointerAngle] = useState(0) // Added state to track pointer angle for debugging
+  const chartSvgRef = useRef<SVGSVGElement | null>(null)
   const animationFrameIdRef = useRef<number | null>(null)
   const loopStartTimeRef = useRef(0)
   const loopElapsedBeforePauseMsRef = useRef(0)
@@ -506,6 +548,21 @@ export default function AstrologyCalculator() {
       setLocationSuggestions([])
     }
   }, [selectedPreset, showSubject])
+
+  const resolveEarthModeFromClientPosition = useCallback(
+    (clientX: number, clientY: number): NavigationMode | null => {
+      const svg = chartSvgRef.current
+      if (!svg) return null
+
+      const rect = svg.getBoundingClientRect()
+      if (!rect.width || !rect.height) return null
+
+      const svgX = ((clientX - rect.left) / rect.width) * 400
+      const svgY = ((clientY - rect.top) / rect.height) * 400
+      return getEarthModeFromSvgPoint(svgX, svgY)
+    },
+    [],
+  )
 
   const cancelPointerLoop = useCallback(() => {
     if (animationFrameIdRef.current !== null) {
@@ -793,8 +850,8 @@ export default function AstrologyCalculator() {
     stopAll()
     setFormData({ ...PRESET_BA77_FORM })
     setSelectedPreset("ba77")
-    setShowSubject(true)
-    setShowChart(false)
+    setShowSubject(false)
+    setShowChart(true)
     setError("")
     setElementSoundVolume(2)
     setBackgroundVolume(2)
@@ -1133,6 +1190,19 @@ export default function AstrologyCalculator() {
     try {
       setError("")
       setLoading(true)
+      cancelAllNavigationSchedulers()
+      stopAll()
+      stopBackgroundSound()
+      stopElementBackground()
+      loopElapsedBeforePauseMsRef.current = 0
+      lastUiCommitTimeRef.current = 0
+      setIsLoopRunning(false)
+      setIsPaused(false)
+      setCurrentPlanetUnderPointer(null)
+      setPointerRotation(180)
+      setDebugPointerAngle(0)
+      setEarthHoverMode(null)
+      setActivePlanetAspectsMap({})
       console.log("[v0] Calculating with isSidereal:", isSidereal)
       const data = await calculateCustomHoroscope(birthDate, birthTime, latitude, longitude, isSidereal, presetToUse)
       console.log("[v0] Horoscope data received:", data)
@@ -2015,7 +2085,7 @@ export default function AstrologyCalculator() {
             {showChart && (
               <div className="mb-8 flex justify-center">
                 <div className="relative w-full max-w-[400px] aspect-square md:w-[min(90vh,90vw)] md:h-[min(90vh,90vw)] md:max-w-none md:aspect-auto">
-                  <svg viewBox="0 0 400 400" className="w-full h-full">
+                  <svg ref={chartSvgRef} viewBox="0 0 400 400" className="w-full h-full">
                     <defs>
                       <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
                         <feGaussianBlur stdDeviation="3" result="coloredBlur" />
@@ -2333,79 +2403,87 @@ export default function AstrologyCalculator() {
 
                     {showPointer && (
                       <>
-                        {/* Earth quadrants as pizza slices (Q1/Q2/Q3/Q4) */}
-                        <g style={{ pointerEvents: "auto" }} onMouseLeave={() => setEarthHoverMode(null)}>
-                          <path
-                            d="M200 200 L190 200 A10 10 0 0 1 200 190 Z"
-                            fill="#FFFFFF"
-                            onPointerDown={() => handleEarthQuadrantPress("astral_chord")}
-                            onMouseEnter={() => setEarthHoverMode("astral_chord")}
-                            style={{ cursor: "pointer" }}
-                          />
-                          <path
-                            d="M200 200 L200 190 A10 10 0 0 1 210 200 Z"
-                            fill="#BDBDBD"
-                            onPointerDown={() => handleEarthQuadrantPress("radial")}
-                            onMouseEnter={() => setEarthHoverMode("radial")}
-                            style={{ cursor: "pointer" }}
-                          />
-                          <path
-                            d="M200 200 L200 210 A10 10 0 0 1 190 200 Z"
-                            fill="#6F6F6F"
-                            onPointerDown={() => handleEarthQuadrantPress("sequential")}
-                            onMouseEnter={() => setEarthHoverMode("sequential")}
-                            style={{ cursor: "pointer" }}
-                          />
-                          <path
-                            d="M200 200 L210 200 A10 10 0 0 1 200 210 Z"
-                            fill="#1A1A1A"
-                            onPointerDown={() => handleEarthQuadrantPress("aspectual")}
-                            onMouseEnter={() => setEarthHoverMode("aspectual")}
+                        {/* Earth control as 4 pizza quadrants */}
+                        <g>
+                          {EARTH_QUADRANT_CONFIG.map((quadrant) => (
+                            <path
+                              key={quadrant.mode}
+                              d={buildEarthQuadrantPath(
+                                EARTH_CENTER_X,
+                                EARTH_CENTER_Y,
+                                EARTH_RADIUS,
+                                quadrant.startAngle,
+                                quadrant.endAngle,
+                              )}
+                              fill={quadrant.fill}
+                              opacity={isLoopRunning ? 1 : 0.92}
+                              style={{ pointerEvents: "none" }}
+                            />
+                          ))}
+                          <circle
+                            cx={EARTH_CENTER_X}
+                            cy={EARTH_CENTER_Y}
+                            r={EARTH_RADIUS}
+                            fill="transparent"
+                            onPointerEnter={(event) => {
+                              const mode = resolveEarthModeFromClientPosition(event.clientX, event.clientY)
+                              setEarthHoverMode(mode)
+                            }}
+                            onPointerMove={(event) => {
+                              const mode = resolveEarthModeFromClientPosition(event.clientX, event.clientY)
+                              setEarthHoverMode(mode)
+                            }}
+                            onPointerLeave={() => setEarthHoverMode(null)}
+                            onPointerDown={(event) => {
+                              const mode = resolveEarthModeFromClientPosition(event.clientX, event.clientY)
+                              if (!mode) return
+                              handleEarthQuadrantPress(mode)
+                            }}
                             style={{ cursor: "pointer" }}
                           />
                           {earthHoverMode && (
                             <g style={{ pointerEvents: "none" }}>
-                              <rect x="176" y="176" width="48" height="10" fill="#000000" opacity="0.72" rx="2" />
+                              <rect x="165" y="165" width="70" height="13" fill="#000000" opacity="0.78" rx="2" />
                               <text
                                 x="200"
-                                y="181"
+                                y="171.5"
                                 textAnchor="middle"
                                 dominantBaseline="middle"
-                                className="fill-white font-mono text-[6px] select-none"
-                                style={{ opacity: 0.98 }}
+                                className="fill-white font-mono text-[8px] select-none"
+                                style={{ opacity: 1 }}
                               >
                                 {NAV_MODE_HINT_LABEL[earthHoverMode]}
                               </text>
                             </g>
                           )}
                           <circle
-                            cx="200"
-                            cy="200"
-                            r="10"
+                            cx={EARTH_CENTER_X}
+                            cy={EARTH_CENTER_Y}
+                            r={EARTH_RADIUS}
                             fill="none"
                             stroke="white"
                             strokeWidth="1.5"
-                            opacity={isLoopRunning ? 1 : 0.65}
+                            opacity={isLoopRunning ? 1 : 0.72}
                             style={{ pointerEvents: "none" }}
                           />
                           <line
-                            x1="200"
-                            y1="190"
-                            x2="200"
-                            y2="210"
+                            x1={EARTH_CENTER_X}
+                            y1={EARTH_CENTER_Y - EARTH_RADIUS}
+                            x2={EARTH_CENTER_X}
+                            y2={EARTH_CENTER_Y + EARTH_RADIUS}
                             stroke="white"
                             strokeWidth="1.2"
-                            opacity={isLoopRunning ? 1 : 0.65}
+                            opacity={isLoopRunning ? 1 : 0.72}
                             style={{ pointerEvents: "none" }}
                           />
                           <line
-                            x1="190"
-                            y1="200"
-                            x2="210"
-                            y2="200"
+                            x1={EARTH_CENTER_X - EARTH_RADIUS}
+                            y1={EARTH_CENTER_Y}
+                            x2={EARTH_CENTER_X + EARTH_RADIUS}
+                            y2={EARTH_CENTER_Y}
                             stroke="white"
                             strokeWidth="1.2"
-                            opacity={isLoopRunning ? 1 : 0.65}
+                            opacity={isLoopRunning ? 1 : 0.72}
                             style={{ pointerEvents: "none" }}
                           />
                         </g>

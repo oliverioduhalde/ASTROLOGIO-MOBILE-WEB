@@ -98,6 +98,7 @@ const SEQUENTIAL_PLANET_ORDER = [
 
 const NAVIGATION_TRANSITION_MS = 5000
 const CHART_PLANET_HOLD_MS = 15000
+const CHORD_POINTER_RADIUS = 16
 
 const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
   astral_chord: "ACCORD",
@@ -1067,12 +1068,27 @@ export default function AstrologyCalculator() {
 
   const startAstralChordMode = () => {
     if (!horoscopeData?.planets) return
+    const allowedAspects = new Set(["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"])
+    const allMajorAspects =
+      horoscopeData.aspects?.filter(
+        (aspect) =>
+          allowedAspects.has(aspect.aspectType) && aspect.point1.name.toLowerCase() !== aspect.point2.name.toLowerCase(),
+      ) || []
+
+    if (allMajorAspects.length > 0) {
+      setActivePlanetAspectsMap({
+        all: {
+          aspects: allMajorAspects,
+          opacity: 1,
+        },
+      })
+    } else {
+      setActivePlanetAspectsMap({})
+    }
+
     const route = buildSequentialRoute().filter((name, index, arr) => index === arr.indexOf(name))
     const runId = navigationRunIdRef.current
-    const sunAngle = getPlanetDialAngle("sun")
-    if (sunAngle !== null) {
-      setPointerAngle(sunAngle, "sun")
-    }
+    setCurrentPlanetUnderPointer(null)
 
     route.forEach((planetName, index) => {
       const angle = getPlanetDialAngle(planetName)
@@ -1092,6 +1108,7 @@ export default function AstrologyCalculator() {
       setIsPaused(false)
       setCurrentPlanetUnderPointer(null)
       setStartButtonPhase("contracted")
+      setActivePlanetAspectsMap({})
     }, Math.max(2000, totalDurationSec * 1000 + 300))
     navigationTimeoutsRef.current.push(finishTimer)
   }
@@ -1107,6 +1124,7 @@ export default function AstrologyCalculator() {
     lastUiCommitTimeRef.current = 0
     setPointerOpacity(1)
     setPointerOpacityTransitionMs(0)
+    setActivePlanetAspectsMap({})
     setIsLoopRunning(true)
     setIsPaused(false)
     setStartButtonPhase("expanding")
@@ -2526,12 +2544,33 @@ export default function AstrologyCalculator() {
                         )}
 
                         {/* Update pointer visibility - only show when loop is running */}
+                        {showPointer && isLoopRunning && navigationMode === "astral_chord" && (
+                          <circle
+                            cx={EARTH_CENTER_X}
+                            cy={EARTH_CENTER_Y}
+                            r={CHORD_POINTER_RADIUS}
+                            fill="white"
+                            fillOpacity="0.12"
+                            stroke="white"
+                            strokeWidth="1.25"
+                            opacity={pointerOpacity}
+                            style={{
+                              pointerEvents: "none",
+                              transition:
+                                pointerOpacityTransitionMs > 0
+                                  ? `opacity ${pointerOpacityTransitionMs}ms linear`
+                                  : "none",
+                            }}
+                          />
+                        )}
+
                         {showPointer && isLoopRunning && (
                           <g
                             style={{
                               transform: `rotate(${pointerRotation}deg)`,
                               transformOrigin: "200px 200px",
                               transition: "none", // Remove transition for smooth animation
+                              opacity: navigationMode === "astral_chord" ? 0 : 1,
                             }}
                           >
                             <circle

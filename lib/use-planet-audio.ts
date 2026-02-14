@@ -61,6 +61,41 @@ interface PlanetData {
   declination?: number
 }
 
+export interface OfflineMp3AspectEvent {
+  planetName: string
+  angleDeg: number
+  declinationDeg: number
+  aspectType: string
+}
+
+export interface OfflineMp3PlanetEvent {
+  planetName: string
+  angleDeg: number
+  declinationDeg: number
+  startSec: number
+  fadeInSec: number
+  fadeOutSec: number
+  aspects?: OfflineMp3AspectEvent[]
+  aspectFadeInSec?: number
+  aspectSustainSec?: number
+  aspectFadeOutSec?: number
+  aspectVolumePercent?: number
+}
+
+export interface OfflineMp3RenderOptions {
+  events: OfflineMp3PlanetEvent[]
+  durationSec: number
+  masterVolumePercent: number
+  tuningCents?: number
+  modalEnabled?: boolean
+  modalSunSignIndex?: number | null
+  includeBackground?: boolean
+  backgroundVolumePercent?: number
+  includeElement?: boolean
+  elementName?: "fire" | "earth" | "air" | "water"
+  elementVolumePercent?: number
+}
+
 function polarToCartesian3D(azimuthDeg: number, elevationDeg: number): Position3D {
   const distance = 5
   const azimuthRad = (azimuthDeg * Math.PI) / 180
@@ -230,7 +265,7 @@ function getFmPadGainValue(masterVolume: number, synthVolume: number): number {
   return Math.max(0, (masterVolume / 100) * 0.22 * FM_PAD_GAIN_BOOST_FACTOR * (synthVolume / 100))
 }
 
-function createLowDiffusionReverbImpulse(ctx: AudioContext, durationSeconds = 3): AudioBuffer {
+function createLowDiffusionReverbImpulse(ctx: BaseAudioContext, durationSeconds = 3): AudioBuffer {
   const sampleRate = ctx.sampleRate
   const length = Math.max(1, Math.floor(sampleRate * durationSeconds))
   const impulse = ctx.createBuffer(1, length, sampleRate)
@@ -327,11 +362,6 @@ export function usePlanetAudio(
   const toneModuleRef = useRef<any>(null)
   const fmPadSynthRef = useRef<any>(null)
   const fmPadGainRef = useRef<any>(null)
-  const mp3EncoderRef = useRef<Mp3EncoderInstance | null>(null)
-  const mp3ChunksRef = useRef<Int8Array[]>([])
-  const isMp3RecordingRef = useRef(false)
-  const recordingProcessorRef = useRef<ScriptProcessorNode | null>(null)
-  const recordingSinkGainRef = useRef<GainNode | null>(null)
 
   useEffect(() => {
     backgroundVolumeRef.current = envelope.backgroundVolume ?? 20
@@ -578,29 +608,6 @@ export function usePlanetAudio(
           preSplitter.connect(preRightAnalyser, 1)
           postSplitter.connect(postLeftAnalyser, 0)
           postSplitter.connect(postRightAnalyser, 1)
-
-          // Optional MP3 export tap from post-limiter stereo output.
-          const recordingProcessor = audioContextRef.current.createScriptProcessor(4096, 2, 2)
-          const recordingSinkGain = audioContextRef.current.createGain()
-          recordingSinkGain.gain.value = 0
-          recordingProcessor.onaudioprocess = (event) => {
-            if (!isMp3RecordingRef.current || !mp3EncoderRef.current) return
-
-            const input = event.inputBuffer
-            const left = input.getChannelData(0)
-            const right = input.numberOfChannels > 1 ? input.getChannelData(1) : left
-            const left16 = floatToInt16(left)
-            const right16 = floatToInt16(right)
-            const encodedChunk = toInt8Array(mp3EncoderRef.current.encodeBuffer(left16, right16))
-            if (encodedChunk.length > 0) {
-              mp3ChunksRef.current.push(encodedChunk)
-            }
-          }
-          dynamicsCompressor.connect(recordingProcessor)
-          recordingProcessor.connect(recordingSinkGain)
-          recordingSinkGain.connect(audioContextRef.current.destination)
-          recordingProcessorRef.current = recordingProcessor
-          recordingSinkGainRef.current = recordingSinkGain
 
           resonanceSceneRef.current.setListenerPosition(0, 0, 0)
           console.log("[v0] Resonance Audio scene initialized with 18dB gain and limiter")
@@ -1280,53 +1287,224 @@ export function usePlanetAudio(
     }
   }, [])
 
-  const startMp3Recording = useCallback(async (): Promise<boolean> => {
-    try {
-      await initializeAudio()
-      const ctx = audioContextRef.current
-      if (!ctx) return false
-      if (ctx.state === "suspended") {
-        await ctx.resume()
-      }
+  const renderOfflineMp3 = useCallback(
+    async (options: OfflineMp3RenderOptions): Promise<Blob | null> => {
+      const durationSec = Math.max(0.5, options.durationSec)
+      if (!options.events || options.events.length === 0) return null
 
-      const lameModule = (await import("lamejs")) as {
-        Mp3Encoder: new (channels: number, sampleRate: number, kbps: number) => Mp3EncoderInstance
-      }
-      mp3ChunksRef.current = []
-      mp3EncoderRef.current = new lameModule.Mp3Encoder(2, Math.round(ctx.sampleRate), 192)
-      isMp3RecordingRef.current = true
-      return true
-    } catch (error) {
-      console.error("[v0] Error starting MP3 export:", error)
-      isMp3RecordingRef.current = false
-      mp3EncoderRef.current = null
-      mp3ChunksRef.current = []
-      return false
-    }
-  }, [initializeAudio])
+      try {
+        await initializeAudio()
+        const liveContext = audioContextRef.current
+        if (!liveContext) return null
 
-  const stopMp3Recording = useCallback((): Blob | null => {
-    isMp3RecordingRef.current = false
-    if (!mp3EncoderRef.current) return null
+        const sampleRate = Math.max(22050, Math.round(liveContext.sampleRate || 44100))
+        const totalFrames = Math.max(1, Math.ceil(durationSec * sampleRate))
+        const offlineContext = new OfflineAudioContext(2, totalFrames, sampleRate)
 
-    try {
-      const flushChunk = toInt8Array(mp3EncoderRef.current.flush())
-      if (flushChunk.length > 0) {
-        mp3ChunksRef.current.push(flushChunk)
-      }
-      if (mp3ChunksRef.current.length === 0) {
-        mp3EncoderRef.current = null
+        const masterGainNode = offlineContext.createGain()
+        const baseGain = Math.pow(10, 28 / 20)
+        masterGainNode.gain.value = baseGain * Math.max(0, options.masterVolumePercent / 100)
+
+        const dynamicsCompressor = offlineContext.createDynamicsCompressor()
+        dynamicsCompressor.threshold.value = -1
+        dynamicsCompressor.knee.value = 0
+        dynamicsCompressor.ratio.value = 4
+        dynamicsCompressor.attack.value = 0.003
+        dynamicsCompressor.release.value = 0.25
+        masterGainNode.connect(dynamicsCompressor)
+        dynamicsCompressor.connect(offlineContext.destination)
+
+        const impulseBuffer = createLowDiffusionReverbImpulse(offlineContext, 3)
+        const globalReverbSend = offlineContext.createGain()
+        globalReverbSend.gain.value = 1
+        const globalReverbConvolver = offlineContext.createConvolver()
+        globalReverbConvolver.buffer = impulseBuffer
+        const globalReverbShelf = offlineContext.createBiquadFilter()
+        globalReverbShelf.type = "highshelf"
+        globalReverbShelf.frequency.value = 800
+        globalReverbShelf.gain.value = -6
+        const globalReverbReturn = offlineContext.createGain()
+        globalReverbReturn.gain.value = 1
+        globalReverbSend.connect(globalReverbConvolver)
+        globalReverbConvolver.connect(globalReverbShelf)
+        globalReverbShelf.connect(globalReverbReturn)
+        globalReverbReturn.connect(masterGainNode)
+
+        const tuningRate = centsToPlaybackRate(
+          typeof options.tuningCents === "number" ? options.tuningCents : tuningCentsRef.current,
+        )
+        const modalEnabled = options.modalEnabled ?? modalEnabledRef.current
+        const modalSunSignIndex =
+          typeof options.modalSunSignIndex === "number"
+            ? options.modalSunSignIndex
+            : modalSunSignIndexRef.current
+
+        const scheduleSample = (params: {
+          bufferKey: string
+          startSec: number
+          angleDeg: number
+          fadeInSec: number
+          sustainSec: number
+          fadeOutSec: number
+          peakGain: number
+          playbackRate: number
+        }) => {
+          const buffer = audioBuffersRef.current[params.bufferKey]
+          if (!buffer) return
+
+          const startTime = Math.max(0, params.startSec)
+          if (startTime >= durationSec) return
+
+          const source = offlineContext.createBufferSource()
+          source.buffer = buffer
+          source.playbackRate.setValueAtTime(Math.max(0.05, params.playbackRate), startTime)
+
+          const gainNode = offlineContext.createGain()
+          const dryGainNode = offlineContext.createGain()
+          const wetSendGainNode = offlineContext.createGain()
+          dryGainNode.gain.value = 0.8
+          wetSendGainNode.gain.value = 0.2
+
+          const stereoPan = Math.max(-1, Math.min(1, Math.sin((params.angleDeg * Math.PI) / 180)))
+          const panner = offlineContext.createStereoPanner()
+          panner.pan.setValueAtTime(stereoPan, startTime)
+
+          source.connect(gainNode)
+          gainNode.connect(panner)
+          panner.connect(dryGainNode)
+          panner.connect(wetSendGainNode)
+          dryGainNode.connect(masterGainNode)
+          wetSendGainNode.connect(globalReverbSend)
+
+          const startOffsetSec = 30
+          const availableDurationSec = Math.max(0, (buffer.duration - startOffsetSec) / Math.max(0.05, params.playbackRate))
+          if (availableDurationSec <= 0) return
+
+          const fadeInSec = Math.max(0.01, params.fadeInSec)
+          const sustainSec = Math.max(0, params.sustainSec)
+          const fadeOutSec = Math.max(0.01, params.fadeOutSec)
+          const requestedDurationSec = fadeInSec + sustainSec + fadeOutSec
+          const maxRemainingSec = Math.max(0.01, durationSec - startTime)
+          const effectiveDurationSec = Math.min(requestedDurationSec, availableDurationSec, maxRemainingSec)
+          const endTime = startTime + effectiveDurationSec
+          const fadeInEnd = Math.min(endTime, startTime + fadeInSec)
+          const sustainEnd = Math.min(endTime, fadeInEnd + sustainSec)
+
+          gainNode.gain.setValueAtTime(0, startTime)
+          gainNode.gain.linearRampToValueAtTime(params.peakGain, fadeInEnd)
+          gainNode.gain.setValueAtTime(params.peakGain, sustainEnd)
+          gainNode.gain.linearRampToValueAtTime(0, endTime)
+
+          source.start(startTime, startOffsetSec)
+          source.stop(endTime)
+        }
+
+        if (options.includeBackground) {
+          const backgroundBuffer = audioBuffersRef.current.background
+          if (backgroundBuffer) {
+            const backgroundSource = offlineContext.createBufferSource()
+            const backgroundGainNode = offlineContext.createGain()
+            backgroundSource.buffer = backgroundBuffer
+            backgroundSource.loop = true
+            backgroundGainNode.gain.value = Math.max(0, (options.backgroundVolumePercent ?? backgroundVolumeRef.current) / 100)
+            backgroundSource.connect(backgroundGainNode)
+            backgroundGainNode.connect(masterGainNode)
+            backgroundSource.start(0)
+            backgroundSource.stop(durationSec)
+          }
+        }
+
+        if (options.includeElement && options.elementName) {
+          const elementBuffer = audioBuffersRef.current[options.elementName]
+          if (elementBuffer) {
+            const rulerPlanet = getSignRulerPlanetName(modalSunSignIndex)
+            const elementPlaybackRate =
+              getPlanetPrincipalPlaybackRate(rulerPlanet, modalEnabled, modalSunSignIndex) * tuningRate
+            const elementSource = offlineContext.createBufferSource()
+            const elementGainNode = offlineContext.createGain()
+            elementSource.buffer = elementBuffer
+            elementSource.loop = true
+            elementSource.playbackRate.value = elementPlaybackRate
+            elementGainNode.gain.value = Math.max(0, (options.elementVolumePercent ?? elementSoundVolumeRef.current) / 100)
+            elementSource.connect(elementGainNode)
+            elementGainNode.connect(masterGainNode)
+            elementSource.start(0)
+            elementSource.stop(durationSec)
+          }
+        }
+
+        for (const event of options.events) {
+          const planetName = event.planetName.toLowerCase()
+          const principalPlaybackRate = getPlanetPrincipalPlaybackRate(planetName, modalEnabled, modalSunSignIndex) * tuningRate
+          const principalPeakGain = getPlanetVolumeMultiplier(planetName)
+
+          scheduleSample({
+            bufferKey: planetName,
+            startSec: event.startSec,
+            angleDeg: event.angleDeg,
+            fadeInSec: event.fadeInSec,
+            sustainSec: 0,
+            fadeOutSec: event.fadeOutSec,
+            peakGain: principalPeakGain,
+            playbackRate: principalPlaybackRate,
+          })
+
+          const aspectFadeInSec = Math.max(0.01, event.aspectFadeInSec ?? dynAspectsFadeInRef.current)
+          const aspectSustainSec = Math.max(0, event.aspectSustainSec ?? dynAspectsSustainRef.current)
+          const aspectFadeOutSec = Math.max(0.01, event.aspectFadeOutSec ?? dynAspectsFadeOutRef.current)
+          const aspectVolumePercent = Math.max(0, event.aspectVolumePercent ?? aspectsSoundVolumeRef.current)
+
+          for (const aspect of event.aspects || []) {
+            const aspectPlanetName = aspect.planetName.toLowerCase()
+            const aspectSemitoneOffset = ASPECT_SEMITONE_OFFSETS[aspect.aspectType] ?? 0
+            const aspectTransposeRate = Math.pow(2, aspectSemitoneOffset / 12)
+            const aspectPlaybackRate = principalPlaybackRate * aspectTransposeRate
+            const aspectPeakGain = 0.33 * (aspectVolumePercent / 100) * getPlanetVolumeMultiplier(aspectPlanetName)
+
+            scheduleSample({
+              bufferKey: aspectPlanetName,
+              startSec: event.startSec,
+              angleDeg: aspect.angleDeg,
+              fadeInSec: aspectFadeInSec,
+              sustainSec: aspectSustainSec,
+              fadeOutSec: aspectFadeOutSec,
+              peakGain: aspectPeakGain,
+              playbackRate: aspectPlaybackRate,
+            })
+          }
+        }
+
+        const renderedBuffer = await offlineContext.startRendering()
+        const leftChannel = renderedBuffer.getChannelData(0)
+        const rightChannel = renderedBuffer.numberOfChannels > 1 ? renderedBuffer.getChannelData(1) : leftChannel
+
+        const lameModule = (await import("lamejs")) as {
+          Mp3Encoder: new (channels: number, sampleRate: number, kbps: number) => Mp3EncoderInstance
+        }
+        const encoder = new lameModule.Mp3Encoder(2, renderedBuffer.sampleRate, 192)
+        const mp3Chunks: Int8Array[] = []
+        const chunkSize = 1152
+        for (let i = 0; i < leftChannel.length; i += chunkSize) {
+          const leftChunk = floatToInt16(leftChannel.subarray(i, i + chunkSize))
+          const rightChunk = floatToInt16(rightChannel.subarray(i, i + chunkSize))
+          const encoded = toInt8Array(encoder.encodeBuffer(leftChunk, rightChunk))
+          if (encoded.length > 0) {
+            mp3Chunks.push(encoded)
+          }
+        }
+        const flushChunk = toInt8Array(encoder.flush())
+        if (flushChunk.length > 0) {
+          mp3Chunks.push(flushChunk)
+        }
+        if (mp3Chunks.length === 0) return null
+        return new Blob(mp3Chunks, { type: "audio/mpeg" })
+      } catch (error) {
+        console.error("[v0] Error rendering offline MP3:", error)
         return null
       }
-      return new Blob(mp3ChunksRef.current, { type: "audio/mpeg" })
-    } catch (error) {
-      console.error("[v0] Error finalizing MP3 export:", error)
-      return null
-    } finally {
-      mp3EncoderRef.current = null
-      mp3ChunksRef.current = []
-    }
-  }, [])
+    },
+    [initializeAudio],
+  )
 
   useEffect(() => {
     initializeAudio()
@@ -1337,26 +1515,6 @@ export function usePlanetAudio(
       stopAll()
       stopBackgroundSound()
       stopElementBackground()
-      isMp3RecordingRef.current = false
-      mp3EncoderRef.current = null
-      mp3ChunksRef.current = []
-      if (recordingProcessorRef.current) {
-        try {
-          recordingProcessorRef.current.disconnect()
-        } catch (e) {
-          // ignore
-        }
-        recordingProcessorRef.current.onaudioprocess = null
-        recordingProcessorRef.current = null
-      }
-      if (recordingSinkGainRef.current) {
-        try {
-          recordingSinkGainRef.current.disconnect()
-        } catch (e) {
-          // ignore
-        }
-        recordingSinkGainRef.current = null
-      }
       if (fmPadSynthRef.current) {
         try {
           fmPadSynthRef.current.dispose()
@@ -1394,7 +1552,6 @@ export function usePlanetAudio(
     audioLevelLeftPost,
     audioLevelRightPost,
     compressionReductionDb,
-    startMp3Recording,
-    stopMp3Recording,
+    renderOfflineMp3,
   }
 }

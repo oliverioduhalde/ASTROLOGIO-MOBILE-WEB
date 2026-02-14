@@ -232,6 +232,7 @@ export default function AstrologyCalculator() {
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
   const [exportMode, setExportMode] = useState<NavigationMode>("radial")
   const [isExportingMp3, setIsExportingMp3] = useState(false)
+  const [pendingMp3Download, setPendingMp3Download] = useState<{ url: string; fileName: string } | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<"ba" | "cairo" | "manual" | "ba77">("manual")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
@@ -812,8 +813,17 @@ export default function AstrologyCalculator() {
     }
   }, [currentPlanetUnderPointer, showDynAspects, activePlanetAspectsMap, dynAspectsFadeOut, navigationMode])
 
+  useEffect(() => {
+    return () => {
+      if (pendingMp3Download?.url) {
+        URL.revokeObjectURL(pendingMp3Download.url)
+      }
+    }
+  }, [pendingMp3Download])
+
   const resetToInitialState = () => {
     setIsExportingMp3(false)
+    setPendingMp3Download(null)
     cancelAllNavigationSchedulers()
     clearAspectTimers()
     loopStartTimeRef.current = 0
@@ -1522,10 +1532,30 @@ export default function AstrologyCalculator() {
       const sunDegrees = horoscopeData.planets.find((planet) => planet.name === "sun")?.ChartPosition?.Ecliptic?.DecimalDegrees
       const sunElement = typeof sunDegrees === "number" ? getElementFromDegrees(sunDegrees) : "fire"
       const exportMasterVolume = mode === "astral_chord" ? masterVolume * 0.6 : masterVolume
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+      const fileName = `astrologio-${mode}-${timestamp}.mp3`
 
       setError("")
       setIsExportingMp3(true)
       try {
+        let fileHandle: any = null
+        let savedViaPicker = false
+        const showSaveFilePicker = (window as any).showSaveFilePicker
+        if (typeof showSaveFilePicker === "function") {
+          try {
+            fileHandle = await showSaveFilePicker({
+              suggestedName: fileName,
+              types: [{ description: "MP3 Audio", accept: { "audio/mpeg": [".mp3"] } }],
+            })
+          } catch (pickerError: any) {
+            if (pickerError?.name === "AbortError") {
+              setIsExportingMp3(false)
+              return
+            }
+            console.warn("[v0] showSaveFilePicker unavailable/failed, falling back to auto-download", pickerError)
+          }
+        }
+
         const mp3Blob = await renderOfflineMp3({
           events: plan.events,
           durationSec: plan.durationSec,
@@ -1544,16 +1574,39 @@ export default function AstrologyCalculator() {
           setIsExportingMp3(false)
           return
         }
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
-        const fileName = `astrologio-${mode}-${timestamp}.mp3`
+
+        if (fileHandle) {
+          try {
+            const writable = await fileHandle.createWritable()
+            await writable.write(mp3Blob)
+            await writable.close()
+            savedViaPicker = true
+          } catch (saveError) {
+            console.warn("[v0] Save picker write failed, falling back to browser download", saveError)
+          }
+        }
+
         const fileUrl = URL.createObjectURL(mp3Blob)
-        const anchor = document.createElement("a")
-        anchor.href = fileUrl
-        anchor.download = fileName
-        document.body.appendChild(anchor)
-        anchor.click()
-        document.body.removeChild(anchor)
-        setTimeout(() => URL.revokeObjectURL(fileUrl), 4000)
+        setPendingMp3Download((prev) => {
+          if (prev?.url) {
+            URL.revokeObjectURL(prev.url)
+          }
+          return { url: fileUrl, fileName }
+        })
+
+        if (!savedViaPicker) {
+          const anchor = document.createElement("a")
+          anchor.href = fileUrl
+          anchor.download = fileName
+          anchor.rel = "noopener"
+          anchor.target = "_blank"
+          document.body.appendChild(anchor)
+          anchor.click()
+          document.body.removeChild(anchor)
+          setError("Si no se descargó automático por bloqueo del navegador, toca SAVE MP3.")
+        } else {
+          setError("")
+        }
         setNavigationMode(mode)
         setExportMode(mode)
       } catch (error) {
@@ -3492,6 +3545,15 @@ export default function AstrologyCalculator() {
             {isExportingMp3 ? "RENDER MP3..." : "DOWNLOAD MP3"}
           </button>
         </div>
+        {pendingMp3Download && !isExportingMp3 && (
+          <a
+            href={pendingMp3Download.url}
+            download={pendingMp3Download.fileName}
+            className="mt-1.5 block w-full text-center font-mono text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
+          >
+            SAVE MP3
+          </a>
+        )}
       </div>
     </main>
   )

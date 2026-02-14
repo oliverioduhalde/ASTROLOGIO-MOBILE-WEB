@@ -109,43 +109,6 @@ const EARTH_CENTER_X = 200
 const EARTH_CENTER_Y = 200
 const EARTH_RADIUS = 10
 
-const EARTH_QUADRANT_CONFIG: Array<{
-  mode: NavigationMode
-  startAngle: number
-  endAngle: number
-  fill: string
-}> = [
-  { mode: "astral_chord", startAngle: 180, endAngle: 270, fill: "#FFFFFF" },
-  { mode: "radial", startAngle: 270, endAngle: 360, fill: "#BDBDBD" },
-  { mode: "sequential", startAngle: 90, endAngle: 180, fill: "#6F6F6F" },
-  { mode: "aspectual", startAngle: 0, endAngle: 90, fill: "#1A1A1A" },
-]
-
-function pointOnScreenCircle(cx: number, cy: number, r: number, angleDeg: number) {
-  const theta = (angleDeg * Math.PI) / 180
-  return {
-    x: cx + r * Math.cos(theta),
-    y: cy + r * Math.sin(theta),
-  }
-}
-
-function buildEarthQuadrantPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
-  const start = pointOnScreenCircle(cx, cy, r, startAngle)
-  const end = pointOnScreenCircle(cx, cy, r, endAngle)
-  return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${end.x} ${end.y} Z`
-}
-
-function getEarthModeFromSvgPoint(x: number, y: number): NavigationMode | null {
-  const dx = x - EARTH_CENTER_X
-  const dy = y - EARTH_CENTER_Y
-  if (dx * dx + dy * dy > EARTH_RADIUS * EARTH_RADIUS) return null
-
-  if (dy <= 0) {
-    return dx <= 0 ? "astral_chord" : "radial"
-  }
-  return dx <= 0 ? "sequential" : "aspectual"
-}
-
 function adjustPlanetPositions(planets: { name: string; degrees: number }[], minSeparation = 12) {
   const sorted = [...planets].sort((a, b) => a.degrees - b.degrees)
   const adjusted: { name: string; adjustedDegrees: number }[] = []
@@ -257,7 +220,6 @@ export default function AstrologyCalculator() {
   const [showPointerInfo, setShowPointerInfo] = useState(false)
   const [showVuMeter, setShowVuMeter] = useState(false)
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
-  const [earthHoverMode, setEarthHoverMode] = useState<NavigationMode | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<"ba" | "cairo" | "manual" | "ba77">("manual")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
@@ -292,7 +254,6 @@ export default function AstrologyCalculator() {
   const [currentPlanetUnderPointer, setCurrentPlanetUnderPointer] = useState<string | null>(null)
   const [showAstrofono, setShowAstrofono] = useState(false) // Declared showAstrofono
   const [debugPointerAngle, setDebugPointerAngle] = useState(0) // Added state to track pointer angle for debugging
-  const chartSvgRef = useRef<SVGSVGElement | null>(null)
   const animationFrameIdRef = useRef<number | null>(null)
   const loopStartTimeRef = useRef(0)
   const loopElapsedBeforePauseMsRef = useRef(0)
@@ -302,7 +263,6 @@ export default function AstrologyCalculator() {
   const navigationTimeoutsRef = useRef<NodeJS.Timeout[]>([])
   const navigationRunIdRef = useRef(0)
   const lastClickTimeRef = useRef<number>(0)
-  const lastQuadrantTapRef = useRef<NavigationMode | null>(null)
   const [isPaused, setIsPaused] = useState(false)
 
   const [hoveredGlyph, setHoveredGlyph] = useState<string | null>(null)
@@ -377,11 +337,17 @@ export default function AstrologyCalculator() {
     if (!birthDate || !birthTime || Number.isNaN(latitude) || Number.isNaN(longitude)) return
 
     const calculateHoroscope = async () => {
-      console.log("[v0] Calculating with isSidereal:", isSidereal)
-      const data = await calculateCustomHoroscope(birthDate, birthTime, latitude, longitude, isSidereal, selectedPreset)
-      console.log("[v0] Horoscope data received:", data)
-      console.log("[v0] Aspects found:", data.aspects?.length || 0, data.aspects)
-      setHoroscopeData(data)
+      try {
+        console.log("[v0] Calculating with isSidereal:", isSidereal)
+        const data = await calculateCustomHoroscope(birthDate, birthTime, latitude, longitude, isSidereal, selectedPreset)
+        console.log("[v0] Horoscope data received:", data)
+        console.log("[v0] Aspects found:", data.aspects?.length || 0, data.aspects)
+        if (!data?.planets?.length) return
+        setHoroscopeData(data)
+        setShowChart(true)
+      } catch (calcError) {
+        console.error("[v0] Auto-calculate failed:", calcError)
+      }
     }
 
     calculateHoroscope()
@@ -548,21 +514,6 @@ export default function AstrologyCalculator() {
       setLocationSuggestions([])
     }
   }, [selectedPreset, showSubject])
-
-  const resolveEarthModeFromClientPosition = useCallback(
-    (clientX: number, clientY: number): NavigationMode | null => {
-      const svg = chartSvgRef.current
-      if (!svg) return null
-
-      const rect = svg.getBoundingClientRect()
-      if (!rect.width || !rect.height) return null
-
-      const svgX = ((clientX - rect.left) / rect.width) * 400
-      const svgY = ((clientY - rect.top) / rect.height) * 400
-      return getEarthModeFromSvgPoint(svgX, svgY)
-    },
-    [],
-  )
 
   const cancelPointerLoop = useCallback(() => {
     if (animationFrameIdRef.current !== null) {
@@ -837,9 +788,8 @@ export default function AstrologyCalculator() {
     setCurrentPlanetUnderPointer(null)
     setDebugPointerAngle(0)
     setStartButtonPhase("contracted")
-    setEarthHoverMode(null)
     setNavigationMode("radial")
-    lastQuadrantTapRef.current = null
+    lastClickTimeRef.current = 0
     glyphAnimationManager["animations"]?.clear()
     setAnimatedPlanets({})
     stopBackgroundSound()
@@ -848,8 +798,6 @@ export default function AstrologyCalculator() {
     setGlyphHoverOpacity(0)
     setActivePlanetAspectsMap({})
     stopAll()
-    setFormData({ ...PRESET_BA77_FORM })
-    setSelectedPreset("ba77")
     setShowSubject(false)
     setShowChart(true)
     setError("")
@@ -1110,12 +1058,18 @@ export default function AstrologyCalculator() {
     startNonRadialRoute(buildAspectualRoute())
   }
 
-  const handleEarthQuadrantPress = (mode: NavigationMode) => {
+  const setNavigationModeFromMenu = (mode: NavigationMode) => {
+    setNavigationMode(mode)
+    if (!horoscopeData) return
+    if (!isLoopRunning && !isPaused) return
+    startNavigationMode(mode)
+  }
+
+  const handleEarthCenterPress = () => {
+    const mode = navigationMode
     const currentTime = Date.now()
-    const isDoubleClick =
-      currentTime - lastClickTimeRef.current < 1000 && lastQuadrantTapRef.current === mode
+    const isDoubleClick = currentTime - lastClickTimeRef.current < 1000
     lastClickTimeRef.current = currentTime
-    lastQuadrantTapRef.current = mode
 
     if (isDoubleClick) {
       resetToInitialState()
@@ -1190,6 +1144,7 @@ export default function AstrologyCalculator() {
     try {
       setError("")
       setLoading(true)
+      setShowChart(true)
       cancelAllNavigationSchedulers()
       stopAll()
       stopBackgroundSound()
@@ -1201,12 +1156,14 @@ export default function AstrologyCalculator() {
       setCurrentPlanetUnderPointer(null)
       setPointerRotation(180)
       setDebugPointerAngle(0)
-      setEarthHoverMode(null)
       setActivePlanetAspectsMap({})
       console.log("[v0] Calculating with isSidereal:", isSidereal)
       const data = await calculateCustomHoroscope(birthDate, birthTime, latitude, longitude, isSidereal, presetToUse)
       console.log("[v0] Horoscope data received:", data)
       console.log("[v0] Aspects found:", data.aspects?.length || 0, data.aspects)
+      if (!data?.planets?.length) {
+        throw new Error("Horoscope returned empty planets list")
+      }
       setHoroscopeData(data)
       skipNextAutoCalculateRef.current = true
       setShowChart(true)
@@ -1644,6 +1601,33 @@ export default function AstrologyCalculator() {
                     />
                     VU
                   </label>
+
+                  <div className="border-t border-gray-600 my-1"></div>
+
+                  <div className="space-y-1">
+                    <div className="font-mono text-[7.5px] uppercase tracking-wide">Navigation</div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
+                        <button
+                          key={mode}
+                          onClick={() => setNavigationModeFromMenu(mode)}
+                          className={`font-mono text-[7px] uppercase tracking-wide border px-1 py-0.5 transition-colors ${
+                            navigationMode === mode
+                              ? "bg-white text-black border-white"
+                              : "bg-transparent text-white border-gray-600 hover:border-white"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={resetToInitialState}
+                      className="w-full font-mono text-[7px] uppercase tracking-wide border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
 
                   <div className="border-t border-gray-600 my-1"></div>
 
@@ -2085,7 +2069,7 @@ export default function AstrologyCalculator() {
             {showChart && (
               <div className="mb-8 flex justify-center">
                 <div className="relative w-full max-w-[400px] aspect-square md:w-[min(90vh,90vw)] md:h-[min(90vh,90vw)] md:max-w-none md:aspect-auto">
-                  <svg ref={chartSvgRef} viewBox="0 0 400 400" className="w-full h-full">
+                  <svg viewBox="0 0 400 400" className="w-full h-full">
                     <defs>
                       <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
                         <feGaussianBlur stdDeviation="3" result="coloredBlur" />
@@ -2403,59 +2387,30 @@ export default function AstrologyCalculator() {
 
                     {showPointer && (
                       <>
-                        {/* Earth control as 4 pizza quadrants */}
+                        {/* Earth center control (single mode trigger) */}
                         <g>
-                          {EARTH_QUADRANT_CONFIG.map((quadrant) => (
-                            <path
-                              key={quadrant.mode}
-                              d={buildEarthQuadrantPath(
-                                EARTH_CENTER_X,
-                                EARTH_CENTER_Y,
-                                EARTH_RADIUS,
-                                quadrant.startAngle,
-                                quadrant.endAngle,
-                              )}
-                              fill={quadrant.fill}
-                              opacity={isLoopRunning ? 1 : 0.92}
-                              style={{ pointerEvents: "none" }}
-                            />
-                          ))}
                           <circle
                             cx={EARTH_CENTER_X}
                             cy={EARTH_CENTER_Y}
                             r={EARTH_RADIUS}
-                            fill="transparent"
-                            onPointerEnter={(event) => {
-                              const mode = resolveEarthModeFromClientPosition(event.clientX, event.clientY)
-                              setEarthHoverMode(mode)
-                            }}
-                            onPointerMove={(event) => {
-                              const mode = resolveEarthModeFromClientPosition(event.clientX, event.clientY)
-                              setEarthHoverMode(mode)
-                            }}
-                            onPointerLeave={() => setEarthHoverMode(null)}
-                            onPointerDown={(event) => {
-                              const mode = resolveEarthModeFromClientPosition(event.clientX, event.clientY)
-                              if (!mode) return
-                              handleEarthQuadrantPress(mode)
-                            }}
+                            fill="#0F0F0F"
+                            opacity={isLoopRunning ? 1 : 0.92}
+                            onPointerDown={handleEarthCenterPress}
                             style={{ cursor: "pointer" }}
                           />
-                          {earthHoverMode && (
-                            <g style={{ pointerEvents: "none" }}>
-                              <rect x="165" y="165" width="70" height="13" fill="#000000" opacity="0.78" rx="2" />
-                              <text
-                                x="200"
-                                y="171.5"
-                                textAnchor="middle"
-                                dominantBaseline="middle"
-                                className="fill-white font-mono text-[8px] select-none"
-                                style={{ opacity: 1 }}
-                              >
-                                {NAV_MODE_HINT_LABEL[earthHoverMode]}
-                              </text>
-                            </g>
-                          )}
+                          <g style={{ pointerEvents: "none" }}>
+                            <rect x="165" y="165" width="70" height="13" fill="#000000" opacity="0.78" rx="2" />
+                            <text
+                              x="200"
+                              y="171.5"
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              className="fill-white font-mono text-[8px] select-none"
+                              style={{ opacity: 1 }}
+                            >
+                              {NAV_MODE_HINT_LABEL[navigationMode]}
+                            </text>
+                          </g>
                           <circle
                             cx={EARTH_CENTER_X}
                             cy={EARTH_CENTER_Y}

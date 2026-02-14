@@ -1139,6 +1139,7 @@ export default function AstrologyCalculator() {
       console.log("[v0] Aspects found:", data.aspects?.length || 0, data.aspects)
       setHoroscopeData(data)
       skipNextAutoCalculateRef.current = true
+      setShowChart(true)
       setShowSubject(false)
     } catch (err) {
       setError("Error al calcular el horóscopo. Verifica los datos ingresados.")
@@ -2023,9 +2024,6 @@ export default function AstrologyCalculator() {
                           <feMergeNode in="SourceGraphic" />
                         </feMerge>
                       </filter>
-                      <clipPath id="earthQuadrantsClip">
-                        <circle cx="200" cy="200" r="10" />
-                      </clipPath>
                     </defs>
 
                     {showCircle && (
@@ -2337,59 +2335,48 @@ export default function AstrologyCalculator() {
                       <>
                         {/* Earth quadrants as pizza slices (Q1/Q2/Q3/Q4) */}
                         <g style={{ pointerEvents: "auto" }} onMouseLeave={() => setEarthHoverMode(null)}>
-                          <g clipPath="url(#earthQuadrantsClip)">
-                            <rect
-                              x="190"
-                              y="190"
-                              width="10"
-                              height="10"
-                              fill="#FFFFFF"
-                              onPointerDown={() => handleEarthQuadrantPress("astral_chord")}
-                              onMouseEnter={() => setEarthHoverMode("astral_chord")}
-                              style={{ cursor: "pointer" }}
-                            />
-                            <rect
-                              x="200"
-                              y="190"
-                              width="10"
-                              height="10"
-                              fill="#BDBDBD"
-                              onPointerDown={() => handleEarthQuadrantPress("radial")}
-                              onMouseEnter={() => setEarthHoverMode("radial")}
-                              style={{ cursor: "pointer" }}
-                            />
-                            <rect
-                              x="190"
-                              y="200"
-                              width="10"
-                              height="10"
-                              fill="#6F6F6F"
-                              onPointerDown={() => handleEarthQuadrantPress("sequential")}
-                              onMouseEnter={() => setEarthHoverMode("sequential")}
-                              style={{ cursor: "pointer" }}
-                            />
-                            <rect
-                              x="200"
-                              y="200"
-                              width="10"
-                              height="10"
-                              fill="#1A1A1A"
-                              onPointerDown={() => handleEarthQuadrantPress("aspectual")}
-                              onMouseEnter={() => setEarthHoverMode("aspectual")}
-                              style={{ cursor: "pointer" }}
-                            />
-                          </g>
+                          <path
+                            d="M200 200 L190 200 A10 10 0 0 1 200 190 Z"
+                            fill="#FFFFFF"
+                            onPointerDown={() => handleEarthQuadrantPress("astral_chord")}
+                            onMouseEnter={() => setEarthHoverMode("astral_chord")}
+                            style={{ cursor: "pointer" }}
+                          />
+                          <path
+                            d="M200 200 L200 190 A10 10 0 0 1 210 200 Z"
+                            fill="#BDBDBD"
+                            onPointerDown={() => handleEarthQuadrantPress("radial")}
+                            onMouseEnter={() => setEarthHoverMode("radial")}
+                            style={{ cursor: "pointer" }}
+                          />
+                          <path
+                            d="M200 200 L200 210 A10 10 0 0 1 190 200 Z"
+                            fill="#6F6F6F"
+                            onPointerDown={() => handleEarthQuadrantPress("sequential")}
+                            onMouseEnter={() => setEarthHoverMode("sequential")}
+                            style={{ cursor: "pointer" }}
+                          />
+                          <path
+                            d="M200 200 L210 200 A10 10 0 0 1 200 210 Z"
+                            fill="#1A1A1A"
+                            onPointerDown={() => handleEarthQuadrantPress("aspectual")}
+                            onMouseEnter={() => setEarthHoverMode("aspectual")}
+                            style={{ cursor: "pointer" }}
+                          />
                           {earthHoverMode && (
-                            <text
-                              x="200"
-                              y="184"
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              className="fill-white font-mono text-[5px] select-none"
-                              style={{ opacity: 0.95, pointerEvents: "none" }}
-                            >
-                              {NAV_MODE_HINT_LABEL[earthHoverMode]}
-                            </text>
+                            <g style={{ pointerEvents: "none" }}>
+                              <rect x="176" y="176" width="48" height="10" fill="#000000" opacity="0.72" rx="2" />
+                              <text
+                                x="200"
+                                y="181"
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                className="fill-white font-mono text-[6px] select-none"
+                                style={{ opacity: 0.98 }}
+                              >
+                                {NAV_MODE_HINT_LABEL[earthHoverMode]}
+                              </text>
+                            </g>
                           )}
                           <circle
                             cx="200"

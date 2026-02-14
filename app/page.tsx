@@ -126,6 +126,28 @@ function polarToCartesian(cx: number, cy: number, r: number, thetaDeg: number) {
   }
 }
 
+function trimLineSegment(
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+  trimStartPx = 30,
+  trimEndPx = 30,
+) {
+  const dx = end.x - start.x
+  const dy = end.y - start.y
+  const distance = Math.hypot(dx, dy)
+  if (distance <= trimStartPx + trimEndPx) return null
+
+  const ux = dx / distance
+  const uy = dy / distance
+
+  return {
+    x1: start.x + ux * trimStartPx,
+    y1: start.y + uy * trimStartPx,
+    x2: end.x - ux * trimEndPx,
+    y2: end.y - uy * trimEndPx,
+  }
+}
+
 function getZodiacSign(degrees: number) {}
 
 function toCanvasAngle(degrees: number): number {
@@ -1986,6 +2008,8 @@ export default function AstrologyCalculator() {
                         }
 
                         if (!pos1 || !pos2) return null
+                        const trimmedSegment = trimLineSegment(pos1, pos2, 30, 30)
+                        if (!trimmedSegment) return null
 
                         // Determine color and width based on aspect type
                         let stroke = "#888"
@@ -2006,10 +2030,10 @@ export default function AstrologyCalculator() {
                         return (
                           <line
                             key={index}
-                            x1={pos1.x}
-                            y1={pos1.y}
-                            x2={pos2.x}
-                            y2={pos2.y}
+                            x1={trimmedSegment.x1}
+                            y1={trimmedSegment.y1}
+                            x2={trimmedSegment.x2}
+                            y2={trimmedSegment.y2}
                             stroke={stroke}
                             strokeWidth={strokeWidth}
                             opacity="1"
@@ -2115,6 +2139,8 @@ export default function AstrologyCalculator() {
                           const pos2 = getPointPosition(aspect.point2.name)
 
                           if (!pos1 || !pos2) return null
+                          const trimmedSegment = trimLineSegment(pos1, pos2, 30, 30)
+                          if (!trimmedSegment) return null
 
                           // Determine color and width based on aspect type
                           let aspectColor = "#888"
@@ -2141,10 +2167,10 @@ export default function AstrologyCalculator() {
                           return (
                             <line
                               key={`aspect-${planetName}-${index}`}
-                              x1={pos1.x}
-                              y1={pos1.y}
-                              x2={pos2.x}
-                              y2={pos2.y}
+                              x1={trimmedSegment.x1}
+                              y1={trimmedSegment.y1}
+                              x2={trimmedSegment.x2}
+                              y2={trimmedSegment.y2}
                               stroke={aspectColor}
                               strokeWidth={aspectWidth}
                               style={{

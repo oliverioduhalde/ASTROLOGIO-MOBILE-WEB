@@ -719,6 +719,7 @@ export default function AstrologyCalculator() {
     if (
       navigationMode === "astral_chord" ||
       navigationMode === "sequential" ||
+      navigationMode === "aspectual" ||
       !showDynAspects ||
       !currentPlanetUnderPointer ||
       !horoscopeData?.aspects
@@ -766,7 +767,7 @@ export default function AstrologyCalculator() {
   }, [currentPlanetUnderPointer, showDynAspects, dynAspectsFadeIn, horoscopeData?.aspects, navigationMode])
 
   useEffect(() => {
-    if (navigationMode === "astral_chord" || navigationMode === "sequential") {
+    if (navigationMode === "astral_chord" || navigationMode === "sequential" || navigationMode === "aspectual") {
       return
     }
     if (showDynAspects && currentPlanetUnderPointer === null && Object.keys(activePlanetAspectsMap).length > 0) {
@@ -975,6 +976,7 @@ export default function AstrologyCalculator() {
       holdMs?: number
       crossfadeMs?: number
       chartAspects?: boolean
+      fadeInSpeedMultiplier?: number
     },
   ) => {
     const resolvedRoute = route
@@ -990,6 +992,7 @@ export default function AstrologyCalculator() {
     const holdMs = Math.max(0, options?.holdMs ?? 0)
     const crossfadeMs = Math.max(0, options?.crossfadeMs ?? NAVIGATION_TRANSITION_MS)
     const chartAspects = options?.chartAspects ?? false
+    const fadeInSpeedMultiplier = Math.max(1, options?.fadeInSpeedMultiplier ?? 1)
     const runId = navigationRunIdRef.current
     const uiCommitIntervalMs = 33
     let lastUiCommitMs = 0
@@ -1044,6 +1047,7 @@ export default function AstrologyCalculator() {
       }
 
       const halfFadeMs = Math.max(0, Math.floor(crossfadeMs / 2))
+      const fadeInMs = Math.max(0, Math.floor(halfFadeMs / fadeInSpeedMultiplier))
       if (halfFadeMs === 0) {
         setPointerOpacity(0)
         setPointerAngle(nextStep.angle, nextStep.name)
@@ -1064,7 +1068,7 @@ export default function AstrologyCalculator() {
           if (navigationRunIdRef.current !== runId) return
           setPointerOpacityTransitionMs(0)
           onDone()
-        }, halfFadeMs)
+        }, fadeInMs)
         navigationTimeoutsRef.current.push(fadeInTimer)
       }, halfFadeMs)
       navigationTimeoutsRef.current.push(fadeOutTimer)
@@ -1253,6 +1257,7 @@ export default function AstrologyCalculator() {
         holdMs: CHART_PLANET_HOLD_MS,
         crossfadeMs: NAVIGATION_TRANSITION_MS,
         chartAspects: true,
+        fadeInSpeedMultiplier: 2,
       })
       return
     }
@@ -1261,6 +1266,8 @@ export default function AstrologyCalculator() {
       teleport: true,
       holdMs: CHART_PLANET_HOLD_MS,
       crossfadeMs: NAVIGATION_TRANSITION_MS,
+      chartAspects: true,
+      fadeInSpeedMultiplier: 2,
     })
   }
 
@@ -3189,6 +3196,24 @@ export default function AstrologyCalculator() {
             )}
           </div>
         )}
+      </div>
+
+      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-30 border border-white/60 bg-black/70 backdrop-blur-sm px-1.5 py-1">
+        <div className="grid grid-cols-4 gap-1">
+          {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
+            <button
+              key={`bottom-nav-${mode}`}
+              onClick={() => setNavigationModeFromMenu(mode)}
+              className={`font-mono text-[8px] uppercase tracking-wide border px-2 py-1 transition-colors ${
+                navigationMode === mode
+                  ? "bg-white text-black border-white"
+                  : "bg-transparent text-white border-gray-600 hover:border-white"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
     </main>
   )

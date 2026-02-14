@@ -2013,10 +2013,10 @@ export default function AstrologyCalculator() {
 
                         // Determine color and width based on aspect type
                         let stroke = "#888"
-                        let strokeWidth = 1.5
+                        let strokeWidth = 0.5
                         if (aspect.aspectType === "Oposición") {
                           stroke = "#FF8C00"
-                          strokeWidth = 2
+                          strokeWidth = 1
                         } else if (aspect.aspectType === "Conjunción") {
                           stroke = "#9D4EDD"
                         } else if (aspect.aspectType === "Trígono") {
@@ -2147,15 +2147,15 @@ export default function AstrologyCalculator() {
 
                           // Determine color and width based on aspect type
                           let aspectColor = "#888"
-                          let aspectWidth = 1.5
+                          let aspectWidth = 0.5
                           let aspectFilter = "none"
 
                           if (aspect.aspectType === "Oposición") {
                             aspectColor = "#FF8C00"
-                            aspectWidth = 2
+                            aspectWidth = 1
                           } else if (aspect.aspectType === "Oposición") {
                             aspectColor = "#FF8C00"
-                            aspectWidth = 2
+                            aspectWidth = 1
                           } else if (aspect.aspectType === "Conjunción") {
                             aspectColor = "#9D4EDD"
                           } else if (aspect.aspectType === "Trígono") {

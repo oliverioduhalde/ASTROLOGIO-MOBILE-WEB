@@ -2128,7 +2128,10 @@ export default function AstrologyCalculator() {
                               degrees = horoscopeData.mc.ChartPosition.Ecliptic.DecimalDegrees
                             } else {
                               const planet = horoscopeData.planets.find((p) => p.name === pointName)
-                              degrees = planet?.ChartPosition.Ecliptic.DecimalDegrees
+                              if (planet) {
+                                // Match the printed glyph position (adjusted), not raw ecliptic angle.
+                                degrees = adjustedPositions[planet.name] ?? planet.ChartPosition.Ecliptic.DecimalDegrees
+                              }
                             }
                             return degrees !== undefined
                               ? polarToCartesian(200, 200, 180, adjustToCanvasAngle(degrees))

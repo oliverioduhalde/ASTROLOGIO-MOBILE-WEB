@@ -795,7 +795,6 @@ export default function AstrologyCalculator() {
     setCurrentPlanetUnderPointer(null)
     setDebugPointerAngle(0)
     setStartButtonPhase("contracted")
-    setNavigationMode("radial")
     lastClickTimeRef.current = 0
     glyphAnimationManager["animations"]?.clear()
     setAnimatedPlanets({})

@@ -2014,6 +2014,7 @@ export default function AstrologyCalculator() {
                         // Determine color and width based on aspect type
                         let stroke = "#888"
                         let strokeWidth = 1.5
+                        let isSquare = false
                         if (aspect.aspectType === "Oposición") {
                           stroke = "#FF8C00"
                           strokeWidth = 2
@@ -2022,24 +2023,36 @@ export default function AstrologyCalculator() {
                         } else if (aspect.aspectType === "Trígono") {
                           stroke = "#00FF00"
                         } else if (aspect.aspectType === "Cuadrado") {
-                          stroke = "#FF0000"
-                          strokeWidth = 2.5
+                          stroke = "#FF3B30"
+                          strokeWidth = 3
+                          isSquare = true
                         } else if (aspect.aspectType === "Sextil") {
                           stroke = "#0099FF"
                         }
 
                         return (
-                          <line
-                            key={index}
-                            x1={trimmedSegment.x1}
-                            y1={trimmedSegment.y1}
-                            x2={trimmedSegment.x2}
-                            y2={trimmedSegment.y2}
-                            stroke={stroke}
-                            strokeWidth={strokeWidth}
-                            opacity="1"
-                            style={{ pointerEvents: "none" }}
-                          />
+                          <g key={index} style={{ pointerEvents: "none" }}>
+                            {isSquare && (
+                              <line
+                                x1={trimmedSegment.x1}
+                                y1={trimmedSegment.y1}
+                                x2={trimmedSegment.x2}
+                                y2={trimmedSegment.y2}
+                                stroke="#FFFFFF"
+                                strokeWidth={strokeWidth + 1.5}
+                                opacity="0.45"
+                              />
+                            )}
+                            <line
+                              x1={trimmedSegment.x1}
+                              y1={trimmedSegment.y1}
+                              x2={trimmedSegment.x2}
+                              y2={trimmedSegment.y2}
+                              stroke={stroke}
+                              strokeWidth={strokeWidth}
+                              opacity="1"
+                            />
+                          </g>
                         )
                       })}
 
@@ -2149,12 +2162,10 @@ export default function AstrologyCalculator() {
                           // Determine color and width based on aspect type
                           let aspectColor = "#888"
                           let aspectWidth = 1.5
-                          let aspectFilter = "none"
+                          let aspectOpacity = data.opacity
+                          let isSquare = false
 
                           if (aspect.aspectType === "Oposición") {
-                            aspectColor = "#FF8C00"
-                            aspectWidth = 2
-                          } else if (aspect.aspectType === "Oposición") {
                             aspectColor = "#FF8C00"
                             aspectWidth = 2
                           } else if (aspect.aspectType === "Conjunción") {
@@ -2162,29 +2173,43 @@ export default function AstrologyCalculator() {
                           } else if (aspect.aspectType === "Trígono") {
                             aspectColor = "#00FF00"
                           } else if (aspect.aspectType === "Cuadrado") {
-                            aspectColor = "#FF0000"
-                            aspectWidth = 2.5
-                            aspectFilter = "blur(1px)" // Add subtle blur for squares
+                            aspectColor = "#FF3B30"
+                            aspectWidth = 3
+                            aspectOpacity = Math.min(1, data.opacity * 1.25)
+                            isSquare = true
                           } else if (aspect.aspectType === "Sextil") {
                             aspectColor = "#0099FF"
                           }
 
                           return (
-                            <line
-                              key={`aspect-${planetName}-${index}`}
-                              x1={trimmedSegment.x1}
-                              y1={trimmedSegment.y1}
-                              x2={trimmedSegment.x2}
-                              y2={trimmedSegment.y2}
-                              stroke={aspectColor}
-                              strokeWidth={aspectWidth}
-                              style={{
-                                opacity: data.opacity, // Each aspect uses its own planet's opacity instead of global dynAspectsOpacity
-                                transition: "opacity 0.1s linear",
-                                filter: aspectFilter,
-                                pointerEvents: "none",
-                              }}
-                            />
+                            <g key={`aspect-${planetName}-${index}`} style={{ pointerEvents: "none" }}>
+                              {isSquare && (
+                                <line
+                                  x1={trimmedSegment.x1}
+                                  y1={trimmedSegment.y1}
+                                  x2={trimmedSegment.x2}
+                                  y2={trimmedSegment.y2}
+                                  stroke="#FFFFFF"
+                                  strokeWidth={aspectWidth + 1.5}
+                                  style={{
+                                    opacity: Math.min(1, aspectOpacity * 0.55),
+                                    transition: "opacity 0.1s linear",
+                                  }}
+                                />
+                              )}
+                              <line
+                                x1={trimmedSegment.x1}
+                                y1={trimmedSegment.y1}
+                                x2={trimmedSegment.x2}
+                                y2={trimmedSegment.y2}
+                                stroke={aspectColor}
+                                strokeWidth={aspectWidth}
+                                style={{
+                                  opacity: aspectOpacity,
+                                  transition: "opacity 0.1s linear",
+                                }}
+                              />
+                            </g>
                           )
                         }),
                       )}

@@ -98,6 +98,13 @@ const SEQUENTIAL_PLANET_ORDER = [
 
 const NAVIGATION_TRANSITION_MS = 5000
 
+const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
+  astral_chord: "ACCORD",
+  radial: "RADIAL",
+  sequential: "CHART",
+  aspectual: "ASPECT",
+}
+
 function adjustPlanetPositions(planets: { name: string; degrees: number }[], minSeparation = 12) {
   const sorted = [...planets].sort((a, b) => a.degrees - b.degrees)
   const adjusted: { name: string; adjustedDegrees: number }[] = []
@@ -209,6 +216,7 @@ export default function AstrologyCalculator() {
   const [showPointerInfo, setShowPointerInfo] = useState(false)
   const [showVuMeter, setShowVuMeter] = useState(false)
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
+  const [earthHoverMode, setEarthHoverMode] = useState<NavigationMode | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<"ba" | "cairo" | "manual" | "ba77">("manual")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
@@ -772,6 +780,7 @@ export default function AstrologyCalculator() {
     setCurrentPlanetUnderPointer(null)
     setDebugPointerAngle(0)
     setStartButtonPhase("contracted")
+    setEarthHoverMode(null)
     setNavigationMode("radial")
     lastQuadrantTapRef.current = null
     glyphAnimationManager["animations"]?.clear()
@@ -2326,16 +2335,17 @@ export default function AstrologyCalculator() {
 
                     {showPointer && (
                       <>
-                        {/* Earth quadrants: Q1 astral chord, Q2 radial, Q3 sequential, Q4 aspectual */}
-                        <g style={{ pointerEvents: "auto" }}>
+                        {/* Earth quadrants as pizza slices (Q1/Q2/Q3/Q4) */}
+                        <g style={{ pointerEvents: "auto" }} onMouseLeave={() => setEarthHoverMode(null)}>
                           <g clipPath="url(#earthQuadrantsClip)">
                             <rect
                               x="190"
                               y="190"
                               width="10"
                               height="10"
-                              fill="#111111"
+                              fill="#FFFFFF"
                               onPointerDown={() => handleEarthQuadrantPress("astral_chord")}
+                              onMouseEnter={() => setEarthHoverMode("astral_chord")}
                               style={{ cursor: "pointer" }}
                             />
                             <rect
@@ -2343,8 +2353,9 @@ export default function AstrologyCalculator() {
                               y="190"
                               width="10"
                               height="10"
-                              fill="#555555"
+                              fill="#BDBDBD"
                               onPointerDown={() => handleEarthQuadrantPress("radial")}
+                              onMouseEnter={() => setEarthHoverMode("radial")}
                               style={{ cursor: "pointer" }}
                             />
                             <rect
@@ -2352,8 +2363,9 @@ export default function AstrologyCalculator() {
                               y="200"
                               width="10"
                               height="10"
-                              fill="#999999"
+                              fill="#6F6F6F"
                               onPointerDown={() => handleEarthQuadrantPress("sequential")}
+                              onMouseEnter={() => setEarthHoverMode("sequential")}
                               style={{ cursor: "pointer" }}
                             />
                             <rect
@@ -2361,11 +2373,24 @@ export default function AstrologyCalculator() {
                               y="200"
                               width="10"
                               height="10"
-                              fill="#EEEEEE"
+                              fill="#1A1A1A"
                               onPointerDown={() => handleEarthQuadrantPress("aspectual")}
+                              onMouseEnter={() => setEarthHoverMode("aspectual")}
                               style={{ cursor: "pointer" }}
                             />
                           </g>
+                          {earthHoverMode && (
+                            <text
+                              x="200"
+                              y="184"
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              className="fill-white font-mono text-[5px] select-none"
+                              style={{ opacity: 0.95, pointerEvents: "none" }}
+                            >
+                              {NAV_MODE_HINT_LABEL[earthHoverMode]}
+                            </text>
+                          )}
                           <circle
                             cx="200"
                             cy="200"

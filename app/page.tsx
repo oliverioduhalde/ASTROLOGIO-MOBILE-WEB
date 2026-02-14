@@ -168,6 +168,7 @@ export default function AstrologyCalculator() {
   const [peakLevelRightPost, setPeakLevelRightPost] = useState(0)
   const [showPointer, setShowPointer] = useState(true)
   const [showPointerInfo, setShowPointerInfo] = useState(false)
+  const [showVuMeter, setShowVuMeter] = useState(false)
   const [isSidereal, setIsSidereal] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<"ba" | "cairo" | "manual" | "ba77">("manual")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
@@ -261,6 +262,7 @@ export default function AstrologyCalculator() {
       modalSunSignIndex,
       audioEngineMode,
       synthVolume,
+      vuEnabled: showVuMeter,
     })
   const lastPlayedPlanetRef = useRef<string | null>(null)
 
@@ -328,6 +330,14 @@ export default function AstrologyCalculator() {
   ])
 
   useEffect(() => {
+    if (!showVuMeter) {
+      setPeakLevelLeftPre(0)
+      setPeakLevelRightPre(0)
+      setPeakLevelLeftPost(0)
+      setPeakLevelRightPost(0)
+      return
+    }
+
     const peakResetInterval = setInterval(() => {
       setPeakLevelLeftPre(0)
       setPeakLevelRightPre(0)
@@ -336,7 +346,7 @@ export default function AstrologyCalculator() {
     }, 5000)
     
     return () => clearInterval(peakResetInterval)
-  }, [])
+  }, [showVuMeter])
 
   const percentToDb = (percent: number) => {
     const db = (percent / 100) * 60 - 60
@@ -729,6 +739,7 @@ export default function AstrologyCalculator() {
       setShowAstroChart(false)
       setShowPointer(true)
       setShowPointerInfo(false)
+      setShowVuMeter(false)
       setIsSidereal(false)
       return
     }
@@ -1257,6 +1268,15 @@ export default function AstrologyCalculator() {
                     />
                     Modal
                   </label>
+                  <label className="flex items-center gap-2 font-mono text-[8.4px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={showVuMeter}
+                      onChange={(e) => setShowVuMeter(e.target.checked)}
+                      className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
+                    />
+                    VU
+                  </label>
 
                   <div className="border-t border-gray-600 my-1"></div>
 
@@ -1465,7 +1485,8 @@ export default function AstrologyCalculator() {
                     </div>
                   </div>
 
-                  <div className="space-y-1">
+                  {showVuMeter && (
+                    <div className="space-y-1">
                     <div className="font-mono text-[7.5px] uppercase tracking-wide">VU Meter</div>
                     <div className="border border-white/50 bg-black p-1 space-y-1">
                       <div className="flex items-center justify-between text-[6.5px] font-mono uppercase tracking-wide">
@@ -1542,6 +1563,7 @@ export default function AstrologyCalculator() {
                       </div>
                     </div>
                   </div>
+                  )}
                 </div>
               </div>
             )}

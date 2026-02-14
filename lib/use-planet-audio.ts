@@ -32,6 +32,7 @@ interface AudioEnvelope {
   modalSunSignIndex?: number | null
   audioEngineMode?: AudioEngineMode
   synthVolume?: number
+  vuEnabled?: boolean
 }
 
 interface Position3D {
@@ -395,8 +396,20 @@ export function usePlanetAudio(
 
   // VU Meter update loop - 50ms refresh rate, pre/post compression
   useEffect(() => {
-    let intervalId: NodeJS.Timeout
-    
+    const vuEnabled = envelope.vuEnabled ?? false
+    let intervalId: NodeJS.Timeout | undefined
+
+    if (!vuEnabled) {
+      setAudioLevelLeftPre(0)
+      setAudioLevelRightPre(0)
+      setAudioLevelLeftPost(0)
+      setAudioLevelRightPost(0)
+      setCompressionReductionDb(0)
+      return () => {
+        if (intervalId) clearTimeout(intervalId)
+      }
+    }
+
     const updateVuMeter = () => {
       if (
         preLeftAnalyserRef.current &&
@@ -441,15 +454,15 @@ export function usePlanetAudio(
       }
       intervalId = setTimeout(updateVuMeter, 50)
     }
-    
+
     updateVuMeter()
-    
+
     return () => {
       if (intervalId) {
         clearTimeout(intervalId)
       }
     }
-  }, [])
+  }, [envelope.vuEnabled])
 
   const initializeAudio = useCallback(async () => {
     if (initPromiseRef.current) return initPromiseRef.current

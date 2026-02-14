@@ -230,6 +230,8 @@ export default function AstrologyCalculator() {
   const [showPointerInfo, setShowPointerInfo] = useState(false)
   const [showVuMeter, setShowVuMeter] = useState(false)
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
+  const [exportMode, setExportMode] = useState<NavigationMode>("radial")
+  const [isExportingMp3, setIsExportingMp3] = useState(false)
   const [isSidereal, setIsSidereal] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<"ba" | "cairo" | "manual" | "ba77">("manual")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
@@ -291,6 +293,7 @@ export default function AstrologyCalculator() {
   const [locationSuggestions, setLocationSuggestions] = useState<GeoSuggestion[]>([])
   const [isResolvingLocation, setIsResolvingLocation] = useState(false)
   const chartAspectsKeyRef = useRef("__chart__")
+  const exportTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const modalSunSignIndex = useMemo(() => {
     const sunDegrees = horoscopeData?.planets?.find((p) => p.name === "sun")?.ChartPosition?.Ecliptic?.DecimalDegrees
@@ -317,6 +320,8 @@ export default function AstrologyCalculator() {
     audioLevelLeftPost,
     audioLevelRightPost,
     compressionReductionDb,
+    startMp3Recording,
+    stopMp3Recording,
   } =
     usePlanetAudio({
       fadeIn: audioFadeIn,
@@ -341,6 +346,13 @@ export default function AstrologyCalculator() {
       timers.forEach((timerId) => clearTimeout(timerId))
     })
     aspectClickTimersRef.current = {}
+  }, [])
+
+  const clearExportTimer = useCallback(() => {
+    if (exportTimeoutRef.current) {
+      clearTimeout(exportTimeoutRef.current)
+      exportTimeoutRef.current = null
+    }
   }, [])
 
   useEffect(() => {
@@ -809,7 +821,17 @@ export default function AstrologyCalculator() {
     }
   }, [currentPlanetUnderPointer, showDynAspects, activePlanetAspectsMap, dynAspectsFadeOut, navigationMode])
 
+  useEffect(() => {
+    return () => {
+      clearExportTimer()
+      stopMp3Recording()
+    }
+  }, [clearExportTimer, stopMp3Recording])
+
   const resetToInitialState = () => {
+    clearExportTimer()
+    stopMp3Recording()
+    setIsExportingMp3(false)
     cancelAllNavigationSchedulers()
     clearAspectTimers()
     loopStartTimeRef.current = 0
@@ -1359,8 +1381,119 @@ export default function AstrologyCalculator() {
     })
   }
 
+  const getExportDurationMs = useCallback(
+    (mode: NavigationMode): number => {
+      if (mode === "radial") {
+        return Math.max(20000, loopDuration * 1000 + (audioFadeOut + 2) * 1000)
+      }
+
+      if (mode === "astral_chord") {
+        const chordAudioMs = Math.max(
+          (audioFadeIn + audioFadeOut) * 1000,
+          (dynAspectsFadeIn + dynAspectsSustain + dynAspectsFadeOut) * 1000,
+        )
+        return Math.max(12000, chordAudioMs + 3000)
+      }
+
+      const routeLength =
+        mode === "sequential" ? Math.max(1, buildSequentialRoute().length) : Math.max(1, buildAspectualRoute().length)
+      const baseMs = routeLength * CHART_PLANET_HOLD_MS
+      const worstCaseJitterMs = routeLength * (NON_RADIAL_JITTER_MS + NON_RADIAL_INFRACTION_JITTER_MS)
+      const tailMs = Math.max(4000, (audioFadeOut + dynAspectsFadeOut) * 1000)
+      return Math.max(30000, baseMs + worstCaseJitterMs + NON_RADIAL_CROSSFADE_MS + tailMs)
+    },
+    [
+      audioFadeIn,
+      audioFadeOut,
+      buildAspectualRoute,
+      buildSequentialRoute,
+      dynAspectsFadeIn,
+      dynAspectsFadeOut,
+      dynAspectsSustain,
+      loopDuration,
+    ],
+  )
+
+  const downloadNavigationModeMp3 = useCallback(
+    async (mode: NavigationMode) => {
+      if (!horoscopeData || isExportingMp3) return
+
+      const exportDurationMs = getExportDurationMs(mode)
+      clearExportTimer()
+      cancelAllNavigationSchedulers()
+      clearAspectTimers()
+      stopAll()
+      stopBackgroundSound()
+      stopElementBackground()
+      setActivePlanetAspectsMap({})
+      setCurrentPlanetUnderPointer(null)
+      setIsLoopRunning(false)
+      setIsPaused(false)
+      setError("")
+
+      setIsExportingMp3(true)
+      const recorderStarted = await startMp3Recording()
+      if (!recorderStarted) {
+        setIsExportingMp3(false)
+        setError("No se pudo iniciar la exportación MP3.")
+        return
+      }
+
+      setNavigationMode(mode)
+      setExportMode(mode)
+      startNavigationMode(mode)
+
+      exportTimeoutRef.current = setTimeout(() => {
+        clearExportTimer()
+        cancelAllNavigationSchedulers()
+        clearAspectTimers()
+        stopAll()
+        stopBackgroundSound()
+        stopElementBackground()
+        setActivePlanetAspectsMap({})
+        setCurrentPlanetUnderPointer(null)
+        setIsLoopRunning(false)
+        setIsPaused(false)
+
+        const mp3Blob = stopMp3Recording()
+        if (!mp3Blob) {
+          setIsExportingMp3(false)
+          setError("No se pudo generar el MP3.")
+          return
+        }
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+        const fileName = `astrologio-${mode}-${timestamp}.mp3`
+        const fileUrl = URL.createObjectURL(mp3Blob)
+        const anchor = document.createElement("a")
+        anchor.href = fileUrl
+        anchor.download = fileName
+        document.body.appendChild(anchor)
+        anchor.click()
+        document.body.removeChild(anchor)
+        setTimeout(() => URL.revokeObjectURL(fileUrl), 4000)
+        setIsExportingMp3(false)
+      }, exportDurationMs)
+    },
+    [
+      cancelAllNavigationSchedulers,
+      clearAspectTimers,
+      clearExportTimer,
+      getExportDurationMs,
+      horoscopeData,
+      isExportingMp3,
+      startMp3Recording,
+      startNavigationMode,
+      stopAll,
+      stopBackgroundSound,
+      stopElementBackground,
+      stopMp3Recording,
+    ],
+  )
+
   const setNavigationModeFromMenu = (mode: NavigationMode) => {
     setNavigationMode(mode)
+    setExportMode(mode)
     if (!horoscopeData) return
     if (!isLoopRunning && !isPaused) return
     startNavigationMode(mode)
@@ -3241,13 +3374,13 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
-      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-30 border border-white/60 bg-black/70 backdrop-blur-sm px-1.5 py-1">
-        <div className="grid grid-cols-4 gap-1">
+      <div className="fixed top-2 right-2 z-40 border border-white/70 bg-black/75 backdrop-blur-sm px-2 py-2 w-[calc(100vw-1rem)] max-w-[560px] md:w-auto">
+        <div className="grid grid-cols-5 gap-1.5">
           {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
             <button
-              key={`bottom-nav-${mode}`}
+              key={`top-nav-${mode}`}
               onClick={() => setNavigationModeFromMenu(mode)}
-              className={`font-mono text-[8px] uppercase tracking-wide border px-2 py-1 transition-colors ${
+              className={`font-mono text-[12px] uppercase tracking-wide border px-3 py-1.5 transition-colors ${
                 navigationMode === mode
                   ? "bg-white text-black border-white"
                   : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -3256,6 +3389,36 @@ export default function AstrologyCalculator() {
               {label}
             </button>
           ))}
+          <button
+            onClick={resetToInitialState}
+            className="font-mono text-[12px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
+          >
+            RESET
+          </button>
+        </div>
+        <div className="mt-1.5 flex gap-1.5">
+          <select
+            value={exportMode}
+            onChange={(e) => setExportMode(e.target.value as NavigationMode)}
+            className="flex-1 font-mono text-[11px] uppercase tracking-wide border border-gray-600 bg-black text-white px-2 py-1.5"
+          >
+            {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
+              <option key={`export-${mode}`} value={mode}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => downloadNavigationModeMp3(exportMode)}
+            disabled={!horoscopeData || isExportingMp3}
+            className={`font-mono text-[11px] uppercase tracking-wide border px-3 py-1.5 transition-colors ${
+              !horoscopeData || isExportingMp3
+                ? "border-gray-700 text-gray-500 cursor-not-allowed"
+                : "border-white text-white hover:bg-white hover:text-black"
+            }`}
+          >
+            {isExportingMp3 ? "REC MP3..." : "DOWNLOAD MP3"}
+          </button>
         </div>
       </div>
     </main>

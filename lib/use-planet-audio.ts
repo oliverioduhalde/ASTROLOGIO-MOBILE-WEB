@@ -41,6 +41,13 @@ interface Position3D {
   z: number
 }
 
+type Mp3Chunk = Int8Array | Uint8Array | number[]
+
+interface Mp3EncoderInstance {
+  encodeBuffer(left: Int16Array, right?: Int16Array): Mp3Chunk
+  flush(): Mp3Chunk
+}
+
 interface PlanetData {
   name: string
   ChartPosition: {
@@ -252,6 +259,19 @@ function centsToPlaybackRate(cents: number): number {
   return Math.pow(2, cents / 1200)
 }
 
+function floatToInt16(input: Float32Array): Int16Array {
+  const output = new Int16Array(input.length)
+  for (let i = 0; i < input.length; i++) {
+    const sample = Math.max(-1, Math.min(1, input[i]))
+    output[i] = sample < 0 ? Math.round(sample * 0x8000) : Math.round(sample * 0x7fff)
+  }
+  return output
+}
+
+function toInt8Array(chunk: Mp3Chunk): Int8Array {
+  return Int8Array.from(chunk as ArrayLike<number>)
+}
+
 export function usePlanetAudio(
   envelope: AudioEnvelope = { fadeIn: 7, fadeOut: 7, backgroundVolume: 20, aspectsSoundVolume: 33, masterVolume: 20 },
 ) {
@@ -307,6 +327,11 @@ export function usePlanetAudio(
   const toneModuleRef = useRef<any>(null)
   const fmPadSynthRef = useRef<any>(null)
   const fmPadGainRef = useRef<any>(null)
+  const mp3EncoderRef = useRef<Mp3EncoderInstance | null>(null)
+  const mp3ChunksRef = useRef<Int8Array[]>([])
+  const isMp3RecordingRef = useRef(false)
+  const recordingProcessorRef = useRef<ScriptProcessorNode | null>(null)
+  const recordingSinkGainRef = useRef<GainNode | null>(null)
 
   useEffect(() => {
     backgroundVolumeRef.current = envelope.backgroundVolume ?? 20
@@ -553,6 +578,29 @@ export function usePlanetAudio(
           preSplitter.connect(preRightAnalyser, 1)
           postSplitter.connect(postLeftAnalyser, 0)
           postSplitter.connect(postRightAnalyser, 1)
+
+          // Optional MP3 export tap from post-limiter stereo output.
+          const recordingProcessor = audioContextRef.current.createScriptProcessor(4096, 2, 2)
+          const recordingSinkGain = audioContextRef.current.createGain()
+          recordingSinkGain.gain.value = 0
+          recordingProcessor.onaudioprocess = (event) => {
+            if (!isMp3RecordingRef.current || !mp3EncoderRef.current) return
+
+            const input = event.inputBuffer
+            const left = input.getChannelData(0)
+            const right = input.numberOfChannels > 1 ? input.getChannelData(1) : left
+            const left16 = floatToInt16(left)
+            const right16 = floatToInt16(right)
+            const encodedChunk = toInt8Array(mp3EncoderRef.current.encodeBuffer(left16, right16))
+            if (encodedChunk.length > 0) {
+              mp3ChunksRef.current.push(encodedChunk)
+            }
+          }
+          dynamicsCompressor.connect(recordingProcessor)
+          recordingProcessor.connect(recordingSinkGain)
+          recordingSinkGain.connect(audioContextRef.current.destination)
+          recordingProcessorRef.current = recordingProcessor
+          recordingSinkGainRef.current = recordingSinkGain
 
           resonanceSceneRef.current.setListenerPosition(0, 0, 0)
           console.log("[v0] Resonance Audio scene initialized with 18dB gain and limiter")
@@ -1232,6 +1280,54 @@ export function usePlanetAudio(
     }
   }, [])
 
+  const startMp3Recording = useCallback(async (): Promise<boolean> => {
+    try {
+      await initializeAudio()
+      const ctx = audioContextRef.current
+      if (!ctx) return false
+      if (ctx.state === "suspended") {
+        await ctx.resume()
+      }
+
+      const lameModule = (await import("lamejs")) as {
+        Mp3Encoder: new (channels: number, sampleRate: number, kbps: number) => Mp3EncoderInstance
+      }
+      mp3ChunksRef.current = []
+      mp3EncoderRef.current = new lameModule.Mp3Encoder(2, Math.round(ctx.sampleRate), 192)
+      isMp3RecordingRef.current = true
+      return true
+    } catch (error) {
+      console.error("[v0] Error starting MP3 export:", error)
+      isMp3RecordingRef.current = false
+      mp3EncoderRef.current = null
+      mp3ChunksRef.current = []
+      return false
+    }
+  }, [initializeAudio])
+
+  const stopMp3Recording = useCallback((): Blob | null => {
+    isMp3RecordingRef.current = false
+    if (!mp3EncoderRef.current) return null
+
+    try {
+      const flushChunk = toInt8Array(mp3EncoderRef.current.flush())
+      if (flushChunk.length > 0) {
+        mp3ChunksRef.current.push(flushChunk)
+      }
+      if (mp3ChunksRef.current.length === 0) {
+        mp3EncoderRef.current = null
+        return null
+      }
+      return new Blob(mp3ChunksRef.current, { type: "audio/mpeg" })
+    } catch (error) {
+      console.error("[v0] Error finalizing MP3 export:", error)
+      return null
+    } finally {
+      mp3EncoderRef.current = null
+      mp3ChunksRef.current = []
+    }
+  }, [])
+
   useEffect(() => {
     initializeAudio()
   }, [initializeAudio])
@@ -1241,6 +1337,26 @@ export function usePlanetAudio(
       stopAll()
       stopBackgroundSound()
       stopElementBackground()
+      isMp3RecordingRef.current = false
+      mp3EncoderRef.current = null
+      mp3ChunksRef.current = []
+      if (recordingProcessorRef.current) {
+        try {
+          recordingProcessorRef.current.disconnect()
+        } catch (e) {
+          // ignore
+        }
+        recordingProcessorRef.current.onaudioprocess = null
+        recordingProcessorRef.current = null
+      }
+      if (recordingSinkGainRef.current) {
+        try {
+          recordingSinkGainRef.current.disconnect()
+        } catch (e) {
+          // ignore
+        }
+        recordingSinkGainRef.current = null
+      }
       if (fmPadSynthRef.current) {
         try {
           fmPadSynthRef.current.dispose()
@@ -1278,5 +1394,7 @@ export function usePlanetAudio(
     audioLevelLeftPost,
     audioLevelRightPost,
     compressionReductionDb,
+    startMp3Recording,
+    stopMp3Recording,
   }
 }

@@ -242,6 +242,7 @@ export default function AstrologyCalculator() {
   const [pointerRotation, setPointerRotation] = useState(0)
   const [pointerOpacity, setPointerOpacity] = useState(1)
   const [pointerOpacityTransitionMs, setPointerOpacityTransitionMs] = useState(0)
+  const [chartAspectsTransitionMs, setChartAspectsTransitionMs] = useState(0)
   const [chordAspectsTransitionMs, setChordAspectsTransitionMs] = useState(CHORD_ASPECTS_FADE_IN_MS)
   const [startButtonScale, setStartButtonScale] = useState(1)
 
@@ -632,6 +633,7 @@ export default function AstrologyCalculator() {
           setPointerRotation(180)
           setPointerOpacity(1)
           setPointerOpacityTransitionMs(0)
+          setChartAspectsTransitionMs(0)
           setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
           setIsLoopRunning(false)
           setIsPaused(false)
@@ -822,6 +824,7 @@ export default function AstrologyCalculator() {
     setPointerRotation(180)
     setPointerOpacity(1)
     setPointerOpacityTransitionMs(0)
+    setChartAspectsTransitionMs(0)
     setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
     setCurrentPlanetUnderPointer(null)
     setDebugPointerAngle(0)
@@ -1013,10 +1016,11 @@ export default function AstrologyCalculator() {
 
     setPointerOpacity(1)
     setPointerOpacityTransitionMs(0)
+    setChartAspectsTransitionMs(0)
     setPointerAngle(resolvedRoute[0].angle, resolvedRoute[0].name)
     triggerPlanetAudioAtPointer(resolvedRoute[0].name, resolvedRoute[0].angle)
     if (chartAspects) {
-      triggerChartPlanetAspects(resolvedRoute[0].name)
+      triggerChartPlanetAspects(resolvedRoute[0].name, { targetOpacity: 0.8, transitionMs: 0 })
     }
     lastPlayedPlanetRef.current = resolvedRoute[0].name
 
@@ -1051,6 +1055,16 @@ export default function AstrologyCalculator() {
       loopElapsedBeforePauseMsRef.current = 0
       setPointerOpacity(1)
       setPointerOpacityTransitionMs(0)
+      setChartAspectsTransitionMs(0)
+      if (chartAspects) {
+        const key = chartAspectsKeyRef.current
+        setActivePlanetAspectsMap((prevMap) => {
+          if (!prevMap[key]) return prevMap
+          const updated = { ...prevMap }
+          delete updated[key]
+          return updated
+        })
+      }
     }
 
     const computeStepHoldMs = () => {
@@ -1061,7 +1075,11 @@ export default function AstrologyCalculator() {
       return Math.max(0, holdMs + randomOffset)
     }
 
-    const teleportTransition = (nextStep: { name: string; angle: number }, onDone: () => void) => {
+    const teleportTransition = (
+      currentStep: { name: string; angle: number },
+      nextStep: { name: string; angle: number },
+      onDone: () => void,
+    ) => {
       if (!teleport) {
         onDone()
         return
@@ -1071,7 +1089,13 @@ export default function AstrologyCalculator() {
       const fadeInMs = Math.max(0, Math.floor(halfFadeMs / fadeInSpeedMultiplier))
       if (halfFadeMs === 0) {
         setPointerOpacity(0)
+        if (chartAspects) {
+          triggerChartPlanetAspects(currentStep.name, { targetOpacity: 0, transitionMs: 0 })
+        }
         setPointerAngle(nextStep.angle, nextStep.name)
+        if (chartAspects) {
+          triggerChartPlanetAspects(nextStep.name, { targetOpacity: 0.8, transitionMs: 0 })
+        }
         setPointerOpacity(1)
         onDone()
         return
@@ -1079,11 +1103,26 @@ export default function AstrologyCalculator() {
 
       setPointerOpacityTransitionMs(halfFadeMs)
       setPointerOpacity(0)
+      if (chartAspects) {
+        triggerChartPlanetAspects(currentStep.name, { targetOpacity: 0, transitionMs: halfFadeMs })
+      }
 
       const fadeOutTimer = setTimeout(() => {
         if (navigationRunIdRef.current !== runId) return
         setPointerAngle(nextStep.angle, nextStep.name)
+        if (chartAspects) {
+          triggerChartPlanetAspects(nextStep.name, { targetOpacity: 0, transitionMs: 0 })
+        }
+        setPointerOpacityTransitionMs(fadeInMs)
         setPointerOpacity(1)
+
+        if (chartAspects) {
+          const chartFadeInTimer = setTimeout(() => {
+            if (navigationRunIdRef.current !== runId) return
+            triggerChartPlanetAspects(nextStep.name, { targetOpacity: 0.8, transitionMs: fadeInMs })
+          }, 0)
+          navigationTimeoutsRef.current.push(chartFadeInTimer)
+        }
 
         const fadeInTimer = setTimeout(() => {
           if (navigationRunIdRef.current !== runId) return
@@ -1130,8 +1169,8 @@ export default function AstrologyCalculator() {
       }
 
       triggerPlanetAudioAtPointer(nextStep.name, nextStep.angle)
-      if (chartAspects) {
-        triggerChartPlanetAspects(nextStep.name)
+      if (chartAspects && !teleport) {
+        triggerChartPlanetAspects(nextStep.name, { targetOpacity: 0.8, transitionMs: 100 })
       }
       lastPlayedPlanetRef.current = nextStep.name
 
@@ -1139,11 +1178,11 @@ export default function AstrologyCalculator() {
         if (audioLeadMs > 0) {
           const transitionTimer = setTimeout(() => {
             if (navigationRunIdRef.current !== runId) return
-            teleportTransition(nextStep, runStepDone)
+            teleportTransition(currentStep, nextStep, runStepDone)
           }, audioLeadMs)
           navigationTimeoutsRef.current.push(transitionTimer)
         } else {
-          teleportTransition(nextStep, runStepDone)
+          teleportTransition(currentStep, nextStep, runStepDone)
         }
         return
       }
@@ -1267,6 +1306,7 @@ export default function AstrologyCalculator() {
     lastUiCommitTimeRef.current = 0
     setPointerOpacity(1)
     setPointerOpacityTransitionMs(0)
+    setChartAspectsTransitionMs(0)
     setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
     setActivePlanetAspectsMap({})
     setIsLoopRunning(true)
@@ -1419,6 +1459,7 @@ export default function AstrologyCalculator() {
       setPointerRotation(180)
       setPointerOpacity(1)
       setPointerOpacityTransitionMs(0)
+      setChartAspectsTransitionMs(0)
       setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
       setDebugPointerAngle(0)
       setActivePlanetAspectsMap({})
@@ -1503,13 +1544,17 @@ export default function AstrologyCalculator() {
   }
 
   const triggerChartPlanetAspects = useCallback(
-    (planetName: string) => {
+    (planetName: string, options?: { targetOpacity?: number; transitionMs?: number }) => {
       const key = chartAspectsKeyRef.current
       const existingTimers = aspectClickTimersRef.current[key]
       if (existingTimers) {
         existingTimers.forEach((timerId) => clearTimeout(timerId))
       }
       aspectClickTimersRef.current[key] = []
+
+      const targetOpacity = Math.max(0, Math.min(1, options?.targetOpacity ?? 0.8))
+      const transitionMs = Math.max(0, options?.transitionMs ?? 0)
+      setChartAspectsTransitionMs(transitionMs)
 
       if (!showDynAspects) {
         setActivePlanetAspectsMap((prevMap) => {
@@ -1530,67 +1575,15 @@ export default function AstrologyCalculator() {
         return
       }
 
-      const targetOpacity = 0.8
       setActivePlanetAspectsMap((prevMap) => ({
         ...prevMap,
         [key]: {
           aspects: aspectsForPlanet,
-          opacity: 0,
+          opacity: targetOpacity,
         },
       }))
-
-      const fadeInInterval = setInterval(() => {
-        setActivePlanetAspectsMap((prevMap) => {
-          const current = prevMap[key]
-          if (!current) return prevMap
-          const increment = targetOpacity / Math.max(1, dynAspectsFadeIn * 10)
-          const newOpacity = Math.min(current.opacity + increment, targetOpacity)
-          return {
-            ...prevMap,
-            [key]: {
-              aspects: current.aspects,
-              opacity: newOpacity,
-            },
-          }
-        })
-      }, 100)
-
-      const fadeInTimeout = setTimeout(() => {
-        clearInterval(fadeInInterval)
-      }, dynAspectsFadeIn * 1000)
-      aspectClickTimersRef.current[key].push(fadeInInterval, fadeInTimeout)
-
-      const fadeOutStart = (dynAspectsFadeIn + dynAspectsSustain) * 1000
-      const fadeOutStartTimeout = setTimeout(() => {
-        const fadeOutInterval = setInterval(() => {
-          setActivePlanetAspectsMap((prevMap) => {
-            const current = prevMap[key]
-            if (!current) return prevMap
-            const decrement = targetOpacity / Math.max(1, dynAspectsFadeOut * 10)
-            const newOpacity = Math.max(current.opacity - decrement, 0)
-            if (newOpacity <= 0) {
-              const updated = { ...prevMap }
-              delete updated[key]
-              return updated
-            }
-            return {
-              ...prevMap,
-              [key]: {
-                aspects: current.aspects,
-                opacity: newOpacity,
-              },
-            }
-          })
-        }, 100)
-
-        const fadeOutTimeout = setTimeout(() => {
-          clearInterval(fadeOutInterval)
-        }, dynAspectsFadeOut * 1000)
-        aspectClickTimersRef.current[key].push(fadeOutInterval, fadeOutTimeout)
-      }, fadeOutStart)
-      aspectClickTimersRef.current[key].push(fadeOutStartTimeout)
     },
-    [dynAspectsFadeIn, dynAspectsFadeOut, dynAspectsSustain, getAspectsForPlanet, showDynAspects],
+    [getAspectsForPlanet, showDynAspects],
   )
 
   const triggerPlanetGlyphScale = (planetName: string, aspectsForPlanet: any[]) => {
@@ -2912,6 +2905,8 @@ export default function AstrologyCalculator() {
                                   transition:
                                     planetName === "all"
                                       ? `opacity ${chordAspectsTransitionMs / 1000}s linear`
+                                      : planetName === chartAspectsKeyRef.current
+                                        ? `opacity ${chartAspectsTransitionMs / 1000}s linear`
                                       : "opacity 0.1s linear",
                                 }}
                               />

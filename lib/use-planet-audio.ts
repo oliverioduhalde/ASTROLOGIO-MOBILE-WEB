@@ -293,6 +293,7 @@ export function usePlanetAudio(
   const synthVolumeRef = useRef(envelope.synthVolume ?? 450)
   const masterGainNodeRef = useRef<GainNode | null>(null)
   const planetReverbImpulseRef = useRef<AudioBuffer | null>(null)
+  const globalReverbSendRef = useRef<GainNode | null>(null)
   const dynAspectsFadeInRef = useRef(envelope.dynAspectsFadeIn ?? 3)
   const dynAspectsSustainRef = useRef(envelope.dynAspectsSustain ?? 2)
   const dynAspectsFadeOutRef = useRef(envelope.dynAspectsFadeOut ?? 15)
@@ -478,6 +479,28 @@ export function usePlanetAudio(
           const baseGain = Math.pow(10, 28 / 20) // 28 dB = 25.1x gain (18dB base + 10dB extra)
           masterGainNode.gain.value = baseGain * (masterVolumeRef.current / 100)
           masterGainNodeRef.current = masterGainNode
+
+          if (!planetReverbImpulseRef.current) {
+            planetReverbImpulseRef.current = createLowDiffusionReverbImpulse(audioContextRef.current, 3)
+          }
+
+          // Shared reverb bus to avoid creating convolver/filter nodes per note.
+          const globalReverbSend = audioContextRef.current.createGain()
+          globalReverbSend.gain.value = 1
+          const globalReverbConvolver = audioContextRef.current.createConvolver()
+          globalReverbConvolver.buffer = planetReverbImpulseRef.current
+          const globalReverbShelf = audioContextRef.current.createBiquadFilter()
+          globalReverbShelf.type = "highshelf"
+          globalReverbShelf.frequency.value = 800
+          globalReverbShelf.gain.value = -6
+          const globalReverbReturn = audioContextRef.current.createGain()
+          globalReverbReturn.gain.value = 1
+
+          globalReverbSend.connect(globalReverbConvolver)
+          globalReverbConvolver.connect(globalReverbShelf)
+          globalReverbShelf.connect(globalReverbReturn)
+          globalReverbReturn.connect(masterGainNode)
+          globalReverbSendRef.current = globalReverbSend
 
           const dynamicsCompressor = audioContextRef.current.createDynamicsCompressor()
           dynamicsCompressor.threshold.value = -1
@@ -1023,29 +1046,18 @@ export function usePlanetAudio(
         const gainNode = ctx.createGain()
         const dryGainNode = ctx.createGain()
         const wetSendGainNode = ctx.createGain()
-        const reverbReturnGainNode = ctx.createGain()
-        const reverbShelfNode = ctx.createBiquadFilter()
-        const convolverNode = ctx.createConvolver()
-
-        if (!planetReverbImpulseRef.current) {
-          planetReverbImpulseRef.current = createLowDiffusionReverbImpulse(ctx, 3)
-        }
-        convolverNode.buffer = planetReverbImpulseRef.current
-        reverbShelfNode.type = "highshelf"
-        reverbShelfNode.frequency.value = 800
-        reverbShelfNode.gain.value = -6
         dryGainNode.gain.value = 0.8
         wetSendGainNode.gain.value = 0.2
-        reverbReturnGainNode.gain.value = 1
 
         source.connect(gainNode)
         gainNode.connect(dryGainNode)
         gainNode.connect(wetSendGainNode)
         dryGainNode.connect(panner.input)
-        wetSendGainNode.connect(convolverNode)
-        convolverNode.connect(reverbShelfNode)
-        reverbShelfNode.connect(reverbReturnGainNode)
-        reverbReturnGainNode.connect(panner.input)
+        if (globalReverbSendRef.current) {
+          wetSendGainNode.connect(globalReverbSendRef.current)
+        } else {
+          wetSendGainNode.connect(panner.input)
+        }
 
         const position = polarToCartesian3D(azimuth, elevation)
         panner.setPosition(position.x, position.y, position.z)
@@ -1073,16 +1085,21 @@ export function usePlanetAudio(
         gainNode.gain.setValueAtTime(planetVolumeMultiplier, currentTime + fadeInTime)
         gainNode.gain.linearRampToValueAtTime(0, currentTime + totalDuration)
 
-        source.start(currentTime, startOffset)
-
-        const endTime = currentTime + totalDuration
-
+        const safeEndTime = Math.max(currentTime + 0.01, currentTime + totalDuration)
         const trackId = `${planetName}-${currentTime}`
+        source.onended = () => {
+          activeTracksRef.current.delete(trackId)
+          playingPlanetsRef.current.delete(planetName)
+          source.onended = null
+        }
+        source.start(currentTime, startOffset)
+        source.stop(safeEndTime)
+
         activeTracksRef.current.set(trackId, {
           audioContext: ctx,
           source,
           startTime: currentTime,
-          endTime,
+          endTime: safeEndTime,
           planetName,
           basePlaybackRate,
           kind: "planet",
@@ -1147,54 +1164,33 @@ export function usePlanetAudio(
             const aspectSustainEnd = aspectFadeInEnd + aspectSustainTime
             const aspectFadeOutEnd = aspectSustainEnd + aspectFadeOutTime
             
-            const aspectEndTime = aspectFadeOutEnd
+            const aspectEndTime = Math.max(aspectStartTime + 0.01, aspectFadeOutEnd)
 
             aspectGainNode.gain.setValueAtTime(0, aspectStartTime)
             aspectGainNode.gain.linearRampToValueAtTime(baseVolume, aspectFadeInEnd)
             aspectGainNode.gain.setValueAtTime(baseVolume, aspectSustainEnd)
             aspectGainNode.gain.linearRampToValueAtTime(0, aspectFadeOutEnd)
 
-            aspectSource.start(currentTime, startOffset)
-
             const aspectTrackId = `${planetName}-aspect-${otherPlanetName}-${currentTime}`
+            aspectSource.onended = () => {
+              activeTracksRef.current.delete(aspectTrackId)
+              aspectSource.onended = null
+            }
             activeTracksRef.current.set(aspectTrackId, {
               audioContext: ctx,
               source: aspectSource,
               startTime: aspectStartTime,
-              endTime: aspectFadeOutEnd,
+              endTime: aspectEndTime,
               planetName: `${planetName}-aspect`,
               basePlaybackRate,
               kind: "aspect",
               panner: aspectPanner,
             })
-
-            const checkInterval = setInterval(() => {
-              if (ctx.currentTime >= aspectFadeOutEnd) {
-                clearInterval(checkInterval)
-                activeTracksRef.current.delete(aspectTrackId)
-                try {
-                  aspectSource.stop()
-                } catch (e) {
-                  // Already stopped
-                }
-              }
-            }, 100)
+            aspectSource.start(aspectStartTime, startOffset)
+            aspectSource.stop(aspectEndTime)
 
           }
         }
-
-        const checkInterval = setInterval(() => {
-          if (ctx.currentTime >= endTime) {
-            clearInterval(checkInterval)
-            activeTracksRef.current.delete(trackId)
-            playingPlanetsRef.current.delete(planetName)
-            try {
-              source.stop()
-            } catch (e) {
-              // Already stopped
-            }
-          }
-        }, 100)
       } catch (error) {
         console.error(`[v0] Error playing sound for ${planetName}:`, error)
       }
@@ -1245,6 +1241,7 @@ export function usePlanetAudio(
       if (audioContextRef.current) {
         audioContextRef.current.close()
       }
+      globalReverbSendRef.current = null
     }
   }, [stopAll, stopBackgroundSound, stopElementBackground])
 

@@ -212,6 +212,7 @@ function getPlanetVolumeMultiplier(planetName: string): number {
     sun: 1.2, // +20%
     pluto: 1.25, // +25%
     mercury: 0.8, // -20%
+    mars: 0.6, // -40%
     neptune: 1.2, // +20%
   }
 

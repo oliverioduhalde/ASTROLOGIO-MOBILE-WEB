@@ -99,6 +99,7 @@ const SEQUENTIAL_PLANET_ORDER = [
 const NAVIGATION_TRANSITION_MS = 5000
 const CHART_PLANET_HOLD_MS = 15000
 const CHORD_POINTER_RADIUS = 16
+const CHORD_ASPECTS_FADE_IN_MS = 7000
 
 const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
   astral_chord: "ACCORD",
@@ -703,7 +704,7 @@ export default function AstrologyCalculator() {
   }, [hoveredGlyph, isLoopRunning, glyphHoverOpacity])
 
   useEffect(() => {
-    if (!showDynAspects || !currentPlanetUnderPointer || !horoscopeData?.aspects) {
+    if (navigationMode === "astral_chord" || !showDynAspects || !currentPlanetUnderPointer || !horoscopeData?.aspects) {
       return
     }
 
@@ -744,9 +745,12 @@ export default function AstrologyCalculator() {
       clearInterval(fadeInInterval)
       clearTimeout(fadeInTimeout)
     }
-  }, [currentPlanetUnderPointer, showDynAspects, dynAspectsFadeIn, horoscopeData?.aspects])
+  }, [currentPlanetUnderPointer, showDynAspects, dynAspectsFadeIn, horoscopeData?.aspects, navigationMode])
 
   useEffect(() => {
+    if (navigationMode === "astral_chord") {
+      return
+    }
     if (showDynAspects && currentPlanetUnderPointer === null && Object.keys(activePlanetAspectsMap).length > 0) {
       const fadeOutInterval = setInterval(() => {
         setActivePlanetAspectsMap((prevMap) => {
@@ -777,7 +781,7 @@ export default function AstrologyCalculator() {
         clearTimeout(fadeOutTimeout)
       }
     }
-  }, [currentPlanetUnderPointer, showDynAspects, activePlanetAspectsMap, dynAspectsFadeOut])
+  }, [currentPlanetUnderPointer, showDynAspects, activePlanetAspectsMap, dynAspectsFadeOut, navigationMode])
 
   const resetToInitialState = () => {
     cancelAllNavigationSchedulers()
@@ -1068,6 +1072,7 @@ export default function AstrologyCalculator() {
 
   const startAstralChordMode = () => {
     if (!horoscopeData?.planets) return
+    const runId = navigationRunIdRef.current
     const allowedAspects = new Set(["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"])
     const allMajorAspects =
       horoscopeData.aspects?.filter(
@@ -1079,15 +1084,29 @@ export default function AstrologyCalculator() {
       setActivePlanetAspectsMap({
         all: {
           aspects: allMajorAspects,
-          opacity: 1,
+          opacity: 0,
         },
       })
+      const chordFadeTimer = setTimeout(() => {
+        if (navigationRunIdRef.current !== runId) return
+        setActivePlanetAspectsMap((prevMap) => {
+          const current = prevMap.all
+          if (!current) return prevMap
+          return {
+            ...prevMap,
+            all: {
+              aspects: current.aspects,
+              opacity: 1,
+            },
+          }
+        })
+      }, 40)
+      navigationTimeoutsRef.current.push(chordFadeTimer)
     } else {
       setActivePlanetAspectsMap({})
     }
 
     const route = buildSequentialRoute().filter((name, index, arr) => index === arr.indexOf(name))
-    const runId = navigationRunIdRef.current
     setCurrentPlanetUnderPointer(null)
 
     route.forEach((planetName, index) => {
@@ -2440,9 +2459,9 @@ export default function AstrologyCalculator() {
                         const trimmedSegment = trimLineSegment(pos1, pos2, 15, 15)
                         if (!trimmedSegment) return null
 
-                        // Determine color; all aspect lines use 2px width.
+                        // Determine color; all aspect lines use 1px width.
                         let stroke = "#888"
-                        const strokeWidth = 2
+                        const strokeWidth = 1
                         if (aspect.aspectType === "Oposición") {
                           stroke = "#FF8C00"
                         } else if (aspect.aspectType === "Conjunción") {
@@ -2625,9 +2644,9 @@ export default function AstrologyCalculator() {
                           const trimmedSegment = trimLineSegment(pos1, pos2, 15, 15)
                           if (!trimmedSegment) return null
 
-                          // Determine color; all aspect lines use 2px width.
+                          // Determine color; all aspect lines use 1px width.
                           let aspectColor = "#888"
-                          const aspectWidth = 2
+                          const aspectWidth = 1
                           let aspectOpacity = data.opacity
 
                           if (aspect.aspectType === "Oposición") {
@@ -2653,7 +2672,10 @@ export default function AstrologyCalculator() {
                                 strokeWidth={aspectWidth}
                                 style={{
                                   opacity: aspectOpacity,
-                                  transition: "opacity 0.1s linear",
+                                  transition:
+                                    planetName === "all"
+                                      ? `opacity ${CHORD_ASPECTS_FADE_IN_MS / 1000}s linear`
+                                      : "opacity 0.1s linear",
                                 }}
                               />
                             </g>

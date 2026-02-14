@@ -847,7 +847,9 @@ export default function AstrologyCalculator() {
 
   const setPointerAngle = (angle: number, currentPlanet: string | null) => {
     const normalized = norm360(angle)
-    setPointerRotation(normalized - 180)
+    // Pointer base is at 180° (left) and CSS rotate is clockwise-positive.
+    // Convert chart angle (counter-clockwise-positive) into CSS rotation.
+    setPointerRotation(180 - normalized)
     setDebugPointerAngle(Math.round(normalized))
     setCurrentPlanetUnderPointer(currentPlanet)
   }

@@ -98,6 +98,11 @@ const SEQUENTIAL_PLANET_ORDER = [
 
 const NAVIGATION_TRANSITION_MS = 5000
 const CHART_PLANET_HOLD_MS = 15000
+const NON_RADIAL_CROSSFADE_MS = 2000
+const NON_RADIAL_AUDIO_LEAD_MS = 1000
+const NON_RADIAL_JITTER_MS = 2000
+const NON_RADIAL_INFRACTION_JITTER_MS = 2800
+const NON_RADIAL_INFRACTION_PROBABILITY = 0.2
 const CHORD_POINTER_RADIUS = 16
 const CHORD_ASPECTS_FADE_IN_MS = 14000
 const CHORD_ASPECTS_HOLD_MS = 5000
@@ -977,6 +982,10 @@ export default function AstrologyCalculator() {
       crossfadeMs?: number
       chartAspects?: boolean
       fadeInSpeedMultiplier?: number
+      audioLeadMs?: number
+      jitterMs?: number
+      infractionProbability?: number
+      infractionJitterMs?: number
     },
   ) => {
     const resolvedRoute = route
@@ -993,6 +1002,10 @@ export default function AstrologyCalculator() {
     const crossfadeMs = Math.max(0, options?.crossfadeMs ?? NAVIGATION_TRANSITION_MS)
     const chartAspects = options?.chartAspects ?? false
     const fadeInSpeedMultiplier = Math.max(1, options?.fadeInSpeedMultiplier ?? 1)
+    const audioLeadMs = Math.max(0, options?.audioLeadMs ?? 0)
+    const jitterMs = Math.max(0, options?.jitterMs ?? 0)
+    const infractionProbability = Math.min(1, Math.max(0, options?.infractionProbability ?? 0))
+    const infractionJitterMs = Math.max(jitterMs, options?.infractionJitterMs ?? jitterMs)
     const runId = navigationRunIdRef.current
     const uiCommitIntervalMs = 33
     let lastUiCommitMs = 0
@@ -1040,6 +1053,14 @@ export default function AstrologyCalculator() {
       setPointerOpacityTransitionMs(0)
     }
 
+    const computeStepHoldMs = () => {
+      if (holdMs <= 0) return 0
+      const useInfraction = Math.random() < infractionProbability
+      const jitterRange = useInfraction ? infractionJitterMs : jitterMs
+      const randomOffset = jitterRange > 0 ? (Math.random() * 2 - 1) * jitterRange : 0
+      return Math.max(0, holdMs + randomOffset)
+    }
+
     const teleportTransition = (nextStep: { name: string; angle: number }, onDone: () => void) => {
       if (!teleport) {
         onDone()
@@ -1076,7 +1097,9 @@ export default function AstrologyCalculator() {
 
     const scheduleNextAdvance = () => {
       if (navigationRunIdRef.current !== runId) return
-      navigationStepTimeoutRef.current = setTimeout(advance, holdMs)
+      const stepHoldMs = computeStepHoldMs()
+      const waitBeforeTransitionMs = Math.max(0, stepHoldMs - audioLeadMs)
+      navigationStepTimeoutRef.current = setTimeout(advance, waitBeforeTransitionMs)
     }
 
     const advance = () => {
@@ -1092,11 +1115,12 @@ export default function AstrologyCalculator() {
       const runStepDone = () => {
         stepIndex = nextIndex
         if (stepIndex >= resolvedRoute.length - 1) {
-          if (holdMs > 0) {
+          const finalHoldMs = computeStepHoldMs()
+          if (finalHoldMs > 0) {
             navigationStepTimeoutRef.current = setTimeout(() => {
               if (navigationRunIdRef.current !== runId) return
               finishRoute()
-            }, holdMs)
+            }, finalHoldMs)
           } else {
             finishRoute()
           }
@@ -1112,11 +1136,27 @@ export default function AstrologyCalculator() {
       lastPlayedPlanetRef.current = nextStep.name
 
       if (teleport) {
-        teleportTransition(nextStep, runStepDone)
+        if (audioLeadMs > 0) {
+          const transitionTimer = setTimeout(() => {
+            if (navigationRunIdRef.current !== runId) return
+            teleportTransition(nextStep, runStepDone)
+          }, audioLeadMs)
+          navigationTimeoutsRef.current.push(transitionTimer)
+        } else {
+          teleportTransition(nextStep, runStepDone)
+        }
         return
       }
 
-      animateTransition(currentStep.angle, nextStep.angle, runStepDone)
+      if (audioLeadMs > 0) {
+        const transitionTimer = setTimeout(() => {
+          if (navigationRunIdRef.current !== runId) return
+          animateTransition(currentStep.angle, nextStep.angle, runStepDone)
+        }, audioLeadMs)
+        navigationTimeoutsRef.current.push(transitionTimer)
+      } else {
+        animateTransition(currentStep.angle, nextStep.angle, runStepDone)
+      }
     }
 
     scheduleNextAdvance()
@@ -1255,9 +1295,13 @@ export default function AstrologyCalculator() {
       startNonRadialRoute(buildSequentialRoute(), {
         teleport: true,
         holdMs: CHART_PLANET_HOLD_MS,
-        crossfadeMs: NAVIGATION_TRANSITION_MS,
+        crossfadeMs: NON_RADIAL_CROSSFADE_MS,
         chartAspects: true,
         fadeInSpeedMultiplier: 2,
+        audioLeadMs: NON_RADIAL_AUDIO_LEAD_MS,
+        jitterMs: NON_RADIAL_JITTER_MS,
+        infractionProbability: NON_RADIAL_INFRACTION_PROBABILITY,
+        infractionJitterMs: NON_RADIAL_INFRACTION_JITTER_MS,
       })
       return
     }
@@ -1265,9 +1309,13 @@ export default function AstrologyCalculator() {
     startNonRadialRoute(buildAspectualRoute(), {
       teleport: true,
       holdMs: CHART_PLANET_HOLD_MS,
-      crossfadeMs: NAVIGATION_TRANSITION_MS,
+      crossfadeMs: NON_RADIAL_CROSSFADE_MS,
       chartAspects: true,
       fadeInSpeedMultiplier: 2,
+      audioLeadMs: NON_RADIAL_AUDIO_LEAD_MS,
+      jitterMs: NON_RADIAL_JITTER_MS,
+      infractionProbability: NON_RADIAL_INFRACTION_PROBABILITY,
+      infractionJitterMs: NON_RADIAL_INFRACTION_JITTER_MS,
     })
   }
 

@@ -129,8 +129,8 @@ function polarToCartesian(cx: number, cy: number, r: number, thetaDeg: number) {
 function trimLineSegment(
   start: { x: number; y: number },
   end: { x: number; y: number },
-  trimStartPx = 30,
-  trimEndPx = 30,
+  trimStartPx = 15,
+  trimEndPx = 15,
 ) {
   const dx = end.x - start.x
   const dy = end.y - start.y
@@ -2008,7 +2008,7 @@ export default function AstrologyCalculator() {
                         }
 
                         if (!pos1 || !pos2) return null
-                        const trimmedSegment = trimLineSegment(pos1, pos2, 30, 30)
+                        const trimmedSegment = trimLineSegment(pos1, pos2, 15, 15)
                         if (!trimmedSegment) return null
 
                         // Determine color and width based on aspect type
@@ -2139,7 +2139,7 @@ export default function AstrologyCalculator() {
                           const pos2 = getPointPosition(aspect.point2.name)
 
                           if (!pos1 || !pos2) return null
-                          const trimmedSegment = trimLineSegment(pos1, pos2, 30, 30)
+                          const trimmedSegment = trimLineSegment(pos1, pos2, 15, 15)
                           if (!trimmedSegment) return null
 
                           // Determine color and width based on aspect type

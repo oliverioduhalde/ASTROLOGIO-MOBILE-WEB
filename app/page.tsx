@@ -97,6 +97,7 @@ const SEQUENTIAL_PLANET_ORDER = [
 ]
 
 const NAVIGATION_TRANSITION_MS = 5000
+const CHART_PLANET_HOLD_MS = 15000
 
 const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
   astral_chord: "ACCORD",
@@ -230,6 +231,8 @@ export default function AstrologyCalculator() {
   const [loopDuration, setLoopDuration] = useState(180)
   const [isLoopRunning, setIsLoopRunning] = useState(false)
   const [pointerRotation, setPointerRotation] = useState(0)
+  const [pointerOpacity, setPointerOpacity] = useState(1)
+  const [pointerOpacityTransitionMs, setPointerOpacityTransitionMs] = useState(0)
   const [startButtonScale, setStartButtonScale] = useState(1)
 
   const [audioFadeIn, setAudioFadeIn] = useState(5)
@@ -609,6 +612,8 @@ export default function AstrologyCalculator() {
           cancelPointerLoop()
           loopElapsedBeforePauseMsRef.current = 0
           setPointerRotation(180)
+          setPointerOpacity(1)
+          setPointerOpacityTransitionMs(0)
           setIsLoopRunning(false)
           setIsPaused(false)
           setCurrentPlanetUnderPointer(null)
@@ -785,6 +790,8 @@ export default function AstrologyCalculator() {
     setIsLoopRunning(false)
     setIsPaused(false)
     setPointerRotation(180)
+    setPointerOpacity(1)
+    setPointerOpacityTransitionMs(0)
     setCurrentPlanetUnderPointer(null)
     setDebugPointerAngle(0)
     setStartButtonPhase("contracted")
@@ -915,7 +922,14 @@ export default function AstrologyCalculator() {
     return route
   }
 
-  const startNonRadialRoute = (route: string[]) => {
+  const startNonRadialRoute = (
+    route: string[],
+    options?: {
+      teleport?: boolean
+      holdMs?: number
+      crossfadeMs?: number
+    },
+  ) => {
     const resolvedRoute = route
       .map((name) => ({ name, angle: getPlanetDialAngle(name) }))
       .filter((item): item is { name: string; angle: number } => item.angle !== null)
@@ -925,11 +939,16 @@ export default function AstrologyCalculator() {
       return
     }
 
+    const teleport = options?.teleport ?? false
+    const holdMs = Math.max(0, options?.holdMs ?? 0)
+    const crossfadeMs = Math.max(0, options?.crossfadeMs ?? NAVIGATION_TRANSITION_MS)
     const runId = navigationRunIdRef.current
     const uiCommitIntervalMs = 33
     let lastUiCommitMs = 0
     let stepIndex = 0
 
+    setPointerOpacity(1)
+    setPointerOpacityTransitionMs(0)
     setPointerAngle(resolvedRoute[0].angle, resolvedRoute[0].name)
     triggerPlanetAudioAtPointer(resolvedRoute[0].name, resolvedRoute[0].angle)
     lastPlayedPlanetRef.current = resolvedRoute[0].name
@@ -957,38 +976,92 @@ export default function AstrologyCalculator() {
       animationFrameIdRef.current = requestAnimationFrame(tick)
     }
 
+    const finishRoute = () => {
+      setIsLoopRunning(false)
+      setIsPaused(false)
+      setCurrentPlanetUnderPointer(null)
+      setStartButtonPhase("contracted")
+      loopElapsedBeforePauseMsRef.current = 0
+      setPointerOpacity(1)
+      setPointerOpacityTransitionMs(0)
+    }
+
+    const teleportTransition = (nextStep: { name: string; angle: number }, onDone: () => void) => {
+      if (!teleport) {
+        onDone()
+        return
+      }
+
+      const halfFadeMs = Math.max(0, Math.floor(crossfadeMs / 2))
+      if (halfFadeMs === 0) {
+        setPointerOpacity(0)
+        setPointerAngle(nextStep.angle, nextStep.name)
+        setPointerOpacity(1)
+        onDone()
+        return
+      }
+
+      setPointerOpacityTransitionMs(halfFadeMs)
+      setPointerOpacity(0)
+
+      const fadeOutTimer = setTimeout(() => {
+        if (navigationRunIdRef.current !== runId) return
+        setPointerAngle(nextStep.angle, nextStep.name)
+        setPointerOpacity(1)
+
+        const fadeInTimer = setTimeout(() => {
+          if (navigationRunIdRef.current !== runId) return
+          setPointerOpacityTransitionMs(0)
+          onDone()
+        }, halfFadeMs)
+        navigationTimeoutsRef.current.push(fadeInTimer)
+      }, halfFadeMs)
+      navigationTimeoutsRef.current.push(fadeOutTimer)
+    }
+
+    const scheduleNextAdvance = () => {
+      if (navigationRunIdRef.current !== runId) return
+      navigationStepTimeoutRef.current = setTimeout(advance, holdMs)
+    }
+
     const advance = () => {
       if (navigationRunIdRef.current !== runId) return
       const nextIndex = stepIndex + 1
       if (nextIndex >= resolvedRoute.length) {
-        setIsLoopRunning(false)
-        setIsPaused(false)
-        setCurrentPlanetUnderPointer(null)
-        setStartButtonPhase("contracted")
-        loopElapsedBeforePauseMsRef.current = 0
+        finishRoute()
         return
       }
 
       const currentStep = resolvedRoute[stepIndex]
       const nextStep = resolvedRoute[nextIndex]
+      const runStepDone = () => {
+        stepIndex = nextIndex
+        if (stepIndex >= resolvedRoute.length - 1) {
+          if (holdMs > 0) {
+            navigationStepTimeoutRef.current = setTimeout(() => {
+              if (navigationRunIdRef.current !== runId) return
+              finishRoute()
+            }, holdMs)
+          } else {
+            finishRoute()
+          }
+          return
+        }
+        scheduleNextAdvance()
+      }
+
       triggerPlanetAudioAtPointer(nextStep.name, nextStep.angle)
       lastPlayedPlanetRef.current = nextStep.name
 
-      animateTransition(currentStep.angle, nextStep.angle, () => {
-        stepIndex = nextIndex
-        if (stepIndex >= resolvedRoute.length - 1) {
-          setIsLoopRunning(false)
-          setIsPaused(false)
-          setCurrentPlanetUnderPointer(null)
-          setStartButtonPhase("contracted")
-          loopElapsedBeforePauseMsRef.current = 0
-          return
-        }
-        navigationStepTimeoutRef.current = setTimeout(advance, 0)
-      })
+      if (teleport) {
+        teleportTransition(nextStep, runStepDone)
+        return
+      }
+
+      animateTransition(currentStep.angle, nextStep.angle, runStepDone)
     }
 
-    navigationStepTimeoutRef.current = setTimeout(advance, 0)
+    scheduleNextAdvance()
   }
 
   const startAstralChordMode = () => {
@@ -1031,6 +1104,8 @@ export default function AstrologyCalculator() {
     stopElementBackground()
     loopElapsedBeforePauseMsRef.current = 0
     lastUiCommitTimeRef.current = 0
+    setPointerOpacity(1)
+    setPointerOpacityTransitionMs(0)
     setIsLoopRunning(true)
     setIsPaused(false)
     setStartButtonPhase("expanding")
@@ -1052,7 +1127,11 @@ export default function AstrologyCalculator() {
       return
     }
     if (mode === "sequential") {
-      startNonRadialRoute(buildSequentialRoute())
+      startNonRadialRoute(buildSequentialRoute(), {
+        teleport: true,
+        holdMs: CHART_PLANET_HOLD_MS,
+        crossfadeMs: NAVIGATION_TRANSITION_MS,
+      })
       return
     }
     startNonRadialRoute(buildAspectualRoute())
@@ -1155,6 +1234,8 @@ export default function AstrologyCalculator() {
       setIsPaused(false)
       setCurrentPlanetUnderPointer(null)
       setPointerRotation(180)
+      setPointerOpacity(1)
+      setPointerOpacityTransitionMs(0)
       setDebugPointerAngle(0)
       setActivePlanetAspectsMap({})
       console.log("[v0] Calculating with isSidereal:", isSidereal)
@@ -2340,38 +2421,23 @@ export default function AstrologyCalculator() {
                         const trimmedSegment = trimLineSegment(pos1, pos2, 15, 15)
                         if (!trimmedSegment) return null
 
-                        // Determine color and width based on aspect type
+                        // Determine color; all aspect lines use 2px width.
                         let stroke = "#888"
-                        let strokeWidth = 1.5
-                        let isSquare = false
+                        const strokeWidth = 2
                         if (aspect.aspectType === "Oposición") {
                           stroke = "#FF8C00"
-                          strokeWidth = 2
                         } else if (aspect.aspectType === "Conjunción") {
                           stroke = "#9D4EDD"
                         } else if (aspect.aspectType === "Trígono") {
                           stroke = "#00FF00"
                         } else if (aspect.aspectType === "Cuadrado") {
                           stroke = "#FF3B30"
-                          strokeWidth = 3
-                          isSquare = true
                         } else if (aspect.aspectType === "Sextil") {
                           stroke = "#0099FF"
                         }
 
                         return (
                           <g key={index} style={{ pointerEvents: "none" }}>
-                            {isSquare && (
-                              <line
-                                x1={trimmedSegment.x1}
-                                y1={trimmedSegment.y1}
-                                x2={trimmedSegment.x2}
-                                y2={trimmedSegment.y2}
-                                stroke="#FFFFFF"
-                                strokeWidth={strokeWidth + 1.5}
-                                opacity="0.45"
-                              />
-                            )}
                             <line
                               x1={trimmedSegment.x1}
                               y1={trimmedSegment.y1}
@@ -2475,8 +2541,14 @@ export default function AstrologyCalculator() {
                               fillOpacity="0.15"
                               stroke="white"
                               strokeWidth="1"
-                              opacity="1"
-                              style={{ pointerEvents: "none" }}
+                              opacity={pointerOpacity}
+                              style={{
+                                pointerEvents: "none",
+                                transition:
+                                  pointerOpacityTransitionMs > 0
+                                    ? `opacity ${pointerOpacityTransitionMs}ms linear`
+                                    : "none",
+                              }}
                             />
                           </g>
                         )}
@@ -2513,44 +2585,25 @@ export default function AstrologyCalculator() {
                           const trimmedSegment = trimLineSegment(pos1, pos2, 15, 15)
                           if (!trimmedSegment) return null
 
-                          // Determine color and width based on aspect type
+                          // Determine color; all aspect lines use 2px width.
                           let aspectColor = "#888"
-                          let aspectWidth = 1.5
+                          const aspectWidth = 2
                           let aspectOpacity = data.opacity
-                          let isSquare = false
 
                           if (aspect.aspectType === "Oposición") {
                             aspectColor = "#FF8C00"
-                            aspectWidth = 2
                           } else if (aspect.aspectType === "Conjunción") {
                             aspectColor = "#9D4EDD"
                           } else if (aspect.aspectType === "Trígono") {
                             aspectColor = "#00FF00"
                           } else if (aspect.aspectType === "Cuadrado") {
                             aspectColor = "#FF3B30"
-                            aspectWidth = 3
-                            aspectOpacity = Math.min(1, data.opacity * 1.25)
-                            isSquare = true
                           } else if (aspect.aspectType === "Sextil") {
                             aspectColor = "#0099FF"
                           }
 
                           return (
                             <g key={`aspect-${planetName}-${index}`} style={{ pointerEvents: "none" }}>
-                              {isSquare && (
-                                <line
-                                  x1={trimmedSegment.x1}
-                                  y1={trimmedSegment.y1}
-                                  x2={trimmedSegment.x2}
-                                  y2={trimmedSegment.y2}
-                                  stroke="#FFFFFF"
-                                  strokeWidth={aspectWidth + 1.5}
-                                  style={{
-                                    opacity: Math.min(1, aspectOpacity * 0.55),
-                                    transition: "opacity 0.1s linear",
-                                  }}
-                                />
-                              )}
                               <line
                                 x1={trimmedSegment.x1}
                                 y1={trimmedSegment.y1}

@@ -1132,6 +1132,8 @@ export default function AstrologyCalculator() {
           triggerChartPlanetAspects(currentStep.name, { targetOpacity: 0, transitionMs: 0 })
         }
         setPointerAngle(nextStep.angle, nextStep.name)
+        triggerPlanetAudioAtPointer(nextStep.name, nextStep.angle)
+        lastPlayedPlanetRef.current = nextStep.name
         if (chartAspects) {
           triggerChartPlanetAspects(nextStep.name, { targetOpacity: 0.8, transitionMs: 0 })
         }
@@ -1149,6 +1151,8 @@ export default function AstrologyCalculator() {
       const fadeOutTimer = setTimeout(() => {
         if (navigationRunIdRef.current !== runId) return
         setPointerAngle(nextStep.angle, nextStep.name)
+        triggerPlanetAudioAtPointer(nextStep.name, nextStep.angle)
+        lastPlayedPlanetRef.current = nextStep.name
         if (chartAspects) {
           triggerChartPlanetAspects(nextStep.name, { targetOpacity: 0, transitionMs: 0 })
         }
@@ -1207,11 +1211,13 @@ export default function AstrologyCalculator() {
         scheduleNextAdvance()
       }
 
-      triggerPlanetAudioAtPointer(nextStep.name, nextStep.angle)
+      if (!teleport) {
+        triggerPlanetAudioAtPointer(nextStep.name, nextStep.angle)
+        lastPlayedPlanetRef.current = nextStep.name
+      }
       if (chartAspects && !teleport) {
         triggerChartPlanetAspects(nextStep.name, { targetOpacity: 0.8, transitionMs: 100 })
       }
-      lastPlayedPlanetRef.current = nextStep.name
 
       if (teleport) {
         if (audioLeadMs > 0) {

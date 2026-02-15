@@ -192,6 +192,17 @@ function toCanvasAngle(degrees: number): number {
   return 180 - degrees
 }
 
+function sanitizeFileToken(raw: string, fallback: string): string {
+  const normalized = raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_")
+    .toUpperCase()
+  return normalized || fallback
+}
+
 const calculatePointerState = (elapsed: number, duration: number, ascDegrees: number) => {
   const progress = elapsed / duration
   const pointerAngle = norm360(180 + 360 * progress)
@@ -1520,6 +1531,24 @@ export default function AstrologyCalculator() {
     ],
   )
 
+  const buildSubjectMp3FileName = useCallback((): string => {
+    const datetime = formData.datetime.trim()
+    const datetimeMatch = datetime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+    const yyyymmddhhmm = datetimeMatch
+      ? `${datetimeMatch[1]}${datetimeMatch[2]}${datetimeMatch[3]}${datetimeMatch[4]}${datetimeMatch[5]}`
+      : "000000000000"
+
+    const locationParts = formData.location
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+    const rawCity = locationParts[0] || "CIUDAD"
+    const rawCountry = locationParts.length > 1 ? locationParts[locationParts.length - 1] : "PAIS"
+    const city = sanitizeFileToken(rawCity, "CIUDAD")
+    const country = sanitizeFileToken(rawCountry, "PAIS")
+    return `${yyyymmddhhmm}_${city}_${country}.mp3`
+  }, [formData.datetime, formData.location])
+
   const downloadNavigationModeMp3 = useCallback(
     async (mode: NavigationMode) => {
       if (!horoscopeData || isExportingMp3) return
@@ -1532,8 +1561,7 @@ export default function AstrologyCalculator() {
       const sunDegrees = horoscopeData.planets.find((planet) => planet.name === "sun")?.ChartPosition?.Ecliptic?.DecimalDegrees
       const sunElement = typeof sunDegrees === "number" ? getElementFromDegrees(sunDegrees) : "fire"
       const exportMasterVolume = mode === "astral_chord" ? masterVolume * 0.6 : masterVolume
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
-      const fileName = `astrologio-${mode}-${timestamp}.mp3`
+      const fileName = buildSubjectMp3FileName()
 
       setError("")
       setIsExportingMp3(true)
@@ -1571,6 +1599,11 @@ export default function AstrologyCalculator() {
         })
         if (!mp3Blob) {
           setError("No se pudo generar el MP3.")
+          setIsExportingMp3(false)
+          return
+        }
+        if (mp3Blob.size === 0) {
+          setError("MP3 vacío: el render no generó datos de audio.")
           setIsExportingMp3(false)
           return
         }
@@ -1618,6 +1651,7 @@ export default function AstrologyCalculator() {
     },
     [
       backgroundVolume,
+      buildSubjectMp3FileName,
       buildOfflineMp3Plan,
       horoscopeData,
       isExportingMp3,

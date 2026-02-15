@@ -303,8 +303,8 @@ function floatToInt16(input: Float32Array): Int16Array {
   return output
 }
 
-function toInt8Array(chunk: Mp3Chunk): Int8Array {
-  return Int8Array.from(chunk as ArrayLike<number>)
+function toUint8Array(chunk: Mp3Chunk): Uint8Array {
+  return Uint8Array.from(chunk as ArrayLike<number>, (value) => value & 0xff)
 }
 
 export function usePlanetAudio(
@@ -1343,6 +1343,7 @@ export function usePlanetAudio(
           bufferKey: string
           startSec: number
           angleDeg: number
+          declinationDeg: number
           fadeInSec: number
           sustainSec: number
           fadeOutSec: number
@@ -1365,9 +1366,21 @@ export function usePlanetAudio(
           dryGainNode.gain.value = 0.8
           wetSendGainNode.gain.value = 0.2
 
-          const stereoPan = Math.max(-1, Math.min(1, Math.sin((params.angleDeg * Math.PI) / 180)))
-          const panner = offlineContext.createStereoPanner()
-          panner.pan.setValueAtTime(stereoPan, startTime)
+          const panner = offlineContext.createPanner()
+          panner.panningModel = "HRTF"
+          panner.distanceModel = "inverse"
+          panner.refDistance = 1
+          panner.maxDistance = 50
+          panner.rolloffFactor = 1
+          const elevation = params.declinationDeg * 5
+          const position = polarToCartesian3D(params.angleDeg, elevation)
+          if (typeof panner.positionX !== "undefined") {
+            panner.positionX.setValueAtTime(position.x, startTime)
+            panner.positionY.setValueAtTime(position.y, startTime)
+            panner.positionZ.setValueAtTime(position.z, startTime)
+          } else {
+            panner.setPosition(position.x, position.y, position.z)
+          }
 
           source.connect(gainNode)
           gainNode.connect(panner)
@@ -1442,6 +1455,7 @@ export function usePlanetAudio(
             bufferKey: planetName,
             startSec: event.startSec,
             angleDeg: event.angleDeg,
+            declinationDeg: event.declinationDeg,
             fadeInSec: event.fadeInSec,
             sustainSec: 0,
             fadeOutSec: event.fadeOutSec,
@@ -1465,6 +1479,7 @@ export function usePlanetAudio(
               bufferKey: aspectPlanetName,
               startSec: event.startSec,
               angleDeg: aspect.angleDeg,
+              declinationDeg: aspect.declinationDeg,
               fadeInSec: aspectFadeInSec,
               sustainSec: aspectSustainSec,
               fadeOutSec: aspectFadeOutSec,
@@ -1481,23 +1496,33 @@ export function usePlanetAudio(
         const lameModule = (await import("lamejs")) as {
           Mp3Encoder: new (channels: number, sampleRate: number, kbps: number) => Mp3EncoderInstance
         }
-        const encoder = new lameModule.Mp3Encoder(2, renderedBuffer.sampleRate, 192)
-        const mp3Chunks: Int8Array[] = []
+        const encoder = new lameModule.Mp3Encoder(2, renderedBuffer.sampleRate, 160)
+        const mp3Chunks: Uint8Array[] = []
         const chunkSize = 1152
         for (let i = 0; i < leftChannel.length; i += chunkSize) {
           const leftChunk = floatToInt16(leftChannel.subarray(i, i + chunkSize))
           const rightChunk = floatToInt16(rightChannel.subarray(i, i + chunkSize))
-          const encoded = toInt8Array(encoder.encodeBuffer(leftChunk, rightChunk))
+          const encoded = toUint8Array(encoder.encodeBuffer(leftChunk, rightChunk))
           if (encoded.length > 0) {
             mp3Chunks.push(encoded)
           }
         }
-        const flushChunk = toInt8Array(encoder.flush())
+        if (mp3Chunks.length === 0) {
+          const leftAll = floatToInt16(leftChannel)
+          const rightAll = floatToInt16(rightChannel)
+          const encodedAll = toUint8Array(encoder.encodeBuffer(leftAll, rightAll))
+          if (encodedAll.length > 0) {
+            mp3Chunks.push(encodedAll)
+          }
+        }
+        const flushChunk = toUint8Array(encoder.flush())
         if (flushChunk.length > 0) {
           mp3Chunks.push(flushChunk)
         }
         if (mp3Chunks.length === 0) return null
-        return new Blob(mp3Chunks, { type: "audio/mpeg" })
+        const blob = new Blob(mp3Chunks, { type: "audio/mpeg" })
+        if (blob.size === 0) return null
+        return blob
       } catch (error) {
         console.error("[v0] Error rendering offline MP3:", error)
         return null

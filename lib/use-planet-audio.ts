@@ -15,7 +15,7 @@ interface AudioTrack {
   panner?: any
 }
 
-type AudioEngineMode = "samples" | "hybrid" | "fm_pad"
+type AudioEngineMode = "samples" | "hybrid" | "fm_pad" | "tibetan_bowls"
 
 interface AudioEnvelope {
   fadeIn: number
@@ -158,6 +158,8 @@ const CONSONANCE_PRIORITY = INTERVAL_TARGET_BY_PROXIMITY
 const DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES = -24 // Two octaves down by default
 const FM_PAD_OCTAVE_SHIFT_SEMITONES = 12 // One octave up vs current FM baseline
 const FM_PAD_GAIN_BOOST_FACTOR = 4 // +300% (4x total)
+const BOWL_SYNTH_OCTAVE_SHIFT_SEMITONES = 0
+const BOWL_GAIN_BOOST_FACTOR = 3
 const ASPECT_SEMITONE_OFFSETS: Record<string, number> = {
   Conjunción: 0,
   Oposición: 14,
@@ -265,6 +267,10 @@ function getFmPadGainValue(masterVolume: number, synthVolume: number): number {
   return Math.max(0, (masterVolume / 100) * 0.22 * FM_PAD_GAIN_BOOST_FACTOR * (synthVolume / 100))
 }
 
+function getBowlGainValue(masterVolume: number, synthVolume: number): number {
+  return Math.max(0, (masterVolume / 100) * 0.18 * BOWL_GAIN_BOOST_FACTOR * (synthVolume / 100))
+}
+
 function createLowDiffusionReverbImpulse(ctx: BaseAudioContext, durationSeconds = 3): AudioBuffer {
   const sampleRate = ctx.sampleRate
   const length = Math.max(1, Math.floor(sampleRate * durationSeconds))
@@ -362,6 +368,8 @@ export function usePlanetAudio(
   const toneModuleRef = useRef<any>(null)
   const fmPadSynthRef = useRef<any>(null)
   const fmPadGainRef = useRef<any>(null)
+  const bowlSynthRef = useRef<any>(null)
+  const bowlGainRef = useRef<any>(null)
 
   useEffect(() => {
     backgroundVolumeRef.current = envelope.backgroundVolume ?? 20
@@ -417,6 +425,14 @@ export function usePlanetAudio(
         fmPadGainRef.current.gain.value = fmGain
       }
     }
+    if (bowlGainRef.current?.gain) {
+      const bowlGain = getBowlGainValue(masterVolumeRef.current, synthVolumeRef.current)
+      if (typeof bowlGainRef.current.gain.rampTo === "function") {
+        bowlGainRef.current.gain.rampTo(bowlGain, 0.05)
+      } else {
+        bowlGainRef.current.gain.value = bowlGain
+      }
+    }
   }, [envelope.synthVolume])
 
   useEffect(() => {
@@ -446,6 +462,14 @@ export function usePlanetAudio(
         fmPadGainRef.current.gain.rampTo(fmGain, 0.05)
       } else {
         fmPadGainRef.current.gain.value = fmGain
+      }
+    }
+    if (bowlGainRef.current?.gain) {
+      const bowlGain = getBowlGainValue(vol, synthVolumeRef.current)
+      if (typeof bowlGainRef.current.gain.rampTo === "function") {
+        bowlGainRef.current.gain.rampTo(bowlGain, 0.05)
+      } else {
+        bowlGainRef.current.gain.value = bowlGain
       }
     }
   }, [envelope.masterVolume])
@@ -1034,6 +1058,126 @@ export function usePlanetAudio(
     [envelope.fadeIn, envelope.fadeOut, initializeFmPadSynth],
   )
 
+  const initializeTibetanBowlSynth = useCallback(async () => {
+    if (bowlSynthRef.current && toneModuleRef.current) {
+      return
+    }
+
+    const Tone = toneModuleRef.current || (await import("tone"))
+    toneModuleRef.current = Tone
+
+    await Tone.start()
+
+    const toneContext: any = Tone.getContext?.() ?? (Tone as any).context
+    if (toneContext) {
+      try {
+        toneContext.lookAhead = 0.25
+        toneContext.updateInterval = 0.05
+        toneContext.latencyHint = "playback"
+      } catch (e) {
+        // ignore context tuning issues
+      }
+    }
+
+    const synth = new Tone.PolySynth(Tone.AMSynth, {
+      harmonicity: 1.6,
+      oscillator: { type: "sine" },
+      envelope: {
+        attack: 0.015,
+        decay: 3.2,
+        sustain: 0.22,
+        release: 8.4,
+      },
+      modulation: { type: "sine" },
+      modulationEnvelope: {
+        attack: 0.03,
+        decay: 2.4,
+        sustain: 0.18,
+        release: 7.2,
+      },
+    })
+    synth.volume.value = -6
+    ;(synth as any).maxPolyphony = 10
+
+    const highpass = new Tone.Filter({ type: "highpass", frequency: 90, rolloff: -24 })
+    const resonatorA = new Tone.Filter({ type: "bandpass", frequency: 430, Q: 12 })
+    const resonatorB = new Tone.Filter({ type: "bandpass", frequency: 860, Q: 10 })
+    const resonatorC = new Tone.Filter({ type: "bandpass", frequency: 1290, Q: 8 })
+    const resonatorMix = new Tone.Gain(1)
+    const vibrato = new Tone.Vibrato({ frequency: 4.2, depth: 0.08 })
+    const reverb = new Tone.Reverb({ decay: 5.5, preDelay: 0.01, wet: 0.28 })
+    await reverb.generate()
+    const reverbShelf = new Tone.Filter({ type: "highshelf", frequency: 2500, gain: -4 })
+    const gain = new Tone.Gain(getBowlGainValue(masterVolumeRef.current, synthVolumeRef.current))
+
+    synth.connect(highpass)
+    highpass.connect(resonatorA)
+    highpass.connect(resonatorB)
+    highpass.connect(resonatorC)
+    resonatorA.connect(resonatorMix)
+    resonatorB.connect(resonatorMix)
+    resonatorC.connect(resonatorMix)
+    resonatorMix.connect(vibrato)
+    vibrato.connect(reverb)
+    reverb.connect(reverbShelf)
+    reverbShelf.connect(gain)
+    gain.toDestination()
+
+    bowlSynthRef.current = synth
+    bowlGainRef.current = gain
+  }, [])
+
+  const triggerTibetanBowlNotes = useCallback(
+    async (
+      principalSemitoneOffset: number,
+      aspects: any[] = [],
+      aspectVolumeOverride?: number,
+    ) => {
+      await initializeTibetanBowlSynth()
+      if (!toneModuleRef.current || !bowlSynthRef.current) return
+
+      const Tone = toneModuleRef.current
+      const synth = bowlSynthRef.current
+      const tunedRate = centsToPlaybackRate(tuningCentsRef.current)
+      const pitchShiftFromTuning = 12 * Math.log2(tunedRate)
+      const baseMidi =
+        60 +
+        principalSemitoneOffset +
+        DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES +
+        BOWL_SYNTH_OCTAVE_SHIFT_SEMITONES +
+        pitchShiftFromTuning
+
+      const principalDuration = Math.max(
+        2.4,
+        (Number.isFinite(envelope.fadeIn) ? envelope.fadeIn : 7) +
+          (Number.isFinite(envelope.fadeOut) ? envelope.fadeOut : 7) +
+          2,
+      )
+      const principalNote = Tone.Frequency(baseMidi, "midi").toNote()
+      synth.triggerAttackRelease(principalNote, principalDuration, undefined, 0.9)
+
+      if (!aspects || aspects.length === 0) return
+
+      const aspectVolume =
+        typeof aspectVolumeOverride === "number" ? aspectVolumeOverride : aspectsSoundVolumeRef.current
+      const aspectGainFactor = Math.max(0.1, Math.min(1, aspectVolume / 100))
+      const aspectDuration = Math.max(
+        1.8,
+        dynAspectsFadeInRef.current + dynAspectsSustainRef.current + dynAspectsFadeOutRef.current + 1.2,
+      )
+
+      aspects.forEach((aspect, index) => {
+        const semitoneOffset = ASPECT_SEMITONE_OFFSETS[aspect.aspectType] ?? null
+        if (semitoneOffset === null) return
+        const aspectMidi = baseMidi + semitoneOffset
+        const aspectNote = Tone.Frequency(aspectMidi, "midi").toNote()
+        const velocity = Math.max(0.06, Math.min(0.6, 0.35 * aspectGainFactor))
+        synth.triggerAttackRelease(aspectNote, aspectDuration, `+${index * 0.06}`, velocity)
+      })
+    },
+    [envelope.fadeIn, envelope.fadeOut, initializeTibetanBowlSynth],
+  )
+
   const playPlanetSound = useCallback(
     async (
       planetName: string,
@@ -1066,16 +1210,20 @@ export function usePlanetAudio(
       )
       const fmTotalDuration =
         (Number.isFinite(envelope.fadeIn) ? envelope.fadeIn : 7) + (Number.isFinite(envelope.fadeOut) ? envelope.fadeOut : 7)
+      const bowlTotalDuration = fmTotalDuration + 2
 
       if (audioMode === "hybrid" || audioMode === "fm_pad") {
         await triggerFmPadNotes(principalSemitoneOffset, aspects, aspectVolumeOverride)
       }
+      if (audioMode === "tibetan_bowls") {
+        await triggerTibetanBowlNotes(principalSemitoneOffset, aspects, aspectVolumeOverride)
+      }
 
-      if (audioMode === "fm_pad") {
+      if (audioMode === "fm_pad" || audioMode === "tibetan_bowls") {
         playingPlanetsRef.current.add(planetName)
         setTimeout(() => {
           playingPlanetsRef.current.delete(planetName)
-        }, Math.max(200, fmTotalDuration * 1000))
+        }, Math.max(200, (audioMode === "tibetan_bowls" ? bowlTotalDuration : fmTotalDuration) * 1000))
         return
       }
 
@@ -1269,7 +1417,7 @@ export function usePlanetAudio(
         console.error(`[v0] Error playing sound for ${planetName}:`, error)
       }
     },
-    [envelope.fadeIn, envelope.fadeOut, initializeAudio, triggerFmPadNotes],
+    [envelope.fadeIn, envelope.fadeOut, initializeAudio, triggerFmPadNotes, triggerTibetanBowlNotes],
   )
 
   const stopAll = useCallback(() => {
@@ -1284,6 +1432,9 @@ export function usePlanetAudio(
     playingPlanetsRef.current.clear()
     if (fmPadSynthRef.current && typeof fmPadSynthRef.current.releaseAll === "function") {
       fmPadSynthRef.current.releaseAll()
+    }
+    if (bowlSynthRef.current && typeof bowlSynthRef.current.releaseAll === "function") {
+      bowlSynthRef.current.releaseAll()
     }
   }, [])
 
@@ -1555,6 +1706,22 @@ export function usePlanetAudio(
           // ignore
         }
         fmPadGainRef.current = null
+      }
+      if (bowlSynthRef.current) {
+        try {
+          bowlSynthRef.current.dispose()
+        } catch (e) {
+          // ignore
+        }
+        bowlSynthRef.current = null
+      }
+      if (bowlGainRef.current) {
+        try {
+          bowlGainRef.current.dispose()
+        } catch (e) {
+          // ignore
+        }
+        bowlGainRef.current = null
       }
       if (audioContextRef.current) {
         audioContextRef.current.close()

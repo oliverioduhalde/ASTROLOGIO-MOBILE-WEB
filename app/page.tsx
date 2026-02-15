@@ -79,7 +79,7 @@ const MODE_NAME_BY_SIGN_INDEX: Record<number, string> = {
   11: "Locrio",
 }
 
-type AudioEngineMode = "samples" | "hybrid" | "fm_pad"
+type AudioEngineMode = "samples" | "hybrid" | "fm_pad" | "tibetan_bowls"
 type NavigationMode = "astral_chord" | "radial" | "sequential" | "aspectual"
 
 const SEQUENTIAL_PLANET_ORDER = [
@@ -103,6 +103,7 @@ const NON_RADIAL_AUDIO_LEAD_MS = 1000
 const NON_RADIAL_JITTER_MS = 2000
 const NON_RADIAL_INFRACTION_JITTER_MS = 2800
 const NON_RADIAL_INFRACTION_PROBABILITY = 0.2
+const NON_RADIAL_FADE_SLOWDOWN_MULTIPLIER = 3
 const CHORD_POINTER_RADIUS = 16
 const CHORD_ASPECTS_FADE_IN_MS = 14000
 const CHORD_ASPECTS_HOLD_MS = 5000
@@ -1012,6 +1013,8 @@ export default function AstrologyCalculator() {
       crossfadeMs?: number
       chartAspects?: boolean
       fadeInSpeedMultiplier?: number
+      fadeTransitionMultiplier?: number
+      shrinkHoldForFade?: boolean
       audioLeadMs?: number
       jitterMs?: number
       infractionProbability?: number
@@ -1032,10 +1035,17 @@ export default function AstrologyCalculator() {
     const crossfadeMs = Math.max(0, options?.crossfadeMs ?? NAVIGATION_TRANSITION_MS)
     const chartAspects = options?.chartAspects ?? false
     const fadeInSpeedMultiplier = Math.max(1, options?.fadeInSpeedMultiplier ?? 1)
+    const fadeTransitionMultiplier = Math.max(1, options?.fadeTransitionMultiplier ?? 1)
+    const shrinkHoldForFade = options?.shrinkHoldForFade ?? false
     const audioLeadMs = Math.max(0, options?.audioLeadMs ?? 0)
     const jitterMs = Math.max(0, options?.jitterMs ?? 0)
     const infractionProbability = Math.min(1, Math.max(0, options?.infractionProbability ?? 0))
     const infractionJitterMs = Math.max(jitterMs, options?.infractionJitterMs ?? jitterMs)
+    const baseHalfFadeMs = Math.max(0, Math.floor(crossfadeMs / 2))
+    const baseFadeInMs = Math.max(0, Math.floor(baseHalfFadeMs / fadeInSpeedMultiplier))
+    const halfFadeMs = Math.max(0, Math.floor(baseHalfFadeMs * fadeTransitionMultiplier))
+    const fadeInMs = Math.max(0, Math.floor(baseFadeInMs * fadeTransitionMultiplier))
+    const addedFadeDurationMs = Math.max(0, halfFadeMs + fadeInMs - (baseHalfFadeMs + baseFadeInMs))
     const runId = navigationRunIdRef.current
     const uiCommitIntervalMs = 33
     let lastUiCommitMs = 0
@@ -1099,7 +1109,9 @@ export default function AstrologyCalculator() {
       const useInfraction = Math.random() < infractionProbability
       const jitterRange = useInfraction ? infractionJitterMs : jitterMs
       const randomOffset = jitterRange > 0 ? (Math.random() * 2 - 1) * jitterRange : 0
-      return Math.max(0, holdMs + randomOffset)
+      const rawHoldMs = Math.max(0, holdMs + randomOffset)
+      if (!shrinkHoldForFade) return rawHoldMs
+      return Math.max(0, rawHoldMs - addedFadeDurationMs)
     }
 
     const teleportTransition = (
@@ -1112,8 +1124,6 @@ export default function AstrologyCalculator() {
         return
       }
 
-      const halfFadeMs = Math.max(0, Math.floor(crossfadeMs / 2))
-      const fadeInMs = Math.max(0, Math.floor(halfFadeMs / fadeInSpeedMultiplier))
       if (halfFadeMs === 0) {
         setPointerOpacity(0)
         if (chartAspects) {
@@ -1365,6 +1375,8 @@ export default function AstrologyCalculator() {
         crossfadeMs: NON_RADIAL_CROSSFADE_MS,
         chartAspects: true,
         fadeInSpeedMultiplier: 2,
+        fadeTransitionMultiplier: NON_RADIAL_FADE_SLOWDOWN_MULTIPLIER,
+        shrinkHoldForFade: true,
         audioLeadMs: NON_RADIAL_AUDIO_LEAD_MS,
         jitterMs: NON_RADIAL_JITTER_MS,
         infractionProbability: NON_RADIAL_INFRACTION_PROBABILITY,
@@ -1379,6 +1391,8 @@ export default function AstrologyCalculator() {
       crossfadeMs: NON_RADIAL_CROSSFADE_MS,
       chartAspects: true,
       fadeInSpeedMultiplier: 2,
+      fadeTransitionMultiplier: NON_RADIAL_FADE_SLOWDOWN_MULTIPLIER,
+      shrinkHoldForFade: true,
       audioLeadMs: NON_RADIAL_AUDIO_LEAD_MS,
       jitterMs: NON_RADIAL_JITTER_MS,
       infractionProbability: NON_RADIAL_INFRACTION_PROBABILITY,
@@ -2338,6 +2352,7 @@ export default function AstrologyCalculator() {
                         <option value="samples">Samples</option>
                         <option value="hybrid">Hybrid</option>
                         <option value="fm_pad">FM Pad</option>
+                        <option value="tibetan_bowls">Tibetan Bowls</option>
                       </select>
                       <span className="font-mono text-[6.5px] w-8 text-right uppercase">Mode</span>
                     </div>

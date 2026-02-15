@@ -325,6 +325,17 @@ function createLowDiffusionReverbImpulse(ctx: BaseAudioContext, durationSeconds 
   return impulse
 }
 
+function createSCurveFadeOutValues(peakGain: number, points = 128): Float32Array {
+  const totalPoints = Math.max(8, points)
+  const curve = new Float32Array(totalPoints)
+  for (let i = 0; i < totalPoints; i++) {
+    const t = i / (totalPoints - 1)
+    const smooth = t * t * (3 - 2 * t)
+    curve[i] = peakGain * (1 - smooth)
+  }
+  return curve
+}
+
 function centsToPlaybackRate(cents: number): number {
   return Math.pow(2, cents / 1200)
 }
@@ -1255,7 +1266,13 @@ export function usePlanetAudio(
       ascendantDegrees = 0,
       mcDegrees = 0,
       aspectVolumeOverride?: number,
-      reverbProfileOverride?: { wetMix?: number; decaySeconds?: number },
+      reverbProfileOverride?: {
+        wetMix?: number
+        decaySeconds?: number
+        gainMultiplier?: number
+        fadeOutScale?: number
+        fadeOutCurve?: "linear" | "s"
+      },
     ) => {
       await initializeAudio()
       const normalizedPlanetName = planetName.toLowerCase()
@@ -1270,6 +1287,9 @@ export function usePlanetAudio(
         0.5,
         reverbProfileOverride?.decaySeconds ?? getReverbDecaySeconds(isChordModeRef.current),
       )
+      const resolvedGainMultiplier = Math.max(0, reverbProfileOverride?.gainMultiplier ?? 1)
+      const resolvedFadeOutScale = Math.max(0.1, reverbProfileOverride?.fadeOutScale ?? 1)
+      const useSCurveFadeOut = reverbProfileOverride?.fadeOutCurve === "s"
 
       if (
         audioContextRef.current &&
@@ -1300,7 +1320,8 @@ export function usePlanetAudio(
         modalSunSignIndexRef.current,
       )
       const fmTotalDuration =
-        (Number.isFinite(envelope.fadeIn) ? envelope.fadeIn : 7) + (Number.isFinite(envelope.fadeOut) ? envelope.fadeOut : 7)
+        (Number.isFinite(envelope.fadeIn) ? envelope.fadeIn : 7) +
+        (Number.isFinite(envelope.fadeOut) ? envelope.fadeOut : 7) * resolvedFadeOutScale
       const bowlTotalDuration = fmTotalDuration + 2
 
       if (audioMode === "hybrid" || audioMode === "fm_pad") {
@@ -1381,7 +1402,7 @@ export function usePlanetAudio(
         )
 
         const fadeInTime = Number.isFinite(envelope.fadeIn) ? envelope.fadeIn : 7
-        const fadeOutTime = Number.isFinite(envelope.fadeOut) ? envelope.fadeOut : 7
+        const fadeOutTime = (Number.isFinite(envelope.fadeOut) ? envelope.fadeOut : 7) * resolvedFadeOutScale
 
         if (!Number.isFinite(fadeInTime) || !Number.isFinite(fadeOutTime)) {
           console.error(`[v0] Invalid envelope times for ${planetName}: fadeIn=${fadeInTime}, fadeOut=${fadeOutTime}`)
@@ -1392,13 +1413,21 @@ export function usePlanetAudio(
 
         const currentTime = ctx.currentTime
         const planetVolumeMultiplier =
-          getPlanetVolumeMultiplier(planetName) * (audioMode === "tibetan_samples" ? 0.92 : 1)
+          getPlanetVolumeMultiplier(planetName) * (audioMode === "tibetan_samples" ? 0.92 : 1) * resolvedGainMultiplier
 
         gainNode.gain.setValueAtTime(0, currentTime)
         gainNode.gain.linearRampToValueAtTime(planetVolumeMultiplier, currentTime + fadeInTime)
-
-        gainNode.gain.setValueAtTime(planetVolumeMultiplier, currentTime + fadeInTime)
-        gainNode.gain.linearRampToValueAtTime(0, currentTime + totalDuration)
+        const fadeOutStartTime = currentTime + fadeInTime
+        gainNode.gain.setValueAtTime(planetVolumeMultiplier, fadeOutStartTime)
+        if (useSCurveFadeOut && fadeOutTime > 0.01) {
+          gainNode.gain.setValueCurveAtTime(
+            createSCurveFadeOutValues(planetVolumeMultiplier),
+            fadeOutStartTime,
+            fadeOutTime,
+          )
+        } else {
+          gainNode.gain.linearRampToValueAtTime(0, currentTime + totalDuration)
+        }
 
         const safeEndTime = Math.max(currentTime + 0.01, currentTime + totalDuration)
         const trackId = `${planetName}-${currentTime}`
@@ -1471,12 +1500,13 @@ export function usePlanetAudio(
               0.33 *
               (aspectVolume / 100) *
               aspectPlanetVolumeMultiplier *
-              (audioMode === "tibetan_samples" ? 0.9 : 1)
+              (audioMode === "tibetan_samples" ? 0.9 : 1) *
+              resolvedGainMultiplier
 
             // Use dynAspects times instead of planet times
             const aspectFadeInTime = dynAspectsFadeInRef.current
             const aspectSustainTime = dynAspectsSustainRef.current
-            const aspectFadeOutTime = dynAspectsFadeOutRef.current
+            const aspectFadeOutTime = dynAspectsFadeOutRef.current * resolvedFadeOutScale
             
             const aspectStartTime = currentTime
             const aspectFadeInEnd = aspectStartTime + aspectFadeInTime
@@ -1488,7 +1518,15 @@ export function usePlanetAudio(
             aspectGainNode.gain.setValueAtTime(0, aspectStartTime)
             aspectGainNode.gain.linearRampToValueAtTime(baseVolume, aspectFadeInEnd)
             aspectGainNode.gain.setValueAtTime(baseVolume, aspectSustainEnd)
-            aspectGainNode.gain.linearRampToValueAtTime(0, aspectFadeOutEnd)
+            if (useSCurveFadeOut && aspectFadeOutTime > 0.01) {
+              aspectGainNode.gain.setValueCurveAtTime(
+                createSCurveFadeOutValues(baseVolume),
+                aspectSustainEnd,
+                aspectFadeOutTime,
+              )
+            } else {
+              aspectGainNode.gain.linearRampToValueAtTime(0, aspectFadeOutEnd)
+            }
 
             const aspectTrackId = `${planetName}-aspect-${otherPlanetName}-${currentTime}`
             aspectSource.onended = () => {

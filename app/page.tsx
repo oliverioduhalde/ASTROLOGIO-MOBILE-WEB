@@ -3542,7 +3542,7 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
-      <div className="fixed top-2 right-2 z-40 border border-white/70 bg-black/75 backdrop-blur-sm px-2 py-2 w-[calc(100vw-1rem)] max-w-[560px] md:w-auto">
+      <div className="fixed top-2 left-4 md:left-8 z-40 border border-white/70 bg-black/75 backdrop-blur-sm px-2 py-2 w-[calc(100vw-2rem)] max-w-[560px]">
         <div className="grid grid-cols-5 gap-1.5">
           {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
             <button

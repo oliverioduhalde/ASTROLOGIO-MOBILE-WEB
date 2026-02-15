@@ -34,6 +34,8 @@ interface AudioEnvelope {
   synthVolume?: number
   vuEnabled?: boolean
   isChordMode?: boolean
+  reverbMixPercent?: number
+  chordReverbMixPercent?: number
 }
 
 interface Position3D {
@@ -96,6 +98,7 @@ export interface OfflineMp3RenderOptions {
   elementName?: "fire" | "earth" | "air" | "water"
   elementVolumePercent?: number
   isChordMode?: boolean
+  reverbMixPercent?: number
 }
 
 function polarToCartesian3D(azimuthDeg: number, elevationDeg: number): Position3D {
@@ -292,8 +295,13 @@ function getBowlGainValue(masterVolume: number, synthVolume: number): number {
   return Math.max(0, (masterVolume / 100) * 0.18 * BOWL_GAIN_BOOST_FACTOR * (synthVolume / 100))
 }
 
-function getReverbWetMix(isChordMode: boolean): number {
-  return isChordMode ? 0.4 : 0.2
+function getReverbWetMix(
+  isChordMode: boolean,
+  reverbMixPercent = 20,
+  chordReverbMixPercent = 40,
+): number {
+  const mixPercent = isChordMode ? chordReverbMixPercent : reverbMixPercent
+  return Math.max(0, Math.min(1, mixPercent / 100))
 }
 
 function getReverbDecaySeconds(isChordMode: boolean): number {
@@ -399,6 +407,8 @@ export function usePlanetAudio(
   const globalReverbSendRef = useRef<GainNode | null>(null)
   const globalReverbConvolverRef = useRef<ConvolverNode | null>(null)
   const isChordModeRef = useRef(envelope.isChordMode ?? false)
+  const reverbMixPercentRef = useRef(envelope.reverbMixPercent ?? 20)
+  const chordReverbMixPercentRef = useRef(envelope.chordReverbMixPercent ?? 40)
   const reverbDecaySecondsRef = useRef(getReverbDecaySeconds(envelope.isChordMode ?? false))
   const dynAspectsFadeInRef = useRef(envelope.dynAspectsFadeIn ?? 3)
   const dynAspectsSustainRef = useRef(envelope.dynAspectsSustain ?? 2)
@@ -490,6 +500,14 @@ export function usePlanetAudio(
   useEffect(() => {
     audioEngineModeRef.current = envelope.audioEngineMode || "samples"
   }, [envelope.audioEngineMode])
+
+  useEffect(() => {
+    reverbMixPercentRef.current = envelope.reverbMixPercent ?? 20
+  }, [envelope.reverbMixPercent])
+
+  useEffect(() => {
+    chordReverbMixPercentRef.current = envelope.chordReverbMixPercent ?? 40
+  }, [envelope.chordReverbMixPercent])
 
   useEffect(() => {
     const isChordMode = envelope.isChordMode ?? false
@@ -1281,7 +1299,11 @@ export function usePlanetAudio(
         audioMode === "tibetan_samples" ? getTibetanSampleKey(name) : name.toLowerCase()
       const resolvedReverbWetMix = Math.max(
         0,
-        Math.min(1, reverbProfileOverride?.wetMix ?? getReverbWetMix(isChordModeRef.current)),
+        Math.min(
+          1,
+          reverbProfileOverride?.wetMix ??
+            getReverbWetMix(isChordModeRef.current, reverbMixPercentRef.current, chordReverbMixPercentRef.current),
+        ),
       )
       const resolvedReverbDecaySeconds = Math.max(
         0.5,
@@ -1602,7 +1624,15 @@ export function usePlanetAudio(
 
         const isChordMode = options.isChordMode ?? false
         const reverbDecaySeconds = getReverbDecaySeconds(isChordMode)
-        const reverbWetMix = getReverbWetMix(isChordMode)
+        const fallbackReverbWetMix = getReverbWetMix(
+          isChordMode,
+          reverbMixPercentRef.current,
+          chordReverbMixPercentRef.current,
+        )
+        const reverbWetMix =
+          typeof options.reverbMixPercent === "number"
+            ? Math.max(0, Math.min(1, options.reverbMixPercent / 100))
+            : fallbackReverbWetMix
         const impulseBuffer = createLowDiffusionReverbImpulse(offlineContext, reverbDecaySeconds)
         const globalReverbSend = offlineContext.createGain()
         globalReverbSend.gain.value = 1

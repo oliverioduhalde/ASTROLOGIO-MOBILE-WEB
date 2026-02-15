@@ -271,6 +271,8 @@ export default function AstrologyCalculator() {
 
   const [aspectsSoundVolume, setAspectsSoundVolume] = useState(30)
   const [masterVolume, setMasterVolume] = useState(50) // Nuevo estado para controlar volumen maestro (0-100%)
+  const [reverbMixPercent, setReverbMixPercent] = useState(20)
+  const [chordReverbMixPercent, setChordReverbMixPercent] = useState(40)
   const [tuningCents, setTuningCents] = useState(0)
   const [modalEnabled, setModalEnabled] = useState(true)
   const [audioEngineMode, setAudioEngineMode] = useState<AudioEngineMode>("samples")
@@ -351,6 +353,8 @@ export default function AstrologyCalculator() {
       synthVolume,
       vuEnabled: showVuMeter,
       isChordMode: navigationMode === "astral_chord",
+      reverbMixPercent,
+      chordReverbMixPercent,
     })
   const lastPlayedPlanetRef = useRef<string | null>(null)
   const clearAspectTimers = useCallback(() => {
@@ -607,7 +611,13 @@ export default function AstrologyCalculator() {
         horoscopeData?.mc?.ChartPosition?.Ecliptic?.DecimalDegrees || 0,
         undefined,
         options?.forceChordProfile
-          ? { wetMix: 0.4, decaySeconds: 5, gainMultiplier: 1.1, fadeOutScale: 2, fadeOutCurve: "s" }
+          ? {
+              wetMix: Math.max(0, Math.min(1, chordReverbMixPercent / 100)),
+              decaySeconds: 5,
+              gainMultiplier: 1.1,
+              fadeOutScale: 2,
+              fadeOutCurve: "s",
+            }
           : undefined,
       )
     },
@@ -616,6 +626,7 @@ export default function AstrologyCalculator() {
       horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees,
       horoscopeData?.mc?.ChartPosition?.Ecliptic?.DecimalDegrees,
       horoscopeData?.planets,
+      chordReverbMixPercent,
       playPlanetSound,
     ],
   )
@@ -880,6 +891,8 @@ export default function AstrologyCalculator() {
     setBackgroundVolume(2)
     setAspectsSoundVolume(30)
     setMasterVolume(50)
+    setReverbMixPercent(20)
+    setChordReverbMixPercent(40)
     setSynthVolume(450)
     setModalEnabled(true)
     setAudioEngineMode("samples")
@@ -1638,6 +1651,7 @@ export default function AstrologyCalculator() {
           elementName: sunElement,
           elementVolumePercent: plan.elementVolumePercent,
           isChordMode: mode === "astral_chord",
+          reverbMixPercent: mode === "astral_chord" ? chordReverbMixPercent : reverbMixPercent,
         })
         if (!mp3Blob) {
           setError("No se pudo generar el MP3.")
@@ -1703,6 +1717,8 @@ export default function AstrologyCalculator() {
       masterVolume,
       modalEnabled,
       modalSunSignIndex,
+      chordReverbMixPercent,
+      reverbMixPercent,
       renderOfflineMp3,
       tuningCents,
     ],
@@ -2408,6 +2424,36 @@ export default function AstrologyCalculator() {
                         className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
                       />
                       <span className="font-mono text-[7.5px] w-8 text-right">{masterVolume}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
+                        Reverb
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={reverbMixPercent}
+                        onChange={(e) => setReverbMixPercent(Number(e.target.value))}
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
+                      />
+                      <span className="font-mono text-[7.5px] w-8 text-right">{reverbMixPercent}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
+                        Chord RVB
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={chordReverbMixPercent}
+                        onChange={(e) => setChordReverbMixPercent(Number(e.target.value))}
+                        className="menu-slider flex-none w-32 h-[2px] bg-white rounded cursor-pointer appearance-none"
+                      />
+                      <span className="font-mono text-[7.5px] w-8 text-right">{chordReverbMixPercent}%</span>
                     </div>
 
                     <div className="flex items-center gap-1">

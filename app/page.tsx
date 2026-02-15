@@ -1563,6 +1563,12 @@ export default function AstrologyCalculator() {
       const exportMasterVolume = mode === "astral_chord" ? masterVolume * 0.6 : masterVolume
       const fileName = buildSubjectMp3FileName()
 
+      setPendingMp3Download((prev) => {
+        if (prev?.url) {
+          URL.revokeObjectURL(prev.url)
+        }
+        return null
+      })
       setError("")
       setIsExportingMp3(true)
       try {
@@ -1600,11 +1606,13 @@ export default function AstrologyCalculator() {
         if (!mp3Blob) {
           setError("No se pudo generar el MP3.")
           setIsExportingMp3(false)
+          setPendingMp3Download(null)
           return
         }
         if (mp3Blob.size === 0) {
           setError("MP3 vacío: el render no generó datos de audio.")
           setIsExportingMp3(false)
+          setPendingMp3Download(null)
           return
         }
 
@@ -1645,6 +1653,7 @@ export default function AstrologyCalculator() {
       } catch (error) {
         console.error("[v0] Error exportando MP3 offline:", error)
         setError("Error al exportar MP3.")
+        setPendingMp3Download(null)
       } finally {
         setIsExportingMp3(false)
       }

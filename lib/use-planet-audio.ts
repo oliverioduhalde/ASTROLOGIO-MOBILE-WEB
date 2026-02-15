@@ -1297,7 +1297,7 @@ export function usePlanetAudio(
         const liveContext = audioContextRef.current
         if (!liveContext) return null
 
-        const sampleRate = Math.max(22050, Math.round(liveContext.sampleRate || 44100))
+        const sampleRate = 48000
         const totalFrames = Math.max(1, Math.ceil(durationSec * sampleRate))
         const offlineContext = new OfflineAudioContext(2, totalFrames, sampleRate)
 
@@ -1493,10 +1493,10 @@ export function usePlanetAudio(
         const leftChannel = renderedBuffer.getChannelData(0)
         const rightChannel = renderedBuffer.numberOfChannels > 1 ? renderedBuffer.getChannelData(1) : leftChannel
 
-        const lameModule = (await import("lamejs")) as {
+        const lameModule = (await import("@breezystack/lamejs")) as {
           Mp3Encoder: new (channels: number, sampleRate: number, kbps: number) => Mp3EncoderInstance
         }
-        const encoder = new lameModule.Mp3Encoder(2, renderedBuffer.sampleRate, 160)
+        const encoder = new lameModule.Mp3Encoder(2, sampleRate, 160)
         const mp3Chunks: Uint8Array[] = []
         const chunkSize = 1152
         for (let i = 0; i < leftChannel.length; i += chunkSize) {

@@ -1843,6 +1843,12 @@ export default function AstrologyCalculator() {
     formData.latitude.trim() !== "" &&
     formData.longitude.trim() !== ""
 
+  const shouldShowIdlePointer = showPointer && !isLoopRunning && navigationMode === "radial"
+  const shouldShowChordCenterPointer = showPointer && isLoopRunning && navigationMode === "astral_chord"
+  const shouldShowOrbitPointer =
+    showPointer &&
+    (isLoopRunning || (!isLoopRunning && (navigationMode === "sequential" || navigationMode === "aspectual")))
+
   const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
   const chartRotation = 180 - ascDegrees
   const adjustToCanvasAngle = (lambda: number) => norm360(lambda + chartRotation)
@@ -3112,7 +3118,7 @@ export default function AstrologyCalculator() {
                         </g>
 
                         {/* Animated pointer - rotates clockwise from ASC (180°) */}
-                        {!isLoopRunning && showPointer && (
+                        {shouldShowIdlePointer && (
                           <circle
                             cx="20"
                             cy="200"
@@ -3127,7 +3133,7 @@ export default function AstrologyCalculator() {
                         )}
 
                         {/* Update pointer visibility - only show when loop is running */}
-                        {showPointer && isLoopRunning && navigationMode === "astral_chord" && (
+                        {shouldShowChordCenterPointer && (
                           <circle
                             cx={EARTH_CENTER_X}
                             cy={EARTH_CENTER_Y}
@@ -3147,7 +3153,7 @@ export default function AstrologyCalculator() {
                           />
                         )}
 
-                        {showPointer && isLoopRunning && (
+                        {shouldShowOrbitPointer && (
                           <g
                             style={{
                               transform: `rotate(${pointerRotation}deg)`,

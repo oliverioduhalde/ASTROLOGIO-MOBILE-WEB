@@ -350,6 +350,7 @@ export default function AstrologyCalculator() {
       audioEngineMode,
       synthVolume,
       vuEnabled: showVuMeter,
+      isChordMode: navigationMode === "astral_chord",
     })
   const lastPlayedPlanetRef = useRef<string | null>(null)
   const clearAspectTimers = useCallback(() => {
@@ -1628,6 +1629,7 @@ export default function AstrologyCalculator() {
           includeElement: plan.includeElement,
           elementName: sunElement,
           elementVolumePercent: plan.elementVolumePercent,
+          isChordMode: mode === "astral_chord",
         })
         if (!mp3Blob) {
           setError("No se pudo generar el MP3.")
@@ -1932,70 +1934,9 @@ export default function AstrologyCalculator() {
     [getAspectsForPlanet, showDynAspects],
   )
 
-  const triggerPlanetGlyphScale = (planetName: string, aspectsForPlanet: any[]) => {
-    if (!horoscopeData?.planets) return
-    const now = Date.now()
-    const lastTriggeredAt = glyphScaleTriggerLockRef.current[planetName] ?? 0
-    if (now - lastTriggeredAt < 500) return
-    glyphScaleTriggerLockRef.current[planetName] = now
-
-    glyphAnimationManager.startAnimation(planetName)
-
-    const affectedPlanets = new Set(
-      aspectsForPlanet
-        .map((aspect) => (aspect.point1.name === planetName ? aspect.point2.name : aspect.point1.name))
-        .filter((name) => name !== planetName && horoscopeData.planets.some((p) => p.name === name)),
-    )
-    const mainAnimationDurationMs = 15000
-    const affectedStartDelayMs = 2000
-    const affectedScaleDurationMs = Math.max(0, mainAnimationDurationMs - 2 * affectedStartDelayMs)
-
-    if (affectedPlanets.size > 0) {
-      affectedPlanets.forEach((name) => {
-        const existingTimers = affectedScaleTimersRef.current[name]
-        if (existingTimers?.start) clearTimeout(existingTimers.start)
-        if (existingTimers?.end) clearTimeout(existingTimers.end)
-
-        const startTimer = setTimeout(() => {
-          setAnimatedPlanets((prev) => {
-            const next = { ...prev }
-            next[name] = Math.max(next[name] ?? 1, 1.3)
-            return next
-          })
-        }, affectedStartDelayMs)
-
-        const endTimer = setTimeout(() => {
-          setAnimatedPlanets((prev) => {
-            if (!prev[name] || prev[name] <= 1) return prev
-            const next = { ...prev }
-            delete next[name]
-            return next
-          })
-          affectedScaleTimersRef.current[name] = { start: null, end: null }
-        }, affectedStartDelayMs + affectedScaleDurationMs)
-
-        affectedScaleTimersRef.current[name] = { start: startTimer, end: endTimer }
-      })
-    }
-
-    // Update animation state every frame
-    const interval = setInterval(() => {
-      const scale = glyphAnimationManager.getScale(planetName)
-      const animation = glyphAnimationManager["animations"]?.get(planetName)
-      setAnimatedPlanets((prev) => ({
-        ...prev,
-        [planetName]: scale,
-      }))
-
-      // Check if animation is complete and a certain time has passed to ensure it has been visible
-      if (
-        scale === 1 &&
-        animation?.startTime &&
-        Date.now() - animation.startTime > 20000
-      ) {
-        clearInterval(interval)
-      }
-    }, 16) // ~60fps
+  const triggerPlanetGlyphScale = (_planetName: string, _aspectsForPlanet: any[]) => {
+    // Dynamic glyph scaling disabled by request.
+    return
   }
 
   const handlePlanetMouseDown = (planetName: string, degrees: number) => {
@@ -2841,15 +2782,9 @@ export default function AstrologyCalculator() {
                       const adjustedDegrees = adjustedPositions[planet.name] ?? originalDegrees
                       const position = polarToCartesian(200, 200, 180, adjustToCanvasAngle(adjustedDegrees))
                       const glyph = PLANET_GLYPHS[planet.name]
-                      const scale = animatedPlanets[planet.name] || 1
                       // Added hover detection for glyphs
                       const isHovered = hoveredGlyph === planet.name
                       const baseGlyphScale = planet.name === "sun" ? 1.5 : planet.name === "venus" ? 0.8 : 1
-                      const pointerLeadAngle = norm360(debugPointerAngle + 7)
-                      const glyphAngle = adjustToCanvasAngle(adjustedDegrees)
-                      const pointerGlyphDiff = Math.abs(pointerLeadAngle - glyphAngle)
-                      const pointerCircularDiff = Math.min(pointerGlyphDiff, 360 - pointerGlyphDiff)
-                      const pointerScale = pointerCircularDiff < 5 ? 1.5 : 1
 
                       return (
                         <g
@@ -2917,9 +2852,9 @@ export default function AstrologyCalculator() {
                               paintOrder: "stroke fill",
                               stroke: "#ffffff",
                               strokeWidth: "0.5px",
-                              transform: `scale(${baseGlyphScale * scale * (isHovered ? 1.2 : 1) * pointerScale})`,
+                              transform: `scale(${baseGlyphScale})`,
                               transformOrigin: `${position.x}px ${position.y}px`,
-                              transition: "transform 7s ease-in-out",
+                              transition: "none",
                             }}
                             filter={isHovered ? "url(#glow)" : undefined} // Applied glow filter on hover
                           >

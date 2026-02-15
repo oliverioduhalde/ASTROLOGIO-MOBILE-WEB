@@ -33,6 +33,7 @@ interface AudioEnvelope {
   audioEngineMode?: AudioEngineMode
   synthVolume?: number
   vuEnabled?: boolean
+  isChordMode?: boolean
 }
 
 interface Position3D {
@@ -94,6 +95,7 @@ export interface OfflineMp3RenderOptions {
   includeElement?: boolean
   elementName?: "fire" | "earth" | "air" | "water"
   elementVolumePercent?: number
+  isChordMode?: boolean
 }
 
 function polarToCartesian3D(azimuthDeg: number, elevationDeg: number): Position3D {
@@ -290,6 +292,14 @@ function getBowlGainValue(masterVolume: number, synthVolume: number): number {
   return Math.max(0, (masterVolume / 100) * 0.18 * BOWL_GAIN_BOOST_FACTOR * (synthVolume / 100))
 }
 
+function getReverbWetMix(isChordMode: boolean): number {
+  return isChordMode ? 0.4 : 0.2
+}
+
+function getReverbDecaySeconds(isChordMode: boolean): number {
+  return isChordMode ? 5 : 3
+}
+
 function createLowDiffusionReverbImpulse(ctx: BaseAudioContext, durationSeconds = 3): AudioBuffer {
   const sampleRate = ctx.sampleRate
   const length = Math.max(1, Math.floor(sampleRate * durationSeconds))
@@ -300,7 +310,7 @@ function createLowDiffusionReverbImpulse(ctx: BaseAudioContext, durationSeconds 
     data[i] = 0
   }
 
-  // Sparse taps for low diffusion + linear decay envelope over 3 seconds.
+  // Sparse taps for low diffusion + linear decay envelope over requested duration.
   const tapSpacingSamples = Math.max(1, Math.floor(sampleRate * 0.011))
   for (let i = 0; i < length; i += tapSpacingSamples) {
     const t = i / (length - 1)
@@ -376,6 +386,9 @@ export function usePlanetAudio(
   const masterGainNodeRef = useRef<GainNode | null>(null)
   const planetReverbImpulseRef = useRef<AudioBuffer | null>(null)
   const globalReverbSendRef = useRef<GainNode | null>(null)
+  const globalReverbConvolverRef = useRef<ConvolverNode | null>(null)
+  const isChordModeRef = useRef(envelope.isChordMode ?? false)
+  const reverbDecaySecondsRef = useRef(getReverbDecaySeconds(envelope.isChordMode ?? false))
   const dynAspectsFadeInRef = useRef(envelope.dynAspectsFadeIn ?? 3)
   const dynAspectsSustainRef = useRef(envelope.dynAspectsSustain ?? 2)
   const dynAspectsFadeOutRef = useRef(envelope.dynAspectsFadeOut ?? 15)
@@ -466,6 +479,22 @@ export function usePlanetAudio(
   useEffect(() => {
     audioEngineModeRef.current = envelope.audioEngineMode || "samples"
   }, [envelope.audioEngineMode])
+
+  useEffect(() => {
+    const isChordMode = envelope.isChordMode ?? false
+    isChordModeRef.current = isChordMode
+    const nextDecaySeconds = getReverbDecaySeconds(isChordMode)
+
+    if (
+      audioContextRef.current &&
+      globalReverbConvolverRef.current &&
+      reverbDecaySecondsRef.current !== nextDecaySeconds
+    ) {
+      planetReverbImpulseRef.current = createLowDiffusionReverbImpulse(audioContextRef.current, nextDecaySeconds)
+      globalReverbConvolverRef.current.buffer = planetReverbImpulseRef.current
+      reverbDecaySecondsRef.current = nextDecaySeconds
+    }
+  }, [envelope.isChordMode])
 
   useEffect(() => {
     const vol = envelope.masterVolume !== undefined ? envelope.masterVolume : 20
@@ -592,8 +621,13 @@ export function usePlanetAudio(
           masterGainNode.gain.value = baseGain * (masterVolumeRef.current / 100)
           masterGainNodeRef.current = masterGainNode
 
-          if (!planetReverbImpulseRef.current) {
-            planetReverbImpulseRef.current = createLowDiffusionReverbImpulse(audioContextRef.current, 3)
+          const initialReverbDecaySeconds = getReverbDecaySeconds(isChordModeRef.current)
+          if (!planetReverbImpulseRef.current || reverbDecaySecondsRef.current !== initialReverbDecaySeconds) {
+            planetReverbImpulseRef.current = createLowDiffusionReverbImpulse(
+              audioContextRef.current,
+              initialReverbDecaySeconds,
+            )
+            reverbDecaySecondsRef.current = initialReverbDecaySeconds
           }
 
           // Shared reverb bus to avoid creating convolver/filter nodes per note.
@@ -613,6 +647,7 @@ export function usePlanetAudio(
           globalReverbShelf.connect(globalReverbReturn)
           globalReverbReturn.connect(masterGainNode)
           globalReverbSendRef.current = globalReverbSend
+          globalReverbConvolverRef.current = globalReverbConvolver
 
           const dynamicsCompressor = audioContextRef.current.createDynamicsCompressor()
           dynamicsCompressor.threshold.value = -1
@@ -1303,8 +1338,9 @@ export function usePlanetAudio(
         const gainNode = ctx.createGain()
         const dryGainNode = ctx.createGain()
         const wetSendGainNode = ctx.createGain()
-        dryGainNode.gain.value = 0.8
-        wetSendGainNode.gain.value = 0.2
+        const wetMix = getReverbWetMix(isChordModeRef.current)
+        dryGainNode.gain.value = Math.max(0, 1 - wetMix)
+        wetSendGainNode.gain.value = wetMix
 
         source.connect(gainNode)
         gainNode.connect(dryGainNode)
@@ -1505,7 +1541,10 @@ export function usePlanetAudio(
         masterGainNode.connect(dynamicsCompressor)
         dynamicsCompressor.connect(offlineContext.destination)
 
-        const impulseBuffer = createLowDiffusionReverbImpulse(offlineContext, 3)
+        const isChordMode = options.isChordMode ?? false
+        const reverbDecaySeconds = getReverbDecaySeconds(isChordMode)
+        const reverbWetMix = getReverbWetMix(isChordMode)
+        const impulseBuffer = createLowDiffusionReverbImpulse(offlineContext, reverbDecaySeconds)
         const globalReverbSend = offlineContext.createGain()
         globalReverbSend.gain.value = 1
         const globalReverbConvolver = offlineContext.createConvolver()
@@ -1554,8 +1593,8 @@ export function usePlanetAudio(
           const gainNode = offlineContext.createGain()
           const dryGainNode = offlineContext.createGain()
           const wetSendGainNode = offlineContext.createGain()
-          dryGainNode.gain.value = 0.8
-          wetSendGainNode.gain.value = 0.2
+          dryGainNode.gain.value = Math.max(0, 1 - reverbWetMix)
+          wetSendGainNode.gain.value = reverbWetMix
 
           const panner = offlineContext.createPanner()
           panner.panningModel = "HRTF"

@@ -240,6 +240,7 @@ export default function AstrologyCalculator() {
   const [showPointer, setShowPointer] = useState(true)
   const [showPointerInfo, setShowPointerInfo] = useState(false)
   const [showVuMeter, setShowVuMeter] = useState(false)
+  const [showModeInfo, setShowModeInfo] = useState(false)
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
   const [exportMode, setExportMode] = useState<NavigationMode>("radial")
   const [isExportingMp3, setIsExportingMp3] = useState(false)
@@ -888,6 +889,7 @@ export default function AstrologyCalculator() {
     setShowPointer(true)
     setShowPointerInfo(false)
     setShowVuMeter(false)
+    setShowModeInfo(false)
     setIsSidereal(false)
   }
 
@@ -2264,6 +2266,15 @@ export default function AstrologyCalculator() {
                     />
                     VU
                   </label>
+                  <label className="flex items-center gap-2 font-mono text-[8.4px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={showModeInfo}
+                      onChange={(e) => setShowModeInfo(e.target.checked)}
+                      className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
+                    />
+                    Mode Info
+                  </label>
 
                   <div className="border-t border-gray-600 my-1"></div>
 
@@ -2583,10 +2594,12 @@ export default function AstrologyCalculator() {
             )}
           </div>
 
-          <h1 className="text-base md:text-lg font-mono absolute left-1/2 transform -translate-x-1/2">ASTRO.LOG.IO</h1>
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 font-mono text-[10px] uppercase tracking-widest text-white/80">
-            {modalEnabled ? `Modo: ${currentModeLabel}` : "Modo: OFF"}
-          </div>
+          <h1 className="text-[19px] md:text-[22px] font-mono absolute left-1/2 transform -translate-x-1/2">ASTRO.LOG.IO</h1>
+          {showModeInfo && (
+            <div className="absolute left-14 md:left-20 top-1/2 -translate-y-1/2 font-mono text-[12px] md:text-[14px] uppercase tracking-widest text-white/85">
+              {modalEnabled ? `Modo: ${currentModeLabel}` : "Modo: OFF"}
+            </div>
+          )}
 
           {/* START button - Moved to within the chart's rendering logic */}
         </div>
@@ -3542,61 +3555,65 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
-      <div className="fixed top-2 left-4 md:left-8 z-40 border border-white/70 bg-black/75 backdrop-blur-sm px-2 py-2 w-[calc(100vw-2rem)] max-w-[560px]">
-        <div className="grid grid-cols-5 gap-1.5">
-          {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
-            <button
-              key={`top-nav-${mode}`}
-              onClick={() => setNavigationModeFromMenu(mode)}
-              className={`font-mono text-[12px] uppercase tracking-wide border px-3 py-1.5 transition-colors ${
-                navigationMode === mode
-                  ? "bg-white text-black border-white"
-                  : "bg-transparent text-white border-gray-600 hover:border-white"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-          <button
-            onClick={resetToInitialState}
-            className="font-mono text-[12px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
-          >
-            RESET
-          </button>
+      <div className="fixed top-2 inset-x-0 z-40 pointer-events-none">
+        <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
+          <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-2 py-2 w-full max-w-[560px]">
+            <div className="grid grid-cols-5 gap-1.5">
+              {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
+                <button
+                  key={`top-nav-${mode}`}
+                  onClick={() => setNavigationModeFromMenu(mode)}
+                  className={`font-mono text-[12px] uppercase tracking-wide border px-3 py-1.5 transition-colors ${
+                    navigationMode === mode
+                      ? "bg-white text-black border-white"
+                      : "bg-transparent text-white border-gray-600 hover:border-white"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                onClick={resetToInitialState}
+                className="font-mono text-[12px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
+              >
+                RESET
+              </button>
+            </div>
+            <div className="mt-1.5 flex gap-1.5">
+              <select
+                value={exportMode}
+                onChange={(e) => setExportMode(e.target.value as NavigationMode)}
+                className="flex-1 font-mono text-[11px] uppercase tracking-wide border border-gray-600 bg-black text-white px-2 py-1.5"
+              >
+                {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
+                  <option key={`export-${mode}`} value={mode}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => downloadNavigationModeMp3(exportMode)}
+                disabled={!horoscopeData || isExportingMp3}
+                className={`font-mono text-[11px] uppercase tracking-wide border px-3 py-1.5 transition-colors ${
+                  !horoscopeData || isExportingMp3
+                    ? "border-gray-700 text-gray-500 cursor-not-allowed"
+                    : "border-white text-white hover:bg-white hover:text-black"
+                }`}
+              >
+                {isExportingMp3 ? "RENDER MP3..." : "DOWNLOAD MP3"}
+              </button>
+            </div>
+            {pendingMp3Download && !isExportingMp3 && (
+              <a
+                href={pendingMp3Download.url}
+                download={pendingMp3Download.fileName}
+                className="mt-1.5 block w-full text-center font-mono text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
+              >
+                SAVE MP3
+              </a>
+            )}
+          </div>
         </div>
-        <div className="mt-1.5 flex gap-1.5">
-          <select
-            value={exportMode}
-            onChange={(e) => setExportMode(e.target.value as NavigationMode)}
-            className="flex-1 font-mono text-[11px] uppercase tracking-wide border border-gray-600 bg-black text-white px-2 py-1.5"
-          >
-            {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
-              <option key={`export-${mode}`} value={mode}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={() => downloadNavigationModeMp3(exportMode)}
-            disabled={!horoscopeData || isExportingMp3}
-            className={`font-mono text-[11px] uppercase tracking-wide border px-3 py-1.5 transition-colors ${
-              !horoscopeData || isExportingMp3
-                ? "border-gray-700 text-gray-500 cursor-not-allowed"
-                : "border-white text-white hover:bg-white hover:text-black"
-            }`}
-          >
-            {isExportingMp3 ? "RENDER MP3..." : "DOWNLOAD MP3"}
-          </button>
-        </div>
-        {pendingMp3Download && !isExportingMp3 && (
-          <a
-            href={pendingMp3Download.url}
-            download={pendingMp3Download.fileName}
-            className="mt-1.5 block w-full text-center font-mono text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
-          >
-            SAVE MP3
-          </a>
-        )}
       </div>
     </main>
   )

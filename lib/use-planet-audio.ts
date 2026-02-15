@@ -1255,12 +1255,34 @@ export function usePlanetAudio(
       ascendantDegrees = 0,
       mcDegrees = 0,
       aspectVolumeOverride?: number,
+      reverbProfileOverride?: { wetMix?: number; decaySeconds?: number },
     ) => {
       await initializeAudio()
       const normalizedPlanetName = planetName.toLowerCase()
       const audioMode = audioEngineModeRef.current || "samples"
       const resolveBufferKey = (name: string) =>
         audioMode === "tibetan_samples" ? getTibetanSampleKey(name) : name.toLowerCase()
+      const resolvedReverbWetMix = Math.max(
+        0,
+        Math.min(1, reverbProfileOverride?.wetMix ?? getReverbWetMix(isChordModeRef.current)),
+      )
+      const resolvedReverbDecaySeconds = Math.max(
+        0.5,
+        reverbProfileOverride?.decaySeconds ?? getReverbDecaySeconds(isChordModeRef.current),
+      )
+
+      if (
+        audioContextRef.current &&
+        globalReverbConvolverRef.current &&
+        reverbDecaySecondsRef.current !== resolvedReverbDecaySeconds
+      ) {
+        planetReverbImpulseRef.current = createLowDiffusionReverbImpulse(
+          audioContextRef.current,
+          resolvedReverbDecaySeconds,
+        )
+        globalReverbConvolverRef.current.buffer = planetReverbImpulseRef.current
+        reverbDecaySecondsRef.current = resolvedReverbDecaySeconds
+      }
 
       if (playingPlanetsRef.current.has(planetName)) {
         console.log(`[v0] Planet ${planetName} is already playing`)
@@ -1338,9 +1360,8 @@ export function usePlanetAudio(
         const gainNode = ctx.createGain()
         const dryGainNode = ctx.createGain()
         const wetSendGainNode = ctx.createGain()
-        const wetMix = getReverbWetMix(isChordModeRef.current)
-        dryGainNode.gain.value = Math.max(0, 1 - wetMix)
-        wetSendGainNode.gain.value = wetMix
+        dryGainNode.gain.value = Math.max(0, 1 - resolvedReverbWetMix)
+        wetSendGainNode.gain.value = resolvedReverbWetMix
 
         source.connect(gainNode)
         gainNode.connect(dryGainNode)

@@ -579,7 +579,11 @@ export default function AstrologyCalculator() {
   )
 
   const triggerPlanetAudioAtPointer = useCallback(
-    (planetName: string, adjustedAngle: number, options?: { aspectsPoint1Only?: boolean }) => {
+    (
+      planetName: string,
+      adjustedAngle: number,
+      options?: { aspectsPoint1Only?: boolean; forceChordReverb?: boolean },
+    ) => {
       const planet = horoscopeData?.planets?.find((p) => p.name === planetName)
       if (!planet) return
 
@@ -601,6 +605,8 @@ export default function AstrologyCalculator() {
         horoscopeData?.planets || [],
         horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees || 0,
         horoscopeData?.mc?.ChartPosition?.Ecliptic?.DecimalDegrees || 0,
+        undefined,
+        options?.forceChordReverb ? { wetMix: 0.4, decaySeconds: 5 } : undefined,
       )
     },
     [
@@ -1321,7 +1327,7 @@ export default function AstrologyCalculator() {
       const timer = setTimeout(() => {
         if (navigationRunIdRef.current !== runId) return
         setCurrentPlanetUnderPointer(planetName)
-        triggerPlanetAudioAtPointer(planetName, angle, { aspectsPoint1Only: false })
+        triggerPlanetAudioAtPointer(planetName, angle, { aspectsPoint1Only: false, forceChordReverb: true })
       }, index * 20)
       navigationTimeoutsRef.current.push(timer)
     })

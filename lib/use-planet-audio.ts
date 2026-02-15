@@ -15,7 +15,7 @@ interface AudioTrack {
   panner?: any
 }
 
-type AudioEngineMode = "samples" | "hybrid" | "fm_pad" | "tibetan_bowls"
+type AudioEngineMode = "samples" | "hybrid" | "fm_pad" | "tibetan_bowls" | "tibetan_samples"
 
 interface AudioEnvelope {
   fadeIn: number
@@ -261,6 +261,25 @@ function getPlanetVolumeMultiplier(planetName: string): number {
   }
 
   return volumeMultipliers[normalized] ?? 1
+}
+
+function getTibetanSampleKey(planetName: string): string {
+  const normalized = planetName.toLowerCase()
+  const map: Record<string, string> = {
+    sun: "bowl_high",
+    moon: "bowl_mid",
+    mercury: "bowl_high",
+    venus: "bowl_mid",
+    mars: "bowl_low",
+    jupiter: "bowl_low",
+    saturn: "bowl_low",
+    uranus: "bowl_mid",
+    neptune: "bowl_high",
+    pluto: "bowl_low",
+    asc: "bowl_mid",
+    mc: "bowl_mid",
+  }
+  return map[normalized] ?? "bowl_mid"
 }
 
 function getFmPadGainValue(masterVolume: number, synthVolume: number): number {
@@ -657,10 +676,20 @@ export function usePlanetAudio(
           water: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/04%20WATER-GNcvuoJGsQNHQkZ6Z8Ta7ww3Gtzb1P.mp3",
         }
 
+        const tibetanSampleAudioMap = {
+          bowl_low:
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/1/17/Small_tibetan_singing_bowl.ogg/Small_tibetan_singing_bowl.ogg.mp3",
+          bowl_mid:
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/2/25/SingingBowl1.ogg/SingingBowl1.ogg.mp3",
+          bowl_high:
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/6/64/SingingBowl2.ogg/SingingBowl2.ogg.mp3",
+        }
+
         const allAudios = [
           ...Object.entries(planetAudioMap),
           ["background", "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ASTROLOG%20FONDO%20ARIES%2044.1-1OFwQVOhZga6hl7H99PNa1gBlDxMA7.mp3"],
           ...Object.entries(elementAudioMap),
+          ...Object.entries(tibetanSampleAudioMap),
         ]
 
         const audioLabels: Record<string, string> = {
@@ -679,6 +708,9 @@ export function usePlanetAudio(
           earth: "Tierra",
           air: "Aire",
           water: "Agua",
+          bowl_low: "Tibetan Bowl Low",
+          bowl_mid: "Tibetan Bowl Mid",
+          bowl_high: "Tibetan Bowl High",
         }
 
         let loadedCount = 0
@@ -1192,6 +1224,8 @@ export function usePlanetAudio(
       await initializeAudio()
       const normalizedPlanetName = planetName.toLowerCase()
       const audioMode = audioEngineModeRef.current || "samples"
+      const resolveBufferKey = (name: string) =>
+        audioMode === "tibetan_samples" ? getTibetanSampleKey(name) : name.toLowerCase()
 
       if (playingPlanetsRef.current.has(planetName)) {
         console.log(`[v0] Planet ${planetName} is already playing`)
@@ -1232,15 +1266,16 @@ export function usePlanetAudio(
         return
       }
 
-      const audioBuffer = audioBuffersRef.current[normalizedPlanetName]
+      const primaryBufferKey = resolveBufferKey(normalizedPlanetName)
+      const audioBuffer = audioBuffersRef.current[primaryBufferKey]
       if (!audioBuffer || !audioContextRef.current) {
-        console.log(`[v0] No audio buffer for ${planetName}`)
+        console.log(`[v0] No audio buffer for ${planetName} (key=${primaryBufferKey})`)
         return
       }
 
       const ctx = audioContextRef.current
 
-      const startOffset = 30
+      const startOffset = audioMode === "tibetan_samples" ? 0 : 30
 
       if (startOffset >= audioBuffer.duration) {
         console.log(`[v0] Start offset ${startOffset}s exceeds buffer duration ${audioBuffer.duration}s`)
@@ -1299,7 +1334,8 @@ export function usePlanetAudio(
         const totalDuration = fadeInTime + fadeOutTime
 
         const currentTime = ctx.currentTime
-        const planetVolumeMultiplier = getPlanetVolumeMultiplier(planetName)
+        const planetVolumeMultiplier =
+          getPlanetVolumeMultiplier(planetName) * (audioMode === "tibetan_samples" ? 0.92 : 1)
 
         gainNode.gain.setValueAtTime(0, currentTime)
         gainNode.gain.linearRampToValueAtTime(planetVolumeMultiplier, currentTime + fadeInTime)
@@ -1335,7 +1371,7 @@ export function usePlanetAudio(
           for (const aspect of aspects) {
             const otherPlanetName = aspect.point1.name === planetName ? aspect.point2.name : aspect.point1.name
 
-            const otherAudioBuffer = audioBuffersRef.current[otherPlanetName.toLowerCase()]
+            const otherAudioBuffer = audioBuffersRef.current[resolveBufferKey(otherPlanetName)]
             if (!otherAudioBuffer) continue
 
             let otherPlanetDegrees: number | null = null
@@ -1374,7 +1410,11 @@ export function usePlanetAudio(
             const aspectVolume =
               typeof aspectVolumeOverride === "number" ? aspectVolumeOverride : aspectsSoundVolumeRef.current
             const aspectPlanetVolumeMultiplier = getPlanetVolumeMultiplier(otherPlanetName)
-            const baseVolume = 0.33 * (aspectVolume / 100) * aspectPlanetVolumeMultiplier
+            const baseVolume =
+              0.33 *
+              (aspectVolume / 100) *
+              aspectPlanetVolumeMultiplier *
+              (audioMode === "tibetan_samples" ? 0.9 : 1)
 
             // Use dynAspects times instead of planet times
             const aspectFadeInTime = dynAspectsFadeInRef.current

@@ -79,7 +79,7 @@ const MODE_NAME_BY_SIGN_INDEX: Record<number, string> = {
   11: "Locrio",
 }
 
-type AudioEngineMode = "samples" | "hybrid" | "fm_pad" | "tibetan_bowls"
+type AudioEngineMode = "samples" | "hybrid" | "fm_pad" | "tibetan_bowls" | "tibetan_samples"
 type NavigationMode = "astral_chord" | "radial" | "sequential" | "aspectual"
 
 const SEQUENTIAL_PLANET_ORDER = [
@@ -98,8 +98,7 @@ const SEQUENTIAL_PLANET_ORDER = [
 
 const NAVIGATION_TRANSITION_MS = 5000
 const CHART_PLANET_HOLD_MS = 15000
-const NON_RADIAL_CROSSFADE_MS = 2000
-const NON_RADIAL_AUDIO_LEAD_MS = 1000
+const NON_RADIAL_CROSSFADE_MS = 4000
 const NON_RADIAL_JITTER_MS = 2000
 const NON_RADIAL_INFRACTION_JITTER_MS = 2800
 const NON_RADIAL_INFRACTION_PROBABILITY = 0.2
@@ -1015,6 +1014,7 @@ export default function AstrologyCalculator() {
       fadeInSpeedMultiplier?: number
       fadeTransitionMultiplier?: number
       shrinkHoldForFade?: boolean
+      forceContinuousFade?: boolean
       audioLeadMs?: number
       jitterMs?: number
       infractionProbability?: number
@@ -1037,6 +1037,7 @@ export default function AstrologyCalculator() {
     const fadeInSpeedMultiplier = Math.max(1, options?.fadeInSpeedMultiplier ?? 1)
     const fadeTransitionMultiplier = Math.max(1, options?.fadeTransitionMultiplier ?? 1)
     const shrinkHoldForFade = options?.shrinkHoldForFade ?? false
+    const forceContinuousFade = options?.forceContinuousFade ?? false
     const audioLeadMs = Math.max(0, options?.audioLeadMs ?? 0)
     const jitterMs = Math.max(0, options?.jitterMs ?? 0)
     const infractionProbability = Math.min(1, Math.max(0, options?.infractionProbability ?? 0))
@@ -1045,7 +1046,7 @@ export default function AstrologyCalculator() {
     const baseFadeInMs = Math.max(0, Math.floor(baseHalfFadeMs / fadeInSpeedMultiplier))
     const halfFadeMs = Math.max(0, Math.floor(baseHalfFadeMs * fadeTransitionMultiplier))
     const fadeInMs = Math.max(0, Math.floor(baseFadeInMs * fadeTransitionMultiplier))
-    const addedFadeDurationMs = Math.max(0, halfFadeMs + fadeInMs - (baseHalfFadeMs + baseFadeInMs))
+    const transitionFadeDurationMs = Math.max(0, halfFadeMs + fadeInMs)
     const runId = navigationRunIdRef.current
     const uiCommitIntervalMs = 33
     let lastUiCommitMs = 0
@@ -1105,13 +1106,14 @@ export default function AstrologyCalculator() {
     }
 
     const computeStepHoldMs = () => {
+      if (forceContinuousFade) return 0
       if (holdMs <= 0) return 0
       const useInfraction = Math.random() < infractionProbability
       const jitterRange = useInfraction ? infractionJitterMs : jitterMs
       const randomOffset = jitterRange > 0 ? (Math.random() * 2 - 1) * jitterRange : 0
       const rawHoldMs = Math.max(0, holdMs + randomOffset)
       if (!shrinkHoldForFade) return rawHoldMs
-      return Math.max(0, rawHoldMs - addedFadeDurationMs)
+      return Math.max(0, rawHoldMs - transitionFadeDurationMs)
     }
 
     const teleportTransition = (
@@ -1374,10 +1376,11 @@ export default function AstrologyCalculator() {
         holdMs: CHART_PLANET_HOLD_MS,
         crossfadeMs: NON_RADIAL_CROSSFADE_MS,
         chartAspects: true,
-        fadeInSpeedMultiplier: 2,
+        fadeInSpeedMultiplier: 1,
         fadeTransitionMultiplier: NON_RADIAL_FADE_SLOWDOWN_MULTIPLIER,
         shrinkHoldForFade: true,
-        audioLeadMs: NON_RADIAL_AUDIO_LEAD_MS,
+        forceContinuousFade: true,
+        audioLeadMs: 0,
         jitterMs: NON_RADIAL_JITTER_MS,
         infractionProbability: NON_RADIAL_INFRACTION_PROBABILITY,
         infractionJitterMs: NON_RADIAL_INFRACTION_JITTER_MS,
@@ -1390,10 +1393,11 @@ export default function AstrologyCalculator() {
       holdMs: CHART_PLANET_HOLD_MS,
       crossfadeMs: NON_RADIAL_CROSSFADE_MS,
       chartAspects: true,
-      fadeInSpeedMultiplier: 2,
+      fadeInSpeedMultiplier: 1,
       fadeTransitionMultiplier: NON_RADIAL_FADE_SLOWDOWN_MULTIPLIER,
       shrinkHoldForFade: true,
-      audioLeadMs: NON_RADIAL_AUDIO_LEAD_MS,
+      forceContinuousFade: true,
+      audioLeadMs: 0,
       jitterMs: NON_RADIAL_JITTER_MS,
       infractionProbability: NON_RADIAL_INFRACTION_PROBABILITY,
       infractionJitterMs: NON_RADIAL_INFRACTION_JITTER_MS,
@@ -2353,6 +2357,7 @@ export default function AstrologyCalculator() {
                         <option value="hybrid">Hybrid</option>
                         <option value="fm_pad">FM Pad</option>
                         <option value="tibetan_bowls">Tibetan Bowls</option>
+                        <option value="tibetan_samples">Tibetan Samples</option>
                       </select>
                       <span className="font-mono text-[6.5px] w-8 text-right uppercase">Mode</span>
                     </div>

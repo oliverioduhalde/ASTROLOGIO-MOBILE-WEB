@@ -367,7 +367,7 @@ function toUint8Array(chunk: Mp3Chunk): Uint8Array {
 }
 
 export function usePlanetAudio(
-  envelope: AudioEnvelope = { fadeIn: 7, fadeOut: 7, backgroundVolume: 20, aspectsSoundVolume: 7, masterVolume: 20 },
+  envelope: AudioEnvelope = { fadeIn: 7, fadeOut: 7, backgroundVolume: 20, aspectsSoundVolume: 11, masterVolume: 20 },
 ) {
   const audioContextRef = useRef<AudioContext | null>(null)
   const audioBuffersRef = useRef<Record<string, AudioBuffer>>({})
@@ -402,7 +402,7 @@ export function usePlanetAudio(
   const elementBackgroundNextGainRef = useRef<GainNode | null>(null)
   const elementBackgroundTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const backgroundVolumeRef = useRef(envelope.backgroundVolume ?? 20)
-  const aspectsSoundVolumeRef = useRef(envelope.aspectsSoundVolume ?? 7)
+  const aspectsSoundVolumeRef = useRef(envelope.aspectsSoundVolume ?? 11)
   const masterVolumeRef = useRef(envelope.masterVolume ?? 20)
   const tuningCentsRef = useRef(envelope.tuningCents ?? 0)
   const elementSoundVolumeRef = useRef(envelope.elementSoundVolume ?? 40)
@@ -464,7 +464,7 @@ export function usePlanetAudio(
   }, [envelope.tuningCents])
 
   useEffect(() => {
-    aspectsSoundVolumeRef.current = envelope.aspectsSoundVolume ?? 7
+    aspectsSoundVolumeRef.current = envelope.aspectsSoundVolume ?? 11
   }, [envelope.aspectsSoundVolume])
 
   useEffect(() => {

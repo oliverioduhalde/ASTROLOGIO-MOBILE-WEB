@@ -124,8 +124,12 @@ const EARTH_RADIUS = 10
 const MAX_ASPECT_LINE_OPACITY = 0.7
 const INTERACTIVE_PREVIEW_KEY = "__interactive_preview__"
 const GLYPH_INTERACTION_SCALE = 1.3
-const GLYPH_INTERACTION_FADE_MS = 700
-const GLYPH_INTERACTION_FADE_SHORTEN_MS = 1000
+const GLYPH_INTERACTION_FADE_IN_MS = 500
+const GLYPH_INTERACTION_FADE_OUT_MS = 2200
+const GLYPH_INTERACTION_FADE_OUT_HOLD_MS = 420
+const GLYPH_INTERACTION_PREVIEW_CLEAR_MS = GLYPH_INTERACTION_FADE_OUT_MS + GLYPH_INTERACTION_FADE_OUT_HOLD_MS
+const GLYPH_INTERACTION_EASE_IN = "cubic-bezier(0.32, 0.08, 0.24, 1)"
+const GLYPH_INTERACTION_EASE_OUT = "cubic-bezier(0.16, 0.84, 0.32, 1)"
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
 
@@ -292,7 +296,7 @@ export default function AstrologyCalculator() {
   const [dynAspectsSustain, setDynAspectsSustain] = useState(2)
   const [dynAspectsFadeOut, setDynAspectsFadeOut] = useState(15)
 
-  const [aspectsSoundVolume, setAspectsSoundVolume] = useState(30)
+  const [aspectsSoundVolume, setAspectsSoundVolume] = useState(17)
   const [masterVolume, setMasterVolume] = useState(50) // Nuevo estado para controlar volumen maestro (0-100%)
   const [reverbMixPercent, setReverbMixPercent] = useState(20)
   const [chordReverbMixPercent, setChordReverbMixPercent] = useState(40)
@@ -2008,7 +2012,7 @@ export default function AstrologyCalculator() {
         return updated
       })
       interactivePreviewClearTimeoutRef.current = null
-    }, GLYPH_INTERACTION_FADE_MS)
+    }, GLYPH_INTERACTION_PREVIEW_CLEAR_MS)
   }, [])
 
   const triggerInteractivePlanetPreview = useCallback(
@@ -2097,7 +2101,7 @@ export default function AstrologyCalculator() {
       setPressedGlyph((current) => (current === planetName ? null : current))
       clearInteractivePlanetPreview(true)
       pressedGlyphReleaseTimeoutRef.current = null
-    }, GLYPH_INTERACTION_FADE_MS + 800)
+    }, GLYPH_INTERACTION_FADE_IN_MS + 800)
   }
 
   const isPlanetUnderPointer = (planetDegrees: number, pointerAngle: number): boolean => {
@@ -2883,12 +2887,15 @@ export default function AstrologyCalculator() {
                       const isPointerFocused = currentPlanetUnderPointer === planet.name
                       const isInteractionActive = isHovered || isPressed || isPointerFocused
                       const interactionScale = isInteractionActive ? GLYPH_INTERACTION_SCALE : 1
-                      const glyphInteractionFadeMs = Math.max(
-                        160,
-                        (isPointerFocused ? pointerSynchronizedGlyphFadeMs : GLYPH_INTERACTION_FADE_MS) -
-                          GLYPH_INTERACTION_FADE_SHORTEN_MS,
+                      const pointerDrivenFadeInMs = Math.max(
+                        320,
+                        Math.round(pointerSynchronizedGlyphFadeMs * 0.85),
                       )
-                      const glyphTransition = `transform ${glyphInteractionFadeMs}ms linear, opacity ${glyphInteractionFadeMs}ms linear`
+                      const glyphFadeInMs = isPointerFocused ? pointerDrivenFadeInMs : GLYPH_INTERACTION_FADE_IN_MS
+                      const glyphFadeOutMs = GLYPH_INTERACTION_FADE_OUT_MS
+                      const glyphTransition = isInteractionActive
+                        ? `transform ${glyphFadeInMs}ms ${GLYPH_INTERACTION_EASE_IN} 0ms, opacity ${glyphFadeInMs}ms ${GLYPH_INTERACTION_EASE_IN} 0ms`
+                        : `transform ${glyphFadeOutMs}ms ${GLYPH_INTERACTION_EASE_OUT} ${GLYPH_INTERACTION_FADE_OUT_HOLD_MS}ms, opacity ${glyphFadeOutMs}ms ${GLYPH_INTERACTION_EASE_OUT} ${GLYPH_INTERACTION_FADE_OUT_HOLD_MS}ms`
                       const baseGlyphScale =
                         planet.name === "sun" ? 0.945 : planet.name === "mars" ? 0.69 : planet.name === "venus" ? 0.88 : 1
                       const glyphSize = 20 * baseGlyphScale

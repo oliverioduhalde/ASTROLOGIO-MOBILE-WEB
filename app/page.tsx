@@ -2113,7 +2113,7 @@ export default function AstrologyCalculator() {
             </button>
 
             {menuOpen && (
-              <div className="absolute top-full left-0 mt-2 bg-black border border-white p-3 z-10 min-w-[200px] md:scale-[2.3] md:origin-top-left">
+              <div className="absolute top-full left-0 mt-2 bg-black border border-white p-3 z-10 min-w-[200px] max-h-[85vh] overflow-y-auto md:scale-[2.3] md:origin-top-left">
                 <div className="space-y-1">
                   <button
                     onClick={() => {

@@ -262,7 +262,7 @@ function getPlanetVolumeMultiplier(planetName: string): number {
     pluto: 1.25, // +25%
     mercury: 0.8, // -20%
     mars: 0.6, // -40%
-    neptune: 1.2, // +20%
+    neptune: 1.44, // +20% adicional sobre el ajuste previo
   }
 
   return volumeMultipliers[normalized] ?? 1
@@ -1326,7 +1326,7 @@ export function usePlanetAudio(
         reverbDecaySecondsRef.current = resolvedReverbDecaySeconds
       }
 
-      if (playingPlanetsRef.current.has(planetName)) {
+      if (playingPlanetsRef.current.has(normalizedPlanetName)) {
         console.log(`[v0] Planet ${planetName} is already playing`)
         return
       }
@@ -1354,9 +1354,9 @@ export function usePlanetAudio(
       }
 
       if (audioMode === "fm_pad" || audioMode === "tibetan_bowls") {
-        playingPlanetsRef.current.add(planetName)
+        playingPlanetsRef.current.add(normalizedPlanetName)
         setTimeout(() => {
-          playingPlanetsRef.current.delete(planetName)
+          playingPlanetsRef.current.delete(normalizedPlanetName)
         }, Math.max(200, (audioMode === "tibetan_bowls" ? bowlTotalDuration : fmTotalDuration) * 1000))
         return
       }
@@ -1455,7 +1455,7 @@ export function usePlanetAudio(
         const trackId = `${planetName}-${currentTime}`
         source.onended = () => {
           activeTracksRef.current.delete(trackId)
-          playingPlanetsRef.current.delete(planetName)
+          playingPlanetsRef.current.delete(normalizedPlanetName)
           source.onended = null
         }
         source.start(currentTime, startOffset)
@@ -1472,12 +1472,16 @@ export function usePlanetAudio(
           panner,
         })
 
-        playingPlanetsRef.current.add(planetName)
+        playingPlanetsRef.current.add(normalizedPlanetName)
 
         if (aspects && aspects.length > 0) {
           // Play aspects with inherited zodiacal playbackRate plus aspect transposition
           for (const aspect of aspects) {
             const otherPlanetName = aspect.point1.name === planetName ? aspect.point2.name : aspect.point1.name
+            const normalizedOtherPlanetName = otherPlanetName.toLowerCase()
+
+            // Do not retrigger a planet as aspect while its principal voice is still fading out.
+            if (playingPlanetsRef.current.has(normalizedOtherPlanetName)) continue
 
             const otherAudioBuffer = audioBuffersRef.current[resolveBufferKey(otherPlanetName)]
             if (!otherAudioBuffer) continue

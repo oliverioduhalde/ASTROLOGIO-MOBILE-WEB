@@ -5,18 +5,21 @@ import { calculateCustomHoroscope, type HoroscopeData } from "@/lib/astrology"
 import { GlyphAnimationManager } from "@/lib/glyph-animation"
 import { usePlanetAudio, type OfflineMp3AspectEvent, type OfflineMp3PlanetEvent } from "@/lib/use-planet-audio"
 
-const PLANET_GLYPHS: Record<string, string> = {
-  sun: "☉",
-  moon: "☽",
-  mercury: "☿",
-  venus: "♀",
-  mars: "♂",
-  jupiter: "♃",
-  saturn: "♄",
-  uranus: "♅",
-  neptune: "♆",
-  pluto: "♇",
-  asc: "AC",
+const PLANET_GLYPH_SVGS: Record<string, string> = {
+  sun: "/planet-glyphs/sun.svg",
+  moon: "/planet-glyphs/moon.svg",
+  mercury: "/planet-glyphs/mercury.svg",
+  venus: "/planet-glyphs/venus.svg",
+  mars: "/planet-glyphs/mars.svg",
+  jupiter: "/planet-glyphs/jupiter.svg",
+  saturn: "/planet-glyphs/saturn.svg",
+  uranus: "/planet-glyphs/uranus.svg",
+  neptune: "/planet-glyphs/neptune.svg",
+  pluto: "/planet-glyphs/pluto.svg",
+}
+
+const PLANET_GLYPH_FALLBACK_LABELS: Record<string, string> = {
+  asc: "ASC",
   mc: "MC",
 }
 
@@ -2835,10 +2838,12 @@ export default function AstrologyCalculator() {
                       const originalDegrees = planet.ChartPosition.Ecliptic.DecimalDegrees
                       const adjustedDegrees = adjustedPositions[planet.name] ?? originalDegrees
                       const position = polarToCartesian(200, 200, 180, adjustToCanvasAngle(adjustedDegrees))
-                      const glyph = PLANET_GLYPHS[planet.name]
+                      const glyphSrc = PLANET_GLYPH_SVGS[planet.name]
+                      const glyphFallback = PLANET_GLYPH_FALLBACK_LABELS[planet.name] || planet.label
                       // Added hover detection for glyphs
                       const isHovered = hoveredGlyph === planet.name
                       const baseGlyphScale = planet.name === "sun" ? 1.5 : planet.name === "venus" ? 0.8 : 1
+                      const glyphSize = 20 * baseGlyphScale
 
                       return (
                         <g
@@ -2894,26 +2899,39 @@ export default function AstrologyCalculator() {
                             }
                           }}
                         >
-                          <text
-                            x={position.x}
-                            y={position.y}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            className={`fill-white font-sans text-xl select-none ${
-                              currentPlanetUnderPointer === planet.name ? "fill-white" : ""
-                            }`}
-                            style={{
-                              paintOrder: "stroke fill",
-                              stroke: "#ffffff",
-                              strokeWidth: "0.5px",
-                              transform: `scale(${baseGlyphScale})`,
-                              transformOrigin: `${position.x}px ${position.y}px`,
-                              transition: "none",
-                            }}
-                            filter={isHovered ? "url(#glow)" : undefined} // Applied glow filter on hover
-                          >
-                            {glyph}
-                          </text>
+                          {glyphSrc ? (
+                            <image
+                              href={glyphSrc}
+                              x={position.x - glyphSize / 2}
+                              y={position.y - glyphSize / 2}
+                              width={glyphSize}
+                              height={glyphSize}
+                              preserveAspectRatio="xMidYMid meet"
+                              filter={isHovered ? "url(#glow)" : undefined}
+                              style={{ pointerEvents: "none" }}
+                            />
+                          ) : (
+                            <text
+                              x={position.x}
+                              y={position.y}
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              className={`fill-white font-sans text-xl select-none ${
+                                currentPlanetUnderPointer === planet.name ? "fill-white" : ""
+                              }`}
+                              style={{
+                                paintOrder: "stroke fill",
+                                stroke: "#ffffff",
+                                strokeWidth: "0.5px",
+                                transform: `scale(${baseGlyphScale})`,
+                                transformOrigin: `${position.x}px ${position.y}px`,
+                                transition: "none",
+                              }}
+                              filter={isHovered ? "url(#glow)" : undefined}
+                            >
+                              {glyphFallback}
+                            </text>
+                          )}
                           {showDegrees && (
                             <text
                               x={position.x}
@@ -3300,14 +3318,23 @@ export default function AstrologyCalculator() {
                       {horoscopeData.planets.map((planet, index) => (
                         <tr key={planet.name} className={index % 2 === 0 ? "bg-black" : "bg-gray-900"}>
                           <td className="p-2 border-r border-gray-700 text-center text-base">
-                            <span
-                              style={{
-                                paintOrder: "stroke fill",
-                                WebkitTextStroke: "0.3px white",
-                              }}
-                            >
-                              {PLANET_GLYPHS[planet.name] || planet.label}
-                            </span>
+                            {PLANET_GLYPH_SVGS[planet.name] ? (
+                              <img
+                                src={PLANET_GLYPH_SVGS[planet.name]}
+                                alt={planet.label}
+                                className="inline-block w-5 h-5 mx-auto align-middle select-none"
+                                draggable={false}
+                              />
+                            ) : (
+                              <span
+                                style={{
+                                  paintOrder: "stroke fill",
+                                  WebkitTextStroke: "0.3px white",
+                                }}
+                              >
+                                {PLANET_GLYPH_FALLBACK_LABELS[planet.name] || planet.label}
+                              </span>
+                            )}
                           </td>
                           <td className="p-2 border-r border-gray-700 text-right tabular-nums">
                             {planet.ChartPosition.Ecliptic.DecimalDegrees.toFixed(4)}
@@ -3476,29 +3503,47 @@ export default function AstrologyCalculator() {
                           return (
                             <tr key={index} className={index % 2 === 0 ? "bg-black" : "bg-gray-900"}>
                               <td className="p-2 border-r border-gray-700 text-center">
-                                <span
-                                  className={`${isSmallFont && (aspect.point1.name === "mc" || aspect.point1.name === "asc") ? "text-sm" : "text-base"}`}
-                                  style={{
-                                    paintOrder: "stroke fill",
-                                    WebkitTextStroke: "0.3px white",
-                                  }}
-                                >
-                                  {PLANET_GLYPHS[aspect.point1.name] || aspect.point1.label}
-                                </span>
+                                {PLANET_GLYPH_SVGS[aspect.point1.name] ? (
+                                  <img
+                                    src={PLANET_GLYPH_SVGS[aspect.point1.name]}
+                                    alt={aspect.point1.label}
+                                    className="inline-block w-5 h-5 mx-auto align-middle select-none"
+                                    draggable={false}
+                                  />
+                                ) : (
+                                  <span
+                                    className={`${isSmallFont && (aspect.point1.name === "mc" || aspect.point1.name === "asc") ? "text-sm" : "text-base"}`}
+                                    style={{
+                                      paintOrder: "stroke fill",
+                                      WebkitTextStroke: "0.3px white",
+                                    }}
+                                  >
+                                    {PLANET_GLYPH_FALLBACK_LABELS[aspect.point1.name] || aspect.point1.label}
+                                  </span>
+                                )}
                               </td>
                               <td className="p-2 border-r border-gray-700 text-center">
                                 <span className="text-lg">{aspectSymbol}</span>
                               </td>
                               <td className="p-2 border-r border-gray-700 text-center">
-                                <span
-                                  className={`${isSmallFont && (aspect.point2.name === "mc" || aspect.point2.name === "asc") ? "text-sm" : "text-base"}`}
-                                  style={{
-                                    paintOrder: "stroke fill",
-                                    WebkitTextStroke: "0.3px white",
-                                  }}
-                                >
-                                  {PLANET_GLYPHS[aspect.point2.name] || aspect.point2.label}
-                                </span>
+                                {PLANET_GLYPH_SVGS[aspect.point2.name] ? (
+                                  <img
+                                    src={PLANET_GLYPH_SVGS[aspect.point2.name]}
+                                    alt={aspect.point2.label}
+                                    className="inline-block w-5 h-5 mx-auto align-middle select-none"
+                                    draggable={false}
+                                  />
+                                ) : (
+                                  <span
+                                    className={`${isSmallFont && (aspect.point2.name === "mc" || aspect.point2.name === "asc") ? "text-sm" : "text-base"}`}
+                                    style={{
+                                      paintOrder: "stroke fill",
+                                      WebkitTextStroke: "0.3px white",
+                                    }}
+                                  >
+                                    {PLANET_GLYPH_FALLBACK_LABELS[aspect.point2.name] || aspect.point2.label}
+                                  </span>
+                                )}
                               </td>
                               <td className="p-2 border-r border-gray-700 text-right tabular-nums">
                                 {aspect.angle?.toFixed(2) || "—"}
@@ -3561,9 +3606,31 @@ export default function AstrologyCalculator() {
                             key={`${planetName}-aspect-${index}`}
                             className="flex items-center justify-between gap-2 text-xs"
                           >
-                            <span>{PLANET_GLYPHS[aspect.point1.name] || aspect.point1.label}</span>
+                            <span className="inline-flex items-center justify-center min-w-[14px]">
+                              {PLANET_GLYPH_SVGS[aspect.point1.name] ? (
+                                <img
+                                  src={PLANET_GLYPH_SVGS[aspect.point1.name]}
+                                  alt={aspect.point1.label}
+                                  className="w-3.5 h-3.5 select-none"
+                                  draggable={false}
+                                />
+                              ) : (
+                                PLANET_GLYPH_FALLBACK_LABELS[aspect.point1.name] || aspect.point1.label
+                              )}
+                            </span>
                             <span className={`text-lg ${aspectColor} ${brightness}`}>{aspectSymbol}</span>
-                            <span>{PLANET_GLYPHS[aspect.point2.name] || aspect.point2.label}</span>
+                            <span className="inline-flex items-center justify-center min-w-[14px]">
+                              {PLANET_GLYPH_SVGS[aspect.point2.name] ? (
+                                <img
+                                  src={PLANET_GLYPH_SVGS[aspect.point2.name]}
+                                  alt={aspect.point2.label}
+                                  className="w-3.5 h-3.5 select-none"
+                                  draggable={false}
+                                />
+                              ) : (
+                                PLANET_GLYPH_FALLBACK_LABELS[aspect.point2.name] || aspect.point2.label
+                              )}
+                            </span>
                             <span className="text-gray-400 text-xs">{aspect.angle.toFixed(1)}°</span>
                           </div>
                         )

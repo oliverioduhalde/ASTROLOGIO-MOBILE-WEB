@@ -5,17 +5,17 @@ import { useMemo } from "react"
 // Glifos zodiacales
 const SIGN_GLYPHS = ["♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"]
 
-const PLANET_GLYPHS: Record<string, string> = {
-  sun: "☉",
-  moon: "☽",
-  mercury: "☿",
-  venus: "♀",
-  mars: "♂",
-  jupiter: "♃",
-  saturn: "♄",
-  uranus: "♅",
-  neptune: "♆",
-  pluto: "♇",
+const PLANET_GLYPH_SVGS: Record<string, string> = {
+  sun: "/planet-glyphs/sun.svg",
+  moon: "/planet-glyphs/moon.svg",
+  mercury: "/planet-glyphs/mercury.svg",
+  venus: "/planet-glyphs/venus.svg",
+  mars: "/planet-glyphs/mars.svg",
+  jupiter: "/planet-glyphs/jupiter.svg",
+  saturn: "/planet-glyphs/saturn.svg",
+  uranus: "/planet-glyphs/uranus.svg",
+  neptune: "/planet-glyphs/neptune.svg",
+  pluto: "/planet-glyphs/pluto.svg",
 }
 
 interface Planet {
@@ -346,24 +346,38 @@ export function AstroChart({ planets, ascendant, mc, size = 400, aspects = [] }:
       {/* Planetas */}
       {planetPositions.map(({ planet, theta, radius }) => {
         const pos = polarToCartesian(cx, cy, radius, theta)
-        const glyph = PLANET_GLYPHS[planet.name] || planet.name[0].toUpperCase()
+        const glyphSrc = PLANET_GLYPH_SVGS[planet.name]
+        const glyphFallback = planet.name[0]?.toUpperCase() || "?"
+        const baseGlyphScale = planet.name === "sun" ? 1.5 : planet.name === "venus" ? 0.8 : 1
+        const glyphSize = size * 0.04 * baseGlyphScale
         const lineEnd = polarToCartesian(cx, cy, rSignsInner - 2, theta)
 
         return (
           <g key={planet.name}>
             <line x1={pos.x} y1={pos.y} x2={lineEnd.x} y2={lineEnd.y} stroke="white" strokeWidth="0.5" opacity="0.4" />
             <circle cx={pos.x} cy={pos.y} r={size * 0.028} fill="black" stroke="white" strokeWidth="0.5" />
-            <text
-              x={pos.x}
-              y={pos.y}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fill="white"
-              fontSize={size * 0.04}
-              className="font-mono"
-            >
-              {glyph}
-            </text>
+            {glyphSrc ? (
+              <image
+                href={glyphSrc}
+                x={pos.x - glyphSize / 2}
+                y={pos.y - glyphSize / 2}
+                width={glyphSize}
+                height={glyphSize}
+                preserveAspectRatio="xMidYMid meet"
+              />
+            ) : (
+              <text
+                x={pos.x}
+                y={pos.y}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill="white"
+                fontSize={size * 0.04}
+                className="font-mono"
+              >
+                {glyphFallback}
+              </text>
+            )}
           </g>
         )
       })}

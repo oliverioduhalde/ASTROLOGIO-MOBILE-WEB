@@ -2819,11 +2819,13 @@ export default function AstrologyCalculator() {
                 <div className="relative w-full max-w-[400px] aspect-square md:w-[min(90vh,90vw)] md:h-[min(90vh,90vw)] md:max-w-none md:aspect-auto">
                   <svg viewBox="0 0 400 400" className="w-full h-full scale-90 origin-center">
                     <defs>
-                      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                        <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                      <filter id="glyph-halo-only" x="-200%" y="-200%" width="400%" height="400%">
+                        <feGaussianBlur in="SourceAlpha" stdDeviation="1.8" result="halo-blur" />
+                        <feComposite in="halo-blur" in2="SourceAlpha" operator="out" result="halo-shell" />
+                        <feFlood floodColor="#ffffff" floodOpacity="1" result="halo-color" />
+                        <feComposite in="halo-color" in2="halo-shell" operator="in" result="halo-only" />
                         <feMerge>
-                          <feMergeNode in="coloredBlur" />
-                          <feMergeNode in="SourceGraphic" />
+                          <feMergeNode in="halo-only" />
                         </feMerge>
                       </filter>
                     </defs>
@@ -2902,9 +2904,12 @@ export default function AstrologyCalculator() {
                       const glyphSize = 20 * baseGlyphScale
                       const glyphGlowTiming = getGlyphGlowTiming(planet.name)
                       const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
-                      const glyphBaseFilter =
-                        "drop-shadow(0 0 3.2px rgba(255,255,255,0.84)) drop-shadow(0 0 8px rgba(255,255,255,0.44))"
-                      const glyphFilter = isHovered ? `url(#glow) ${glyphBaseFilter}` : glyphBaseFilter
+                      const glyphCoreFilter = "drop-shadow(0 0 1.6px rgba(255,255,255,0.58))"
+                      const glyphHaloBaseFilter =
+                        "url(#glyph-halo-only) drop-shadow(0 0 6.4px rgba(255,255,255,0.98)) drop-shadow(0 0 16px rgba(255,255,255,0.88))"
+                      const glyphHaloHoverFilter =
+                        "url(#glyph-halo-only) drop-shadow(0 0 7.6px rgba(255,255,255,1)) drop-shadow(0 0 19.2px rgba(255,255,255,0.95))"
+                      const glyphHaloFilter = isHovered ? glyphHaloHoverFilter : glyphHaloBaseFilter
 
                       return (
                         <g
@@ -2933,47 +2938,87 @@ export default function AstrologyCalculator() {
                             style={{ pointerEvents: "all" }}
                           />
                           {glyphSrc ? (
-                            <image
-                              href={glyphSrc}
-                              x={position.x - glyphSize / 2}
-                              y={position.y - glyphSize / 2}
-                              width={glyphSize}
-                              height={glyphSize}
-                              preserveAspectRatio="xMidYMid meet"
-                              style={{
-                                pointerEvents: "none",
-                                filter: glyphFilter,
-                                animation: glyphGlowAnimation,
-                                transformBox: "fill-box",
-                                transformOrigin: "center",
-                                transform: `scale(${interactionScale})`,
-                                opacity: isInteractionActive ? 1 : 0.92,
-                                transition: glyphTransition,
-                              }}
-                            />
+                            <>
+                              <image
+                                href={glyphSrc}
+                                x={position.x - glyphSize / 2}
+                                y={position.y - glyphSize / 2}
+                                width={glyphSize}
+                                height={glyphSize}
+                                preserveAspectRatio="xMidYMid meet"
+                                style={{
+                                  pointerEvents: "none",
+                                  filter: glyphHaloFilter,
+                                  animation: glyphGlowAnimation,
+                                  mixBlendMode: "screen",
+                                  transformBox: "fill-box",
+                                  transformOrigin: "center",
+                                  transform: `scale(${interactionScale})`,
+                                  opacity: isInteractionActive ? 0.94 : 0.86,
+                                  transition: glyphTransition,
+                                }}
+                              />
+                              <image
+                                href={glyphSrc}
+                                x={position.x - glyphSize / 2}
+                                y={position.y - glyphSize / 2}
+                                width={glyphSize}
+                                height={glyphSize}
+                                preserveAspectRatio="xMidYMid meet"
+                                style={{
+                                  pointerEvents: "none",
+                                  filter: glyphCoreFilter,
+                                  transformBox: "fill-box",
+                                  transformOrigin: "center",
+                                  transform: `scale(${interactionScale})`,
+                                  opacity: isInteractionActive ? 1 : 0.92,
+                                  transition: glyphTransition,
+                                }}
+                              />
+                            </>
                           ) : (
-                            <text
-                              x={position.x}
-                              y={position.y}
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              className={`fill-white font-sans text-xl select-none ${
-                                currentPlanetUnderPointer === planet.name ? "fill-white" : ""
-                              }`}
-                              style={{
-                                paintOrder: "stroke fill",
-                                stroke: "#ffffff",
-                                strokeWidth: "0.5px",
-                                transform: `scale(${baseGlyphScale * interactionScale})`,
-                                transformOrigin: `${position.x}px ${position.y}px`,
-                                opacity: isInteractionActive ? 1 : 0.92,
-                                transition: glyphTransition,
-                                filter: glyphFilter,
-                                animation: glyphGlowAnimation,
-                              }}
-                            >
-                              {glyphFallback}
-                            </text>
+                            <>
+                              <text
+                                x={position.x}
+                                y={position.y}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                className={`fill-white font-sans text-xl select-none ${
+                                  currentPlanetUnderPointer === planet.name ? "fill-white" : ""
+                                }`}
+                                style={{
+                                  transform: `scale(${baseGlyphScale * interactionScale})`,
+                                  transformOrigin: `${position.x}px ${position.y}px`,
+                                  opacity: isInteractionActive ? 0.94 : 0.86,
+                                  transition: glyphTransition,
+                                  filter: glyphHaloFilter,
+                                  animation: glyphGlowAnimation,
+                                }}
+                              >
+                                {glyphFallback}
+                              </text>
+                              <text
+                                x={position.x}
+                                y={position.y}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                className={`fill-white font-sans text-xl select-none ${
+                                  currentPlanetUnderPointer === planet.name ? "fill-white" : ""
+                                }`}
+                                style={{
+                                  paintOrder: "stroke fill",
+                                  stroke: "#ffffff",
+                                  strokeWidth: "0.5px",
+                                  transform: `scale(${baseGlyphScale * interactionScale})`,
+                                  transformOrigin: `${position.x}px ${position.y}px`,
+                                  opacity: isInteractionActive ? 1 : 0.92,
+                                  transition: glyphTransition,
+                                  filter: glyphCoreFilter,
+                                }}
+                              >
+                                {glyphFallback}
+                              </text>
+                            </>
                           )}
                           {showDegrees && (
                             <text

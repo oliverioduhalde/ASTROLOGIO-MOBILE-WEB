@@ -123,7 +123,7 @@ const EARTH_CENTER_Y = 200
 const EARTH_RADIUS = 10
 const MAX_ASPECT_LINE_OPACITY = 0.7
 const INTERACTIVE_PREVIEW_KEY = "__interactive_preview__"
-const GLYPH_INTERACTION_SCALE = 1.5
+const GLYPH_INTERACTION_SCALE = 1.3
 const GLYPH_INTERACTION_FADE_MS = 700
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
@@ -1923,6 +1923,14 @@ export default function AstrologyCalculator() {
     formData.latitude.trim() !== "" &&
     formData.longitude.trim() !== ""
 
+  const pointerPassFadeMs = useMemo(() => {
+    // Pointer hit zone is ±5° (10° total around each glyph).
+    const pointerZoneMs = (loopDuration * 1000 * 10) / 360
+    return Math.max(220, Math.round(pointerZoneMs / 2))
+  }, [loopDuration])
+
+  const pointerSynchronizedGlyphFadeMs = pointerOpacityTransitionMs > 0 ? pointerOpacityTransitionMs : pointerPassFadeMs
+
   const shouldShowIdlePointer = showPointer && !isLoopRunning && navigationMode === "radial"
   const shouldShowChordCenterPointer = showPointer && isLoopRunning && navigationMode === "astral_chord"
   const shouldShowOrbitPointer =
@@ -2874,6 +2882,9 @@ export default function AstrologyCalculator() {
                       const isPointerFocused = currentPlanetUnderPointer === planet.name
                       const isInteractionActive = isHovered || isPressed || isPointerFocused
                       const interactionScale = isInteractionActive ? GLYPH_INTERACTION_SCALE : 1
+                      const glyphInteractionFadeMs = isPointerFocused
+                        ? pointerSynchronizedGlyphFadeMs
+                        : GLYPH_INTERACTION_FADE_MS
                       const baseGlyphScale =
                         planet.name === "sun" ? 0.945 : planet.name === "mars" ? 0.69 : planet.name === "venus" ? 0.8 : 1
                       const glyphSize = 20 * baseGlyphScale
@@ -2918,7 +2929,7 @@ export default function AstrologyCalculator() {
                                 transformOrigin: "center",
                                 transform: `scale(${interactionScale})`,
                                 opacity: isInteractionActive ? 1 : 0.92,
-                                transition: `transform ${GLYPH_INTERACTION_FADE_MS}ms ease, opacity ${GLYPH_INTERACTION_FADE_MS}ms ease`,
+                                transition: `transform ${glyphInteractionFadeMs}ms linear, opacity ${glyphInteractionFadeMs}ms linear`,
                               }}
                             />
                           ) : (
@@ -2937,7 +2948,7 @@ export default function AstrologyCalculator() {
                                 transform: `scale(${baseGlyphScale * interactionScale})`,
                                 transformOrigin: `${position.x}px ${position.y}px`,
                                 opacity: isInteractionActive ? 1 : 0.92,
-                                transition: `transform ${GLYPH_INTERACTION_FADE_MS}ms ease, opacity ${GLYPH_INTERACTION_FADE_MS}ms ease`,
+                                transition: `transform ${glyphInteractionFadeMs}ms linear, opacity ${glyphInteractionFadeMs}ms linear`,
                                 filter: glyphFilter,
                                 animation: glyphGlowAnimation,
                               }}

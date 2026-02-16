@@ -131,6 +131,7 @@ const GLYPH_INTERACTION_FADE_OUT_HOLD_MS = 0
 const GLYPH_INTERACTION_PREVIEW_CLEAR_MS = GLYPH_INTERACTION_FADE_OUT_MS + GLYPH_INTERACTION_FADE_OUT_HOLD_MS
 const GLYPH_INTERACTION_EASE_IN = "cubic-bezier(0.32, 0.08, 0.24, 1)"
 const GLYPH_INTERACTION_EASE_OUT = "cubic-bezier(0.16, 0.84, 0.32, 1)"
+const DEFAULT_ASPECTS_SOUND_VOLUME = 7
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
 
@@ -297,7 +298,7 @@ export default function AstrologyCalculator() {
   const [dynAspectsSustain, setDynAspectsSustain] = useState(2)
   const [dynAspectsFadeOut, setDynAspectsFadeOut] = useState(15)
 
-  const [aspectsSoundVolume, setAspectsSoundVolume] = useState(17)
+  const [aspectsSoundVolume, setAspectsSoundVolume] = useState(DEFAULT_ASPECTS_SOUND_VOLUME)
   const [masterVolume, setMasterVolume] = useState(50) // Nuevo estado para controlar volumen maestro (0-100%)
   const [reverbMixPercent, setReverbMixPercent] = useState(20)
   const [chordReverbMixPercent, setChordReverbMixPercent] = useState(40)
@@ -943,7 +944,7 @@ export default function AstrologyCalculator() {
     setError("")
     setElementSoundVolume(2)
     setBackgroundVolume(2)
-    setAspectsSoundVolume(30)
+    setAspectsSoundVolume(DEFAULT_ASPECTS_SOUND_VOLUME)
     setMasterVolume(50)
     setReverbMixPercent(20)
     setChordReverbMixPercent(40)

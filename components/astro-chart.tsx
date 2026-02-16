@@ -349,7 +349,7 @@ export function AstroChart({ planets, ascendant, mc, size = 400, aspects = [] }:
         const glyphSrc = PLANET_GLYPH_SVGS[planet.name]
         const glyphFallback = planet.name[0]?.toUpperCase() || "?"
         const baseGlyphScale =
-          planet.name === "sun" ? 0.75 : planet.name === "mars" ? 0.5 : planet.name === "venus" ? 0.8 : 1
+          planet.name === "sun" ? 0.9 : planet.name === "mars" ? 0.6 : planet.name === "venus" ? 0.8 : 1
         const glyphSize = size * 0.04 * baseGlyphScale
         const lineEnd = polarToCartesian(cx, cy, rSignsInner - 2, theta)
 

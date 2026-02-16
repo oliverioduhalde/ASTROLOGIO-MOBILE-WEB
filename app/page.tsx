@@ -2843,7 +2843,7 @@ export default function AstrologyCalculator() {
                       // Added hover detection for glyphs
                       const isHovered = hoveredGlyph === planet.name
                       const baseGlyphScale =
-                        planet.name === "sun" ? 0.75 : planet.name === "mars" ? 0.5 : planet.name === "venus" ? 0.8 : 1
+                        planet.name === "sun" ? 0.9 : planet.name === "mars" ? 0.6 : planet.name === "venus" ? 0.8 : 1
                       const glyphSize = 20 * baseGlyphScale
 
                       return (

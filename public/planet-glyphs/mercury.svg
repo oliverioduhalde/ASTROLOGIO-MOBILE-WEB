@@ -5,7 +5,7 @@
       .cls-1 {
         fill: none;
         stroke: #fff;
-        stroke-width: 1.5;
+        stroke-width: 1;
         vector-effect: non-scaling-stroke;
         stroke-linecap: round;
         stroke-linejoin: round;
@@ -15,6 +15,7 @@
   <g id="Layer_2-2" data-name="Layer 2">
     <g>
       <line class="cls-1" x1="100.14" y1="360.76" x2="99.66" y2="214.76"/>
+      <line class="cls-1" x1="40" y1="287" x2="160" y2="287"/>
       <circle class="cls-1" cx="99.66" cy="129.73" r="85.03"/>
       <path class="cls-1" d="M194.27,0c-19.12,27.06-57.35,43.76-97.82,43.76S19.18,26.89,0,.05"/>
     </g>

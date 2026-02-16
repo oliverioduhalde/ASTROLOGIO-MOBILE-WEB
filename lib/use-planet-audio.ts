@@ -161,6 +161,7 @@ const SIGN_PLANET_PROXIMITY: Record<number, string[]> = {
 const INTERVAL_TARGET_BY_PROXIMITY = [0, 7, 5, 4, 3, 9, 8, 2, 10, 11, 1, 6]
 const CONSONANCE_PRIORITY = INTERVAL_TARGET_BY_PROXIMITY
 const DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES = -24 // Two octaves down by default
+const VENUS_PRINCIPAL_OCTAVE_BOOST_SEMITONES = 12
 const FM_PAD_OCTAVE_SHIFT_SEMITONES = 12 // One octave up vs current FM baseline
 const FM_PAD_GAIN_BOOST_FACTOR = 4 // +300% (4x total)
 const BOWL_SYNTH_OCTAVE_SHIFT_SEMITONES = 0
@@ -237,11 +238,14 @@ function getModalPlanetSemitoneOffset(planetName: string, sunSignIndex: number):
 
 function getPlanetPrincipalSemitoneOffset(planetName: string, modalEnabled: boolean, sunSignIndex: number | null): number {
   const normalized = planetName.toLowerCase()
-  return (
+  const baseSemitoneOffset =
     modalEnabled && sunSignIndex !== null
       ? getModalPlanetSemitoneOffset(normalized, sunSignIndex)
       : getLegacyPlanetSemitoneOffset(normalized)
-  )
+  if (normalized === "venus") {
+    return baseSemitoneOffset + VENUS_PRINCIPAL_OCTAVE_BOOST_SEMITONES
+  }
+  return baseSemitoneOffset
 }
 
 function getPlanetPrincipalPlaybackRate(planetName: string, modalEnabled: boolean, sunSignIndex: number | null): number {

@@ -123,10 +123,10 @@ const EARTH_CENTER_Y = 200
 const EARTH_RADIUS = 10
 const MAX_ASPECT_LINE_OPACITY = 0.7
 const INTERACTIVE_PREVIEW_KEY = "__interactive_preview__"
-const GLYPH_INTERACTION_SCALE = 1.3
+const GLYPH_INTERACTION_SCALE = 1.15
 const GLYPH_INTERACTION_FADE_EXTRA_MS = 1000
 const GLYPH_INTERACTION_FADE_IN_MS = 500 + GLYPH_INTERACTION_FADE_EXTRA_MS
-const GLYPH_INTERACTION_FADE_OUT_MS = 2200 + GLYPH_INTERACTION_FADE_EXTRA_MS
+const GLYPH_INTERACTION_FADE_OUT_MS = 2200 + GLYPH_INTERACTION_FADE_EXTRA_MS + 500
 const GLYPH_INTERACTION_FADE_OUT_HOLD_MS = 0
 const GLYPH_INTERACTION_PREVIEW_CLEAR_MS = GLYPH_INTERACTION_FADE_OUT_MS + GLYPH_INTERACTION_FADE_OUT_HOLD_MS
 const GLYPH_INTERACTION_EASE_IN = "cubic-bezier(0.32, 0.08, 0.24, 1)"
@@ -2918,7 +2918,6 @@ export default function AstrologyCalculator() {
                             setHoveredGlyph(planet.name)
                             setGlyphHoverOpacity(0)
                             triggerPlanetGlyphScale(planet.name, getAspectsForPlanet(planet.name))
-                            triggerInteractivePlanetPreview(planet.name, adjustedDegrees)
                           }}
                           onPointerLeave={() => {
                             setHoveredGlyph((current) => (current === planet.name ? null : current))

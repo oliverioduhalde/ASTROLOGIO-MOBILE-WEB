@@ -74,6 +74,20 @@ const ASPECT_STYLES: Record<string, { color: string; width: number; filter: stri
   Cuadrado: { color: "#FF0000", width: 1.5, filter: "drop-shadow(0 0 4px #FF0000)" },
   Sextil: { color: "#0099FF", width: 1.5, filter: "drop-shadow(0 0 4px #0099FF)" },
 }
+const MAX_ASPECT_LINE_OPACITY = 0.7
+
+function getGlyphGlowTiming(glyphName: string) {
+  let hash = 0
+  for (let i = 0; i < glyphName.length; i += 1) {
+    hash = (hash * 31 + glyphName.charCodeAt(i)) % 100000
+  }
+  const durationSec = 1 + (hash % 2000) / 1000
+  const delaySec = -((Math.floor(hash / 7) % 3000) / 1000)
+  return {
+    durationSec: durationSec.toFixed(3),
+    delaySec: delaySec.toFixed(3),
+  }
+}
 
 export function AstroChart({ planets, ascendant, mc, size = 400, aspects = [] }: AstroChartProps) {
   const cx = size / 2
@@ -351,6 +365,10 @@ export function AstroChart({ planets, ascendant, mc, size = 400, aspects = [] }:
         const baseGlyphScale =
           planet.name === "sun" ? 0.945 : planet.name === "mars" ? 0.69 : planet.name === "venus" ? 0.8 : 1
         const glyphSize = size * 0.04 * baseGlyphScale
+        const glyphGlowTiming = getGlyphGlowTiming(planet.name)
+        const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
+        const glyphFilter =
+          "drop-shadow(0 0 1.6px rgba(255,255,255,0.42)) drop-shadow(0 0 4px rgba(255,255,255,0.22))"
         const lineEnd = polarToCartesian(cx, cy, rSignsInner - 2, theta)
 
         return (
@@ -365,6 +383,10 @@ export function AstroChart({ planets, ascendant, mc, size = 400, aspects = [] }:
                 width={glyphSize}
                 height={glyphSize}
                 preserveAspectRatio="xMidYMid meet"
+                style={{
+                  filter: glyphFilter,
+                  animation: glyphGlowAnimation,
+                }}
               />
             ) : (
               <text
@@ -375,6 +397,10 @@ export function AstroChart({ planets, ascendant, mc, size = 400, aspects = [] }:
                 fill="white"
                 fontSize={size * 0.04}
                 className="font-mono"
+                style={{
+                  filter: glyphFilter,
+                  animation: glyphGlowAnimation,
+                }}
               >
                 {glyphFallback}
               </text>
@@ -417,7 +443,7 @@ export function AstroChart({ planets, ascendant, mc, size = 400, aspects = [] }:
             stroke={style.color}
             strokeWidth={style.width}
             filter={`url(#${filterId})`}
-            opacity="1"
+            opacity={MAX_ASPECT_LINE_OPACITY}
           />
         )
       })}

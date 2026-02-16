@@ -121,6 +121,20 @@ const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
 const EARTH_CENTER_X = 200
 const EARTH_CENTER_Y = 200
 const EARTH_RADIUS = 10
+const MAX_ASPECT_LINE_OPACITY = 0.7
+
+function getGlyphGlowTiming(glyphName: string) {
+  let hash = 0
+  for (let i = 0; i < glyphName.length; i += 1) {
+    hash = (hash * 31 + glyphName.charCodeAt(i)) % 100000
+  }
+  const durationSec = 1 + (hash % 2000) / 1000 // 1s..3s
+  const delaySec = -((Math.floor(hash / 7) % 3000) / 1000) // desync start phase
+  return {
+    durationSec: durationSec.toFixed(3),
+    delaySec: delaySec.toFixed(3),
+  }
+}
 
 function adjustPlanetPositions(planets: { name: string; degrees: number }[], minSeparation = 12) {
   const sorted = [...planets].sort((a, b) => a.degrees - b.degrees)
@@ -788,7 +802,7 @@ export default function AstrologyCalculator() {
     const fadeInInterval = setInterval(() => {
       setActivePlanetAspectsMap((prevMap) => {
         const current = prevMap[currentPlanetUnderPointer] || { aspects: aspectsForPlanet, opacity: 0 }
-        const targetOpacity = 0.8 // Maximum opacity is 80%
+        const targetOpacity = MAX_ASPECT_LINE_OPACITY
         const increment = targetOpacity / (dynAspectsFadeIn * 10) // Divide by (seconds * 10) for 100ms intervals
         const newOpacity = Math.min(current.opacity + increment, targetOpacity)
 
@@ -821,7 +835,7 @@ export default function AstrologyCalculator() {
         setActivePlanetAspectsMap((prevMap) => {
           const result = { ...prevMap }
           const targetOpacity = 0
-          const decrement = 0.8 / (dynAspectsFadeOut * 10) // Divide by (seconds * 10) for 100ms intervals
+          const decrement = MAX_ASPECT_LINE_OPACITY / (dynAspectsFadeOut * 10) // Divide by (seconds * 10) for 100ms intervals
 
           Object.keys(result).forEach((planetName) => {
             result[planetName].opacity = Math.max(result[planetName].opacity - decrement, targetOpacity)
@@ -1083,7 +1097,7 @@ export default function AstrologyCalculator() {
     setPointerAngle(resolvedRoute[0].angle, resolvedRoute[0].name)
     triggerPlanetAudioAtPointer(resolvedRoute[0].name, resolvedRoute[0].angle)
     if (chartAspects) {
-      triggerChartPlanetAspects(resolvedRoute[0].name, { targetOpacity: 0.8, transitionMs: 0 })
+      triggerChartPlanetAspects(resolvedRoute[0].name, { targetOpacity: MAX_ASPECT_LINE_OPACITY, transitionMs: 0 })
     }
     lastPlayedPlanetRef.current = resolvedRoute[0].name
 
@@ -1160,7 +1174,7 @@ export default function AstrologyCalculator() {
         triggerPlanetAudioAtPointer(nextStep.name, nextStep.angle)
         lastPlayedPlanetRef.current = nextStep.name
         if (chartAspects) {
-          triggerChartPlanetAspects(nextStep.name, { targetOpacity: 0.8, transitionMs: 0 })
+          triggerChartPlanetAspects(nextStep.name, { targetOpacity: MAX_ASPECT_LINE_OPACITY, transitionMs: 0 })
         }
         setPointerOpacity(1)
         onDone()
@@ -1187,7 +1201,7 @@ export default function AstrologyCalculator() {
         if (chartAspects) {
           const chartFadeInTimer = setTimeout(() => {
             if (navigationRunIdRef.current !== runId) return
-            triggerChartPlanetAspects(nextStep.name, { targetOpacity: 0.8, transitionMs: fadeInMs })
+            triggerChartPlanetAspects(nextStep.name, { targetOpacity: MAX_ASPECT_LINE_OPACITY, transitionMs: fadeInMs })
           }, 0)
           navigationTimeoutsRef.current.push(chartFadeInTimer)
         }
@@ -1241,7 +1255,7 @@ export default function AstrologyCalculator() {
         lastPlayedPlanetRef.current = nextStep.name
       }
       if (chartAspects && !teleport) {
-        triggerChartPlanetAspects(nextStep.name, { targetOpacity: 0.8, transitionMs: 100 })
+        triggerChartPlanetAspects(nextStep.name, { targetOpacity: MAX_ASPECT_LINE_OPACITY, transitionMs: 100 })
       }
 
       if (teleport) {
@@ -1927,7 +1941,7 @@ export default function AstrologyCalculator() {
       }
       aspectClickTimersRef.current[key] = []
 
-      const targetOpacity = Math.max(0, Math.min(1, options?.targetOpacity ?? 0.8))
+      const targetOpacity = Math.max(0, Math.min(MAX_ASPECT_LINE_OPACITY, options?.targetOpacity ?? MAX_ASPECT_LINE_OPACITY))
       const transitionMs = Math.max(0, options?.transitionMs ?? 0)
       setChartAspectsTransitionMs(transitionMs)
 
@@ -2000,7 +2014,7 @@ export default function AstrologyCalculator() {
       }
       aspectClickTimersRef.current[planetName] = []
 
-      const targetOpacity = 0.8
+      const targetOpacity = MAX_ASPECT_LINE_OPACITY
       setActivePlanetAspectsMap((prevMap) => ({
         ...prevMap,
         [planetName]: {
@@ -2845,6 +2859,11 @@ export default function AstrologyCalculator() {
                       const baseGlyphScale =
                         planet.name === "sun" ? 0.945 : planet.name === "mars" ? 0.69 : planet.name === "venus" ? 0.8 : 1
                       const glyphSize = 20 * baseGlyphScale
+                      const glyphGlowTiming = getGlyphGlowTiming(planet.name)
+                      const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
+                      const glyphBaseFilter =
+                        "drop-shadow(0 0 1.6px rgba(255,255,255,0.42)) drop-shadow(0 0 4px rgba(255,255,255,0.22))"
+                      const glyphFilter = isHovered ? `url(#glow) ${glyphBaseFilter}` : glyphBaseFilter
 
                       return (
                         <g
@@ -2908,8 +2927,11 @@ export default function AstrologyCalculator() {
                               width={glyphSize}
                               height={glyphSize}
                               preserveAspectRatio="xMidYMid meet"
-                              filter={isHovered ? "url(#glow)" : undefined}
-                              style={{ pointerEvents: "none" }}
+                              style={{
+                                pointerEvents: "none",
+                                filter: glyphFilter,
+                                animation: glyphGlowAnimation,
+                              }}
                             />
                           ) : (
                             <text
@@ -2927,8 +2949,9 @@ export default function AstrologyCalculator() {
                                 transform: `scale(${baseGlyphScale})`,
                                 transformOrigin: `${position.x}px ${position.y}px`,
                                 transition: "none",
+                                filter: glyphFilter,
+                                animation: glyphGlowAnimation,
                               }}
-                              filter={isHovered ? "url(#glow)" : undefined}
                             >
                               {glyphFallback}
                             </text>
@@ -3080,7 +3103,7 @@ export default function AstrologyCalculator() {
                               y2={trimmedSegment.y2}
                               stroke={stroke}
                               strokeWidth={strokeWidth}
-                              opacity="1"
+                              opacity={MAX_ASPECT_LINE_OPACITY}
                             />
                           </g>
                         )
@@ -3231,7 +3254,7 @@ export default function AstrologyCalculator() {
                           // Determine color; all aspect lines use 1px width.
                           let aspectColor = "#888"
                           const aspectWidth = 1
-                          let aspectOpacity = data.opacity
+                          let aspectOpacity = Math.min(data.opacity, MAX_ASPECT_LINE_OPACITY)
 
                           if (aspect.aspectType === "Oposición") {
                             aspectColor = "#FF8C00"

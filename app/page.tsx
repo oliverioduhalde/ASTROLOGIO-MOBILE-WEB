@@ -125,6 +125,8 @@ const MAX_ASPECT_LINE_OPACITY = 0.7
 const INTERACTIVE_PREVIEW_KEY = "__interactive_preview__"
 const GLYPH_INTERACTION_SCALE = 1.3
 const GLYPH_INTERACTION_FADE_MS = 700
+const GLYPH_INTERACTION_FADE_OUT_EXTRA_MS = 4000
+const GLYPH_INTERACTION_FADE_OUT_LEAD_MS = 4000
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
 
@@ -2885,8 +2887,12 @@ export default function AstrologyCalculator() {
                       const glyphInteractionFadeMs = isPointerFocused
                         ? pointerSynchronizedGlyphFadeMs
                         : GLYPH_INTERACTION_FADE_MS
+                      const glyphFadeOutDurationMs = glyphInteractionFadeMs + GLYPH_INTERACTION_FADE_OUT_EXTRA_MS
+                      const glyphTransition = isInteractionActive
+                        ? `transform ${glyphInteractionFadeMs}ms linear, opacity ${glyphInteractionFadeMs}ms linear`
+                        : `transform ${glyphFadeOutDurationMs}ms linear -${GLYPH_INTERACTION_FADE_OUT_LEAD_MS}ms, opacity ${glyphFadeOutDurationMs}ms linear -${GLYPH_INTERACTION_FADE_OUT_LEAD_MS}ms`
                       const baseGlyphScale =
-                        planet.name === "sun" ? 0.945 : planet.name === "mars" ? 0.69 : planet.name === "venus" ? 0.8 : 1
+                        planet.name === "sun" ? 0.945 : planet.name === "mars" ? 0.69 : planet.name === "venus" ? 0.88 : 1
                       const glyphSize = 20 * baseGlyphScale
                       const glyphGlowTiming = getGlyphGlowTiming(planet.name)
                       const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
@@ -2898,21 +2904,29 @@ export default function AstrologyCalculator() {
                         <g
                           key={planet.name}
                           style={{ cursor: "pointer" }}
-                          onMouseDown={() => handlePlanetMouseDown(planet.name, originalDegrees)}
-                          onTouchStart={() => handlePlanetMouseDown(planet.name, originalDegrees)}
-                          // Added onMouseEnter and onMouseLeave to track hovered glyph
-                          onMouseEnter={() => {
+                          onPointerDown={(event) => {
+                            event.preventDefault()
+                            handlePlanetMouseDown(planet.name, originalDegrees)
+                          }}
+                          onPointerEnter={() => {
                             setHoveredGlyph(planet.name)
                             setGlyphHoverOpacity(0)
                             triggerPlanetGlyphScale(planet.name, getAspectsForPlanet(planet.name))
                             triggerInteractivePlanetPreview(planet.name, adjustedDegrees)
                           }}
-                          onMouseLeave={() => {
+                          onPointerLeave={() => {
                             setHoveredGlyph((current) => (current === planet.name ? null : current))
                             setGlyphHoverOpacity(0)
                             clearInteractivePlanetPreview(true)
                           }}
                         >
+                          <circle
+                            cx={position.x}
+                            cy={position.y}
+                            r={Math.max(12, glyphSize * 0.8)}
+                            fill="transparent"
+                            style={{ pointerEvents: "all" }}
+                          />
                           {glyphSrc ? (
                             <image
                               href={glyphSrc}
@@ -2929,7 +2943,7 @@ export default function AstrologyCalculator() {
                                 transformOrigin: "center",
                                 transform: `scale(${interactionScale})`,
                                 opacity: isInteractionActive ? 1 : 0.92,
-                                transition: `transform ${glyphInteractionFadeMs}ms linear, opacity ${glyphInteractionFadeMs}ms linear`,
+                                transition: glyphTransition,
                               }}
                             />
                           ) : (
@@ -2948,7 +2962,7 @@ export default function AstrologyCalculator() {
                                 transform: `scale(${baseGlyphScale * interactionScale})`,
                                 transformOrigin: `${position.x}px ${position.y}px`,
                                 opacity: isInteractionActive ? 1 : 0.92,
-                                transition: `transform ${glyphInteractionFadeMs}ms linear, opacity ${glyphInteractionFadeMs}ms linear`,
+                                transition: glyphTransition,
                                 filter: glyphFilter,
                                 animation: glyphGlowAnimation,
                               }}

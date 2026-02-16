@@ -363,7 +363,7 @@ export function AstroChart({ planets, ascendant, mc, size = 400, aspects = [] }:
         const glyphSrc = PLANET_GLYPH_SVGS[planet.name]
         const glyphFallback = planet.name[0]?.toUpperCase() || "?"
         const baseGlyphScale =
-          planet.name === "sun" ? 0.945 : planet.name === "mars" ? 0.69 : planet.name === "venus" ? 0.8 : 1
+          planet.name === "sun" ? 0.945 : planet.name === "mars" ? 0.69 : planet.name === "venus" ? 0.88 : 1
         const glyphSize = size * 0.04 * baseGlyphScale
         const glyphGlowTiming = getGlyphGlowTiming(planet.name)
         const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`

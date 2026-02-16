@@ -81,8 +81,8 @@ function getGlyphGlowTiming(glyphName: string) {
   for (let i = 0; i < glyphName.length; i += 1) {
     hash = (hash * 31 + glyphName.charCodeAt(i)) % 100000
   }
-  const durationSec = 1 + (hash % 2000) / 1000
-  const delaySec = -((Math.floor(hash / 7) % 3000) / 1000)
+  const durationSec = 5 + (hash % 5000) / 1000
+  const delaySec = -((Math.floor(hash / 7) % 10000) / 1000)
   return {
     durationSec: durationSec.toFixed(3),
     delaySec: delaySec.toFixed(3),
@@ -368,7 +368,7 @@ export function AstroChart({ planets, ascendant, mc, size = 400, aspects = [] }:
         const glyphGlowTiming = getGlyphGlowTiming(planet.name)
         const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
         const glyphFilter =
-          "drop-shadow(0 0 1.6px rgba(255,255,255,0.42)) drop-shadow(0 0 4px rgba(255,255,255,0.22))"
+          "drop-shadow(0 0 3.2px rgba(255,255,255,0.84)) drop-shadow(0 0 8px rgba(255,255,255,0.44))"
         const lineEnd = polarToCartesian(cx, cy, rSignsInner - 2, theta)
 
         return (

@@ -128,8 +128,8 @@ function getGlyphGlowTiming(glyphName: string) {
   for (let i = 0; i < glyphName.length; i += 1) {
     hash = (hash * 31 + glyphName.charCodeAt(i)) % 100000
   }
-  const durationSec = 1 + (hash % 2000) / 1000 // 1s..3s
-  const delaySec = -((Math.floor(hash / 7) % 3000) / 1000) // desync start phase
+  const durationSec = 5 + (hash % 5000) / 1000 // 5s..10s
+  const delaySec = -((Math.floor(hash / 7) % 10000) / 1000) // desync start phase
   return {
     durationSec: durationSec.toFixed(3),
     delaySec: delaySec.toFixed(3),
@@ -2787,7 +2787,7 @@ export default function AstrologyCalculator() {
         {horoscopeData && (
           <div className="space-y-8">
             {showChart && (
-              <div className="mb-8 flex justify-center">
+              <div className="mb-8 flex justify-center" style={{ transform: "translateY(-10px)" }}>
                 <div className="relative w-full max-w-[400px] aspect-square md:w-[min(90vh,90vw)] md:h-[min(90vh,90vw)] md:max-w-none md:aspect-auto">
                   <svg viewBox="0 0 400 400" className="w-full h-full scale-90 origin-center">
                     <defs>
@@ -2862,7 +2862,7 @@ export default function AstrologyCalculator() {
                       const glyphGlowTiming = getGlyphGlowTiming(planet.name)
                       const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
                       const glyphBaseFilter =
-                        "drop-shadow(0 0 1.6px rgba(255,255,255,0.42)) drop-shadow(0 0 4px rgba(255,255,255,0.22))"
+                        "drop-shadow(0 0 3.2px rgba(255,255,255,0.84)) drop-shadow(0 0 8px rgba(255,255,255,0.44))"
                       const glyphFilter = isHovered ? `url(#glow) ${glyphBaseFilter}` : glyphBaseFilter
 
                       return (

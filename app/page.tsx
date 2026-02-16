@@ -2842,7 +2842,8 @@ export default function AstrologyCalculator() {
                       const glyphFallback = PLANET_GLYPH_FALLBACK_LABELS[planet.name] || planet.label
                       // Added hover detection for glyphs
                       const isHovered = hoveredGlyph === planet.name
-                      const baseGlyphScale = planet.name === "sun" ? 1.5 : planet.name === "venus" ? 0.8 : 1
+                      const baseGlyphScale =
+                        planet.name === "sun" ? 0.75 : planet.name === "mars" ? 0.5 : planet.name === "venus" ? 0.8 : 1
                       const glyphSize = 20 * baseGlyphScale
 
                       return (

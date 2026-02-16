@@ -122,6 +122,11 @@ const EARTH_CENTER_X = 200
 const EARTH_CENTER_Y = 200
 const EARTH_RADIUS = 10
 const MAX_ASPECT_LINE_OPACITY = 0.7
+const INTERACTIVE_PREVIEW_KEY = "__interactive_preview__"
+const GLYPH_INTERACTION_SCALE = 1.5
+const GLYPH_INTERACTION_FADE_MS = 700
+const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
+const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
 
 function getGlyphGlowTiming(glyphName: string) {
   let hash = 0
@@ -314,6 +319,7 @@ export default function AstrologyCalculator() {
   const [isPaused, setIsPaused] = useState(false)
 
   const [hoveredGlyph, setHoveredGlyph] = useState<string | null>(null)
+  const [pressedGlyph, setPressedGlyph] = useState<string | null>(null)
   const [glyphHoverOpacity, setGlyphHoverOpacity] = useState(0)
   const [showAspectIndicator, setShowAspectIndicator] = useState(false) // Declared showAspectIndicator
   const aspectClickTimersRef = useRef<Record<string, NodeJS.Timeout[]>>({})
@@ -321,6 +327,8 @@ export default function AstrologyCalculator() {
     {},
   )
   const glyphScaleTriggerLockRef = useRef<Record<string, number>>({})
+  const pressedGlyphReleaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const interactivePreviewClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const skipNextAutoCalculateRef = useRef(false)
   const [locationSuggestions, setLocationSuggestions] = useState<GeoSuggestion[]>([])
   const [isResolvingLocation, setIsResolvingLocation] = useState(false)
@@ -430,6 +438,14 @@ export default function AstrologyCalculator() {
       if (startButtonPhaseTimeoutRef.current) {
         clearTimeout(startButtonPhaseTimeoutRef.current)
         startButtonPhaseTimeoutRef.current = null
+      }
+      if (pressedGlyphReleaseTimeoutRef.current) {
+        clearTimeout(pressedGlyphReleaseTimeoutRef.current)
+        pressedGlyphReleaseTimeoutRef.current = null
+      }
+      if (interactivePreviewClearTimeoutRef.current) {
+        clearTimeout(interactivePreviewClearTimeoutRef.current)
+        interactivePreviewClearTimeoutRef.current = null
       }
     }
   }, [clearAspectTimers])
@@ -742,7 +758,7 @@ export default function AstrologyCalculator() {
   }, [isLoopRunning, stopBackgroundSound, stopElementBackground])
 
   useEffect(() => {
-    if (hoveredGlyph && isLoopRunning) {
+    if (hoveredGlyph) {
       let opacity = 0
       const fadeInInterval = setInterval(() => {
         opacity += 0.02 // 5 seconds / 100 steps = 50ms per step
@@ -773,7 +789,7 @@ export default function AstrologyCalculator() {
         }
       }
     }
-  }, [hoveredGlyph, isLoopRunning, glyphHoverOpacity])
+  }, [hoveredGlyph, glyphHoverOpacity])
 
   useEffect(() => {
     if (
@@ -830,7 +846,13 @@ export default function AstrologyCalculator() {
     if (navigationMode === "astral_chord" || navigationMode === "sequential" || navigationMode === "aspectual") {
       return
     }
-    if (showDynAspects && currentPlanetUnderPointer === null && Object.keys(activePlanetAspectsMap).length > 0) {
+    if (
+      showDynAspects &&
+      currentPlanetUnderPointer === null &&
+      !hoveredGlyph &&
+      !pressedGlyph &&
+      Object.keys(activePlanetAspectsMap).length > 0
+    ) {
       const fadeOutInterval = setInterval(() => {
         setActivePlanetAspectsMap((prevMap) => {
           const result = { ...prevMap }
@@ -860,7 +882,7 @@ export default function AstrologyCalculator() {
         clearTimeout(fadeOutTimeout)
       }
     }
-  }, [currentPlanetUnderPointer, showDynAspects, activePlanetAspectsMap, dynAspectsFadeOut, navigationMode])
+  }, [currentPlanetUnderPointer, showDynAspects, activePlanetAspectsMap, dynAspectsFadeOut, navigationMode, hoveredGlyph, pressedGlyph])
 
   useEffect(() => {
     return () => {
@@ -898,8 +920,17 @@ export default function AstrologyCalculator() {
     stopBackgroundSound()
     stopElementBackground()
     setHoveredGlyph(null)
+    setPressedGlyph(null)
     setGlyphHoverOpacity(0)
     setActivePlanetAspectsMap({})
+    if (pressedGlyphReleaseTimeoutRef.current) {
+      clearTimeout(pressedGlyphReleaseTimeoutRef.current)
+      pressedGlyphReleaseTimeoutRef.current = null
+    }
+    if (interactivePreviewClearTimeoutRef.current) {
+      clearTimeout(interactivePreviewClearTimeoutRef.current)
+      interactivePreviewClearTimeoutRef.current = null
+    }
     stopAll()
     setShowSubject(false)
     setShowChart(true)
@@ -1932,6 +1963,69 @@ export default function AstrologyCalculator() {
     )
   }
 
+  const clearInteractivePlanetPreview = useCallback((fadeOut = true) => {
+    if (interactivePreviewClearTimeoutRef.current) {
+      clearTimeout(interactivePreviewClearTimeoutRef.current)
+      interactivePreviewClearTimeoutRef.current = null
+    }
+
+    if (!fadeOut) {
+      setActivePlanetAspectsMap((prevMap) => {
+        if (!prevMap[INTERACTIVE_PREVIEW_KEY]) return prevMap
+        const updated = { ...prevMap }
+        delete updated[INTERACTIVE_PREVIEW_KEY]
+        return updated
+      })
+      return
+    }
+
+    setActivePlanetAspectsMap((prevMap) => {
+      const current = prevMap[INTERACTIVE_PREVIEW_KEY]
+      if (!current) return prevMap
+      return {
+        ...prevMap,
+        [INTERACTIVE_PREVIEW_KEY]: {
+          aspects: current.aspects,
+          opacity: 0,
+        },
+      }
+    })
+
+    interactivePreviewClearTimeoutRef.current = setTimeout(() => {
+      setActivePlanetAspectsMap((prevMap) => {
+        if (!prevMap[INTERACTIVE_PREVIEW_KEY]) return prevMap
+        const updated = { ...prevMap }
+        delete updated[INTERACTIVE_PREVIEW_KEY]
+        return updated
+      })
+      interactivePreviewClearTimeoutRef.current = null
+    }, GLYPH_INTERACTION_FADE_MS)
+  }, [])
+
+  const triggerInteractivePlanetPreview = useCallback(
+    (planetName: string, adjustedDegrees: number) => {
+      const aspectsForPlanet = getAspectsForPlanet(planetName)
+
+      triggerPlanetAudioAtPointer(planetName, adjustedDegrees, {
+        forceChordProfile: navigationMode === "astral_chord",
+      })
+
+      if (aspectsForPlanet.length === 0) {
+        clearInteractivePlanetPreview(false)
+        return
+      }
+
+      setActivePlanetAspectsMap((prevMap) => ({
+        ...prevMap,
+        [INTERACTIVE_PREVIEW_KEY]: {
+          aspects: aspectsForPlanet,
+          opacity: MAX_ASPECT_LINE_OPACITY,
+        },
+      }))
+    },
+    [clearInteractivePlanetPreview, getAspectsForPlanet, navigationMode, triggerPlanetAudioAtPointer],
+  )
+
   const triggerChartPlanetAspects = useCallback(
     (planetName: string, options?: { targetOpacity?: number; transitionMs?: number }) => {
       const key = chartAspectsKeyRef.current
@@ -1981,100 +2075,20 @@ export default function AstrologyCalculator() {
   }
 
   const handlePlanetMouseDown = (planetName: string, degrees: number) => {
-    // Added hover detection logic and start animation
     setHoveredGlyph(planetName)
-    setGlyphHoverOpacity(0) // Reset opacity to start fade in
+    setPressedGlyph(planetName)
+    setGlyphHoverOpacity(0)
+    triggerPlanetGlyphScale(planetName, getAspectsForPlanet(planetName))
+    triggerInteractivePlanetPreview(planetName, degrees)
 
-    const planet = horoscopeData?.planets?.find((p) => p.name === planetName)
-    if (!planet) return
-
-    const aspectsForPlanet = getAspectsForPlanet(planetName)
-    triggerPlanetGlyphScale(planetName, aspectsForPlanet)
-
-    const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
-    const mcDegrees = horoscopeData?.mc?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
-
-    const currentPlanets = horoscopeData?.planets ?? []
-
-    playPlanetSound(
-      planetName,
-      degrees,
-      planet.declination || 0,
-      aspectsForPlanet,
-      currentPlanets,
-      ascDegrees,
-      mcDegrees,
-      40,
-    )
-
-    if (showDynAspects && aspectsForPlanet.length > 0) {
-      const existingTimers = aspectClickTimersRef.current[planetName]
-      if (existingTimers) {
-        existingTimers.forEach((timerId) => clearTimeout(timerId))
-      }
-      aspectClickTimersRef.current[planetName] = []
-
-      const targetOpacity = MAX_ASPECT_LINE_OPACITY
-      setActivePlanetAspectsMap((prevMap) => ({
-        ...prevMap,
-        [planetName]: {
-          aspects: aspectsForPlanet,
-          opacity: 0,
-        },
-      }))
-
-      const fadeInInterval = setInterval(() => {
-        setActivePlanetAspectsMap((prevMap) => {
-          const current = prevMap[planetName]
-          if (!current) return prevMap
-          const increment = targetOpacity / Math.max(1, dynAspectsFadeIn * 10)
-          const newOpacity = Math.min(current.opacity + increment, targetOpacity)
-          return {
-            ...prevMap,
-            [planetName]: {
-              aspects: current.aspects,
-              opacity: newOpacity,
-            },
-          }
-        })
-      }, 100)
-
-      const fadeInTimeout = setTimeout(() => {
-        clearInterval(fadeInInterval)
-      }, dynAspectsFadeIn * 1000)
-      aspectClickTimersRef.current[planetName].push(fadeInInterval, fadeInTimeout)
-
-      const fadeOutStart = (dynAspectsFadeIn + dynAspectsSustain) * 1000
-      const fadeOutStartTimeout = setTimeout(() => {
-        const fadeOutInterval = setInterval(() => {
-          setActivePlanetAspectsMap((prevMap) => {
-            const current = prevMap[planetName]
-            if (!current) return prevMap
-            const decrement = targetOpacity / Math.max(1, dynAspectsFadeOut * 10)
-            const newOpacity = Math.max(current.opacity - decrement, 0)
-            if (newOpacity <= 0) {
-              const updated = { ...prevMap }
-              delete updated[planetName]
-              return updated
-            }
-            return {
-              ...prevMap,
-              [planetName]: {
-                aspects: current.aspects,
-                opacity: newOpacity,
-              },
-            }
-          })
-        }, 100)
-
-        const fadeOutTimeout = setTimeout(() => {
-          clearInterval(fadeOutInterval)
-        }, dynAspectsFadeOut * 1000)
-
-        aspectClickTimersRef.current[planetName].push(fadeOutInterval, fadeOutTimeout)
-      }, fadeOutStart)
-      aspectClickTimersRef.current[planetName].push(fadeOutStartTimeout)
+    if (pressedGlyphReleaseTimeoutRef.current) {
+      clearTimeout(pressedGlyphReleaseTimeoutRef.current)
     }
+    pressedGlyphReleaseTimeoutRef.current = setTimeout(() => {
+      setPressedGlyph((current) => (current === planetName ? null : current))
+      clearInteractivePlanetPreview(true)
+      pressedGlyphReleaseTimeoutRef.current = null
+    }, GLYPH_INTERACTION_FADE_MS + 800)
   }
 
   const isPlanetUnderPointer = (planetDegrees: number, pointerAngle: number): boolean => {
@@ -2856,6 +2870,10 @@ export default function AstrologyCalculator() {
                       const glyphFallback = PLANET_GLYPH_FALLBACK_LABELS[planet.name] || planet.label
                       // Added hover detection for glyphs
                       const isHovered = hoveredGlyph === planet.name
+                      const isPressed = pressedGlyph === planet.name
+                      const isPointerFocused = currentPlanetUnderPointer === planet.name
+                      const isInteractionActive = isHovered || isPressed || isPointerFocused
+                      const interactionScale = isInteractionActive ? GLYPH_INTERACTION_SCALE : 1
                       const baseGlyphScale =
                         planet.name === "sun" ? 0.945 : planet.name === "mars" ? 0.69 : planet.name === "venus" ? 0.8 : 1
                       const glyphSize = 20 * baseGlyphScale
@@ -2874,49 +2892,14 @@ export default function AstrologyCalculator() {
                           // Added onMouseEnter and onMouseLeave to track hovered glyph
                           onMouseEnter={() => {
                             setHoveredGlyph(planet.name)
-                            setGlyphHoverOpacity(0) // Reset opacity to start fade in
+                            setGlyphHoverOpacity(0)
                             triggerPlanetGlyphScale(planet.name, getAspectsForPlanet(planet.name))
-
-                            if (isLoopRunning && showDynAspects) {
-                              const planetAspects = horoscopeData.aspects.filter(
-                                (aspect) =>
-                                  (aspect.point1.name === planet.name ||
-                                    aspect.point2.name === planet.name ||
-                                    aspect.point1.name === "asc" ||
-                                    aspect.point1.name === "mc" ||
-                                    aspect.point2.name === "asc" ||
-                                    aspect.point2.name === "mc") &&
-                                  aspect.point1.name !== aspect.point2.name &&
-                                  ["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"].includes(
-                                    aspect.aspectType,
-                                  ),
-                              )
-                              // Update activePlanetAspectsMap for the hovered glyph
-                              setActivePlanetAspectsMap((prevMap) => ({
-                                ...prevMap,
-                                [planet.name]: {
-                                  aspects: planetAspects,
-                                  opacity: 1, // Fully visible when hovered
-                                },
-                              }))
-                              setDynAspectsOpacity(1) // Ensure overall opacity is set
-                            }
+                            triggerInteractivePlanetPreview(planet.name, adjustedDegrees)
                           }}
                           onMouseLeave={() => {
-                            setHoveredGlyph(null)
-                            setGlyphHoverOpacity(0) // Start fade out
-                            if (isLoopRunning && showDynAspects) {
-                              // Remove the aspect map for the hovered glyph
-                              setActivePlanetAspectsMap((prevMap) => {
-                                const newMap = { ...prevMap }
-                                delete newMap[planet.name]
-                                return newMap
-                              })
-                              // Check if any other glyphs are still active to determine overall opacity
-                              if (Object.keys(activePlanetAspectsMap).length === 0) {
-                                setDynAspectsOpacity(0)
-                              }
-                            }
+                            setHoveredGlyph((current) => (current === planet.name ? null : current))
+                            setGlyphHoverOpacity(0)
+                            clearInteractivePlanetPreview(true)
                           }}
                         >
                           {glyphSrc ? (
@@ -2931,6 +2914,11 @@ export default function AstrologyCalculator() {
                                 pointerEvents: "none",
                                 filter: glyphFilter,
                                 animation: glyphGlowAnimation,
+                                transformBox: "fill-box",
+                                transformOrigin: "center",
+                                transform: `scale(${interactionScale})`,
+                                opacity: isInteractionActive ? 1 : 0.92,
+                                transition: `transform ${GLYPH_INTERACTION_FADE_MS}ms ease, opacity ${GLYPH_INTERACTION_FADE_MS}ms ease`,
                               }}
                             />
                           ) : (
@@ -2946,9 +2934,10 @@ export default function AstrologyCalculator() {
                                 paintOrder: "stroke fill",
                                 stroke: "#ffffff",
                                 strokeWidth: "0.5px",
-                                transform: `scale(${baseGlyphScale})`,
+                                transform: `scale(${baseGlyphScale * interactionScale})`,
                                 transformOrigin: `${position.x}px ${position.y}px`,
-                                transition: "none",
+                                opacity: isInteractionActive ? 1 : 0.92,
+                                transition: `transform ${GLYPH_INTERACTION_FADE_MS}ms ease, opacity ${GLYPH_INTERACTION_FADE_MS}ms ease`,
                                 filter: glyphFilter,
                                 animation: glyphGlowAnimation,
                               }}
@@ -3161,7 +3150,7 @@ export default function AstrologyCalculator() {
                             cy="200"
                             r="14"
                             fill="white"
-                            fillOpacity="0.15"
+                            fillOpacity={ORBIT_POINTER_FILL_OPACITY}
                             stroke="white"
                             strokeWidth="1"
                             opacity="1"
@@ -3176,7 +3165,7 @@ export default function AstrologyCalculator() {
                             cy={EARTH_CENTER_Y}
                             r={CHORD_POINTER_RADIUS}
                             fill="white"
-                            fillOpacity="0.12"
+                            fillOpacity={CHORD_POINTER_FILL_OPACITY}
                             stroke="white"
                             strokeWidth="1.25"
                             opacity={pointerOpacity}
@@ -3204,7 +3193,7 @@ export default function AstrologyCalculator() {
                               cy="200"
                               r="14"
                               fill="white"
-                              fillOpacity="0.15"
+                              fillOpacity={ORBIT_POINTER_FILL_OPACITY}
                               stroke="white"
                               strokeWidth="1"
                               opacity={pointerOpacity}

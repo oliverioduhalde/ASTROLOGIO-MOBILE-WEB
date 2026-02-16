@@ -165,6 +165,7 @@ const FM_PAD_OCTAVE_SHIFT_SEMITONES = 12 // One octave up vs current FM baseline
 const FM_PAD_GAIN_BOOST_FACTOR = 4 // +300% (4x total)
 const BOWL_SYNTH_OCTAVE_SHIFT_SEMITONES = 0
 const BOWL_GAIN_BOOST_FACTOR = 3
+const GLOBAL_REVERB_RETURN_GAIN = 1.8
 const ASPECT_SEMITONE_OFFSETS: Record<string, number> = {
   Conjunción: 0,
   Oposición: 14,
@@ -669,7 +670,7 @@ export function usePlanetAudio(
           globalReverbShelf.frequency.value = 800
           globalReverbShelf.gain.value = -6
           const globalReverbReturn = audioContextRef.current.createGain()
-          globalReverbReturn.gain.value = 1
+          globalReverbReturn.gain.value = GLOBAL_REVERB_RETURN_GAIN
 
           globalReverbSend.connect(globalReverbConvolver)
           globalReverbConvolver.connect(globalReverbShelf)
@@ -1516,8 +1517,19 @@ export function usePlanetAudio(
             aspectPanner.setPosition(aspectPosition.x, aspectPosition.y, aspectPosition.z)
 
             const aspectGainNode = ctx.createGain()
+            const aspectDryGainNode = ctx.createGain()
+            const aspectWetSendGainNode = ctx.createGain()
+            aspectDryGainNode.gain.value = Math.max(0, 1 - resolvedReverbWetMix)
+            aspectWetSendGainNode.gain.value = resolvedReverbWetMix
             aspectSource.connect(aspectGainNode)
-            aspectGainNode.connect(aspectPanner.input)
+            aspectGainNode.connect(aspectDryGainNode)
+            aspectGainNode.connect(aspectWetSendGainNode)
+            aspectDryGainNode.connect(aspectPanner.input)
+            if (globalReverbSendRef.current) {
+              aspectWetSendGainNode.connect(globalReverbSendRef.current)
+            } else {
+              aspectWetSendGainNode.connect(aspectPanner.input)
+            }
 
             const aspectVolume =
               typeof aspectVolumeOverride === "number" ? aspectVolumeOverride : aspectsSoundVolumeRef.current
@@ -1647,7 +1659,7 @@ export function usePlanetAudio(
         globalReverbShelf.frequency.value = 800
         globalReverbShelf.gain.value = -6
         const globalReverbReturn = offlineContext.createGain()
-        globalReverbReturn.gain.value = 1
+        globalReverbReturn.gain.value = GLOBAL_REVERB_RETURN_GAIN
         globalReverbSend.connect(globalReverbConvolver)
         globalReverbConvolver.connect(globalReverbShelf)
         globalReverbShelf.connect(globalReverbReturn)

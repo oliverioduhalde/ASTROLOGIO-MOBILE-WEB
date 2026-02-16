@@ -2772,7 +2772,7 @@ export default function AstrologyCalculator() {
             {showChart && (
               <div className="mb-8 flex justify-center">
                 <div className="relative w-full max-w-[400px] aspect-square md:w-[min(90vh,90vw)] md:h-[min(90vh,90vw)] md:max-w-none md:aspect-auto">
-                  <svg viewBox="0 0 400 400" className="w-full h-full">
+                  <svg viewBox="0 0 400 400" className="w-full h-full scale-90 origin-center">
                     <defs>
                       <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
                         <feGaussianBlur stdDeviation="3" result="coloredBlur" />

@@ -125,8 +125,7 @@ const MAX_ASPECT_LINE_OPACITY = 0.7
 const INTERACTIVE_PREVIEW_KEY = "__interactive_preview__"
 const GLYPH_INTERACTION_SCALE = 1.3
 const GLYPH_INTERACTION_FADE_MS = 700
-const GLYPH_INTERACTION_FADE_OUT_EXTRA_MS = 4000
-const GLYPH_INTERACTION_FADE_OUT_LEAD_MS = 4000
+const GLYPH_INTERACTION_FADE_SHORTEN_MS = 1000
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
 
@@ -2884,13 +2883,12 @@ export default function AstrologyCalculator() {
                       const isPointerFocused = currentPlanetUnderPointer === planet.name
                       const isInteractionActive = isHovered || isPressed || isPointerFocused
                       const interactionScale = isInteractionActive ? GLYPH_INTERACTION_SCALE : 1
-                      const glyphInteractionFadeMs = isPointerFocused
-                        ? pointerSynchronizedGlyphFadeMs
-                        : GLYPH_INTERACTION_FADE_MS
-                      const glyphFadeOutDurationMs = glyphInteractionFadeMs + GLYPH_INTERACTION_FADE_OUT_EXTRA_MS
-                      const glyphTransition = isInteractionActive
-                        ? `transform ${glyphInteractionFadeMs}ms linear, opacity ${glyphInteractionFadeMs}ms linear`
-                        : `transform ${glyphFadeOutDurationMs}ms linear -${GLYPH_INTERACTION_FADE_OUT_LEAD_MS}ms, opacity ${glyphFadeOutDurationMs}ms linear -${GLYPH_INTERACTION_FADE_OUT_LEAD_MS}ms`
+                      const glyphInteractionFadeMs = Math.max(
+                        160,
+                        (isPointerFocused ? pointerSynchronizedGlyphFadeMs : GLYPH_INTERACTION_FADE_MS) -
+                          GLYPH_INTERACTION_FADE_SHORTEN_MS,
+                      )
+                      const glyphTransition = `transform ${glyphInteractionFadeMs}ms linear, opacity ${glyphInteractionFadeMs}ms linear`
                       const baseGlyphScale =
                         planet.name === "sun" ? 0.945 : planet.name === "mars" ? 0.69 : planet.name === "venus" ? 0.88 : 1
                       const glyphSize = 20 * baseGlyphScale

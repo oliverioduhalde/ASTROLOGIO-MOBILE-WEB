@@ -485,11 +485,12 @@ export default function AstrologyCalculator() {
     const subtitleInterval = setInterval(() => {
       const previousIndex = loadingIntroIndexRef.current
       const nextIndex = (previousIndex + 1) % LOADING_INTRO_PARAGRAPHS.length
+      const hasDisplayedFullPass = previousIndex === LOADING_INTRO_PARAGRAPHS.length - 1
       loadingIntroIndexRef.current = nextIndex
       setLoadingIntroPrevIndex(previousIndex)
       setLoadingIntroIndex(nextIndex)
       setLoadingIntroTick((prev) => prev + 1)
-      if (nextIndex === LOADING_INTRO_PARAGRAPHS.length - 1) {
+      if (hasDisplayedFullPass) {
         setLoadingIntroCompleted(true)
       }
     }, LOADING_SUBTITLE_STEP_MS)

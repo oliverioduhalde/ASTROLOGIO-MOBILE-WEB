@@ -83,7 +83,7 @@ const MODE_NAME_BY_SIGN_INDEX: Record<number, string> = {
 }
 
 type AudioEngineMode = "samples" | "hybrid" | "fm_pad" | "tibetan_bowls" | "tibetan_samples"
-type NavigationMode = "astral_chord" | "radial" | "sequential" | "aspectual"
+type NavigationMode = "astral_chord" | "radial" | "sequential"
 
 const SEQUENTIAL_PLANET_ORDER = [
   "sun",
@@ -113,9 +113,65 @@ const CHORD_ASPECTS_FADE_OUT_MS = 10000
 
 const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
   astral_chord: "CHORD",
-  radial: "RADIAL",
+  radial: "ORBITAL",
   sequential: "CHART",
-  aspectual: "ASPECT",
+}
+const NAVIGATION_MODES: NavigationMode[] = ["astral_chord", "radial", "sequential"]
+const EXPORT_MODE_SUFFIX: Record<NavigationMode, string> = {
+  astral_chord: "CHORD",
+  radial: "ORBITAL",
+  sequential: "CHART",
+}
+const DOWNLOAD_TOOLTIP_TEXT = "download audio file"
+// Zodiac SVG set sourced from Tabler Icons (MIT).
+const ZODIAC_GLYPH_SVGS: Record<string, string> = {
+  aries: "/zodiac-glyphs/aries.svg",
+  taurus: "/zodiac-glyphs/taurus.svg",
+  gemini: "/zodiac-glyphs/gemini.svg",
+  cancer: "/zodiac-glyphs/cancer.svg",
+  leo: "/zodiac-glyphs/leo.svg",
+  virgo: "/zodiac-glyphs/virgo.svg",
+  libra: "/zodiac-glyphs/libra.svg",
+  scorpio: "/zodiac-glyphs/scorpio.svg",
+  sagittarius: "/zodiac-glyphs/sagittarius.svg",
+  capricorn: "/zodiac-glyphs/capricorn.svg",
+  aquarius: "/zodiac-glyphs/aquarius.svg",
+  pisces: "/zodiac-glyphs/pisces.svg",
+}
+const ZODIAC_SIGN_FALLBACK_ORDER = [
+  "aries",
+  "taurus",
+  "gemini",
+  "cancer",
+  "leo",
+  "virgo",
+  "libra",
+  "scorpio",
+  "sagittarius",
+  "capricorn",
+  "aquarius",
+  "pisces",
+]
+const ZODIAC_SIGN_KEY_BY_LABEL: Record<string, string> = {
+  aries: "aries",
+  tauro: "taurus",
+  taurus: "taurus",
+  geminis: "gemini",
+  gemini: "gemini",
+  cancer: "cancer",
+  leo: "leo",
+  virgo: "virgo",
+  libra: "libra",
+  escorpio: "scorpio",
+  scorpio: "scorpio",
+  sagitario: "sagittarius",
+  sagittarius: "sagittarius",
+  capricornio: "capricorn",
+  capricorn: "capricorn",
+  acuario: "aquarius",
+  aquarius: "aquarius",
+  piscis: "pisces",
+  pisces: "pisces",
 }
 
 const EARTH_CENTER_X = 200
@@ -146,6 +202,13 @@ const LOADING_INTRO_PARAGRAPHS = [
   "Its spatial placement and tuning emerge from astrological chart coordinates and interplanetary relationships calculated from the chart itself.",
   "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here and now.",
 ]
+
+function normalizeSignLabel(label: string): string {
+  return label
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+}
 
 function getGlyphGlowTiming(glyphName: string) {
   let hash = 0
@@ -270,11 +333,14 @@ export default function AstrologyCalculator() {
   const [dynAspectsOpacity, setDynAspectsOpacity] = useState(0)
   const [showChart, setShowChart] = useState(true)
   const [showCircle, setShowCircle] = useState(false)
+  const [showSignsRing, setShowSignsRing] = useState(false)
+  const [showHousesRing, setShowHousesRing] = useState(false)
   const [showMatrix, setShowMatrix] = useState(false)
   const [showDegrees, setShowDegrees] = useState(false)
   const [showAngles, setShowAngles] = useState(false)
   const [showAstroChart, setShowAstroChart] = useState(false)
   const [skipLoadingIntro, setSkipLoadingIntro] = useState(false)
+  const [loadingIntroCompleted, setLoadingIntroCompleted] = useState(false)
   const [loadingIntroIndex, setLoadingIntroIndex] = useState(0)
   const [loadingIntroPrevIndex, setLoadingIntroPrevIndex] = useState<number | null>(null)
   const [loadingIntroTick, setLoadingIntroTick] = useState(0)
@@ -287,7 +353,6 @@ export default function AstrologyCalculator() {
   const [showVuMeter, setShowVuMeter] = useState(false)
   const [showModeInfo, setShowModeInfo] = useState(false)
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
-  const [exportMode, setExportMode] = useState<NavigationMode>("radial")
   const [isExportingMp3, setIsExportingMp3] = useState(false)
   const [pendingMp3Download, setPendingMp3Download] = useState<{ url: string; fileName: string } | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
@@ -406,7 +471,7 @@ export default function AstrologyCalculator() {
       chordReverbMixPercent,
     })
   const lastPlayedPlanetRef = useRef<string | null>(null)
-  const showLoadingIntroScreen = loadingProgress < 100 && !skipLoadingIntro
+  const showLoadingIntroScreen = !skipLoadingIntro && (loadingProgress < 100 || !loadingIntroCompleted)
 
   useEffect(() => {
     if (!showLoadingIntroScreen) return
@@ -415,6 +480,7 @@ export default function AstrologyCalculator() {
     setLoadingIntroIndex(0)
     setLoadingIntroPrevIndex(null)
     setLoadingIntroTick(0)
+    setLoadingIntroCompleted(false)
 
     const subtitleInterval = setInterval(() => {
       const previousIndex = loadingIntroIndexRef.current
@@ -423,6 +489,9 @@ export default function AstrologyCalculator() {
       setLoadingIntroPrevIndex(previousIndex)
       setLoadingIntroIndex(nextIndex)
       setLoadingIntroTick((prev) => prev + 1)
+      if (nextIndex === LOADING_INTRO_PARAGRAPHS.length - 1) {
+        setLoadingIntroCompleted(true)
+      }
     }, LOADING_SUBTITLE_STEP_MS)
 
     return () => clearInterval(subtitleInterval)
@@ -841,7 +910,6 @@ export default function AstrologyCalculator() {
     if (
       navigationMode === "astral_chord" ||
       navigationMode === "sequential" ||
-      navigationMode === "aspectual" ||
       !showDynAspects ||
       !currentPlanetUnderPointer ||
       !horoscopeData?.aspects
@@ -889,7 +957,7 @@ export default function AstrologyCalculator() {
   }, [currentPlanetUnderPointer, showDynAspects, dynAspectsFadeIn, horoscopeData?.aspects, navigationMode])
 
   useEffect(() => {
-    if (navigationMode === "astral_chord" || navigationMode === "sequential" || navigationMode === "aspectual") {
+    if (navigationMode === "astral_chord" || navigationMode === "sequential") {
       return
     }
     if (
@@ -999,6 +1067,8 @@ export default function AstrologyCalculator() {
     setShowAspects(false)
     setShowMatrix(false)
     setShowCircle(false)
+    setShowSignsRing(false)
+    setShowHousesRing(false)
     setShowDegrees(false)
     setShowAngles(false)
     setShowAstroChart(false)
@@ -1064,60 +1134,6 @@ export default function AstrologyCalculator() {
     if (!horoscopeData?.planets) return []
     const available = new Set(horoscopeData.planets.map((p) => p.name.toLowerCase()))
     return SEQUENTIAL_PLANET_ORDER.filter((name) => available.has(name))
-  }
-
-  const buildAspectualRoute = (): string[] => {
-    if (!horoscopeData?.planets) return []
-    const allowedAspects = new Set(["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"])
-    const aspectWeight: Record<string, number> = {
-      "Conjunción": 3,
-      "Cuadrado": 2.8,
-      "Oposición": 2.6,
-      "Trígono": 2.1,
-      "Sextil": 1.6,
-    }
-    const planets = horoscopeData.planets.map((p) => p.name.toLowerCase())
-    const planetSet = new Set(planets)
-    const score: Record<string, number> = Object.fromEntries(planets.map((name) => [name, 0]))
-    const links: Record<string, Record<string, number>> = Object.fromEntries(planets.map((name) => [name, {}]))
-
-    for (const aspect of horoscopeData.aspects || []) {
-      if (!allowedAspects.has(aspect.aspectType)) continue
-      const a = aspect.point1.name.toLowerCase()
-      const b = aspect.point2.name.toLowerCase()
-      if (!planetSet.has(a) || !planetSet.has(b) || a === b) continue
-      const weight = aspectWeight[aspect.aspectType] ?? 1
-      score[a] += weight
-      score[b] += weight
-      links[a][b] = (links[a][b] ?? 0) + weight
-      links[b][a] = (links[b][a] ?? 0) + weight
-    }
-
-    const start = [...planets].sort((a, b) => {
-      const scoreDelta = (score[b] ?? 0) - (score[a] ?? 0)
-      if (scoreDelta !== 0) return scoreDelta
-      if (a === "sun") return -1
-      if (b === "sun") return 1
-      return a.localeCompare(b)
-    })[0]
-    if (!start) return []
-
-    const route = [start]
-    const unvisited = new Set(planets.filter((name) => name !== start))
-    while (unvisited.size > 0) {
-      const current = route[route.length - 1]
-      const next = [...unvisited].sort((a, b) => {
-        const aScore = (links[current]?.[a] ?? 0) * 1.4 + (score[a] ?? 0) * 0.6
-        const bScore = (links[current]?.[b] ?? 0) * 1.4 + (score[b] ?? 0) * 0.6
-        if (bScore !== aScore) return bScore - aScore
-        return a.localeCompare(b)
-      })[0]
-      route.push(next)
-      unvisited.delete(next)
-    }
-
-    route.push(start)
-    return route
   }
 
   const startNonRadialRoute = (
@@ -1509,21 +1525,8 @@ export default function AstrologyCalculator() {
       })
       return
     }
-    startAmbientBed({ playBackground: false, playElement: true })
-    startNonRadialRoute(buildAspectualRoute(), {
-      teleport: true,
-      holdMs: CHART_PLANET_HOLD_MS,
-      crossfadeMs: NON_RADIAL_CROSSFADE_MS,
-      chartAspects: true,
-      fadeInSpeedMultiplier: 1,
-      fadeTransitionMultiplier: NON_RADIAL_FADE_SLOWDOWN_MULTIPLIER,
-      shrinkHoldForFade: true,
-      forceContinuousFade: true,
-      audioLeadMs: 0,
-      jitterMs: NON_RADIAL_JITTER_MS,
-      infractionProbability: NON_RADIAL_INFRACTION_PROBABILITY,
-      infractionJitterMs: NON_RADIAL_INFRACTION_JITTER_MS,
-    })
+    startAmbientBed({ playBackground: true, playElement: true })
+    beginPointerLoop(0)
   }
 
   const buildOfflineMp3Plan = useCallback(
@@ -1605,8 +1608,8 @@ export default function AstrologyCalculator() {
         }
       }
 
-      if (mode === "sequential" || mode === "aspectual") {
-        const route = mode === "sequential" ? buildSequentialRoute() : buildAspectualRoute()
+      if (mode === "sequential") {
+        const route = buildSequentialRoute()
         if (route.length === 0) return null
 
         const events: OfflineMp3PlanetEvent[] = []
@@ -1632,7 +1635,7 @@ export default function AstrologyCalculator() {
           durationSec: Math.max(10, durationSec),
           includeBackground: false,
           includeElement: true,
-          elementVolumePercent: mode === "sequential" ? 1 : elementSoundVolume,
+          elementVolumePercent: 1,
         }
       }
 
@@ -1660,7 +1663,6 @@ export default function AstrologyCalculator() {
       aspectsSoundVolume,
       audioFadeIn,
       audioFadeOut,
-      buildAspectualRoute,
       buildSequentialRoute,
       dynAspectsFadeIn,
       dynAspectsFadeOut,
@@ -1673,7 +1675,7 @@ export default function AstrologyCalculator() {
     ],
   )
 
-  const buildSubjectMp3FileName = useCallback((): string => {
+  const buildSubjectMp3FileName = useCallback((mode: NavigationMode): string => {
     const datetime = formData.datetime.trim()
     const datetimeMatch = datetime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
     const yyyymmddhhmm = datetimeMatch
@@ -1688,7 +1690,8 @@ export default function AstrologyCalculator() {
     const rawCountry = locationParts.length > 1 ? locationParts[locationParts.length - 1] : "PAIS"
     const city = sanitizeFileToken(rawCity, "CIUDAD")
     const country = sanitizeFileToken(rawCountry, "PAIS")
-    return `${yyyymmddhhmm}_${city}_${country}.mp3`
+    const modeSuffix = EXPORT_MODE_SUFFIX[mode]
+    return `ASTRO.LOG.IO_${yyyymmddhhmm}_${city}_${country}_${modeSuffix}.mp3`
   }, [formData.datetime, formData.location])
 
   const downloadNavigationModeMp3 = useCallback(
@@ -1703,7 +1706,7 @@ export default function AstrologyCalculator() {
       const sunDegrees = horoscopeData.planets.find((planet) => planet.name === "sun")?.ChartPosition?.Ecliptic?.DecimalDegrees
       const sunElement = typeof sunDegrees === "number" ? getElementFromDegrees(sunDegrees) : "fire"
       const exportMasterVolume = mode === "astral_chord" ? masterVolume * 0.6 : masterVolume
-      const fileName = buildSubjectMp3FileName()
+      const fileName = buildSubjectMp3FileName(mode)
 
       setPendingMp3Download((prev) => {
         if (prev?.url) {
@@ -1793,7 +1796,6 @@ export default function AstrologyCalculator() {
           setError("")
         }
         setNavigationMode(mode)
-        setExportMode(mode)
       } catch (error) {
         console.error("[v0] Error exportando MP3 offline:", error)
         setError("Error al exportar MP3.")
@@ -1820,7 +1822,6 @@ export default function AstrologyCalculator() {
 
   const setNavigationModeFromMenu = (mode: NavigationMode) => {
     setNavigationMode(mode)
-    setExportMode(mode)
     if (!horoscopeData) return
     if (!isLoopRunning && !isPaused) return
     startNavigationMode(mode)
@@ -1981,7 +1982,7 @@ export default function AstrologyCalculator() {
   const shouldShowChordCenterPointer = showPointer && isLoopRunning && navigationMode === "astral_chord"
   const shouldShowOrbitPointer =
     showPointer &&
-    (isLoopRunning || (!isLoopRunning && (navigationMode === "sequential" || navigationMode === "aspectual")))
+    (isLoopRunning || (!isLoopRunning && navigationMode === "sequential"))
 
   const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
   const chartRotation = 180 - ascDegrees
@@ -2005,6 +2006,56 @@ export default function AstrologyCalculator() {
       adjustedPositions: Object.fromEntries(positions.map((p) => [p.name, p.adjustedDegrees])),
     }
   }, [horoscopeData])
+
+  const zodiacRingItems = useMemo(() => {
+    const cusps = horoscopeData?.zodiacCusps
+    if (!cusps || cusps.length === 0) {
+      return ZODIAC_SIGN_FALLBACK_ORDER.map((signKey, idx) => ({
+        signKey,
+        label: signKey.toUpperCase(),
+        centerDegrees: norm360(idx * 30 + 15),
+      }))
+    }
+
+    const sortedCusps = [...cusps]
+      .map((cusp) => ({
+        label: cusp.Sign?.label || "",
+        startDegrees: cusp.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0,
+      }))
+      .sort((a, b) => a.startDegrees - b.startDegrees)
+
+    return sortedCusps.map((cusp) => {
+      const normalizedLabel = normalizeSignLabel(cusp.label)
+      const signKey = ZODIAC_SIGN_KEY_BY_LABEL[normalizedLabel] || normalizedLabel
+      return {
+        signKey,
+        label: cusp.label || signKey.toUpperCase(),
+        centerDegrees: norm360(cusp.startDegrees + 15),
+      }
+    })
+  }, [horoscopeData?.zodiacCusps])
+
+  const houseRingItems = useMemo(() => {
+    const houses = horoscopeData?.houses
+    if (!houses || houses.length === 0) return []
+
+    const sortedHouses = [...houses]
+      .map((house) => ({
+        id: house.id,
+        startDegrees: house.ChartPosition?.StartPosition?.Ecliptic?.DecimalDegrees ?? 0,
+      }))
+      .sort((a, b) => a.startDegrees - b.startDegrees)
+
+    return sortedHouses.map((house, index) => {
+      const nextHouse = sortedHouses[(index + 1) % sortedHouses.length]
+      const arcSpan = norm360(nextHouse.startDegrees - house.startDegrees)
+      return {
+        id: house.id,
+        startDegrees: house.startDegrees,
+        centerDegrees: norm360(house.startDegrees + arcSpan / 2),
+      }
+    })
+  }, [horoscopeData?.houses])
 
   const getAspectsForPlanet = (planetName: string) => {
     const allowedAspects = ["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"]
@@ -2166,7 +2217,7 @@ export default function AstrologyCalculator() {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center p-4 relative">
         <div className="w-full max-w-2xl">
-          <div className="mb-8 min-h-[260px]">
+          <div className="mb-8 min-h-[380px]">
             <div className="w-full text-center">
               <h1
                 className="text-3xl md:text-4xl uppercase tracking-widest text-center"
@@ -2188,11 +2239,11 @@ export default function AstrologyCalculator() {
               <span>{loadingProgress}%</span>
             </div>
 
-            <div className="mt-6 relative h-[170px] overflow-hidden">
+            <div className="mt-6 relative h-[280px] overflow-hidden">
               {previousIntroParagraph && (
                 <p
                   key={`loading-prev-${loadingIntroTick}-${loadingIntroPrevIndex}`}
-                  className="loading-subtitle-previous absolute left-0 right-0 top-6 mx-auto max-w-[760px] px-2 text-[12px] md:text-[14px] leading-relaxed"
+                  className="loading-subtitle-previous absolute left-0 right-0 top-10 mx-auto max-w-[840px] px-2 text-[24px] md:text-[28px] leading-relaxed"
                   style={{ color: "rgba(255,255,255,0.4)", fontFamily: MONOTYPE_FONT_STACK, textAlign: "justify" }}
                 >
                   {previousIntroParagraph}
@@ -2201,7 +2252,7 @@ export default function AstrologyCalculator() {
 
               <p
                 key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
-                className="loading-subtitle-current absolute left-0 right-0 top-20 mx-auto max-w-[760px] px-2 text-[12px] md:text-[14px] leading-relaxed"
+                className="loading-subtitle-current absolute left-0 right-0 top-24 mx-auto max-w-[840px] px-2 text-[24px] md:text-[28px] leading-relaxed"
                 style={{ color: "rgba(255,255,255,0.7)", fontFamily: MONOTYPE_FONT_STACK, textAlign: "justify" }}
               >
                 {currentIntroParagraph}
@@ -2322,6 +2373,24 @@ export default function AstrologyCalculator() {
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
                       type="checkbox"
+                      checked={showSignsRing}
+                      onChange={(e) => setShowSignsRing(e.target.checked)}
+                      className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
+                    />
+                    Signs Ring
+                  </label>
+                  <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                    <input
+                      type="checkbox"
+                      checked={showHousesRing}
+                      onChange={(e) => setShowHousesRing(e.target.checked)}
+                      className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
+                    />
+                    Houses Ring
+                  </label>
+                  <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
+                    <input
+                      type="checkbox"
                       checked={showDegrees}
                       onChange={(e) => setShowDegrees(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
@@ -2397,7 +2466,7 @@ export default function AstrologyCalculator() {
                   <div className="space-y-1">
                     <div className="font-mono text-[7.5px] uppercase tracking-wide">Navigation</div>
                     <div className="grid grid-cols-2 gap-1">
-                      {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
+                      {NAVIGATION_MODES.map((mode) => (
                         <button
                           key={mode}
                           onClick={() => setNavigationModeFromMenu(mode)}
@@ -2407,7 +2476,7 @@ export default function AstrologyCalculator() {
                               : "bg-transparent text-white border-gray-600 hover:border-white"
                           }`}
                         >
-                          {label}
+                          {NAV_MODE_HINT_LABEL[mode]}
                         </button>
                       ))}
                     </div>
@@ -2951,6 +3020,77 @@ export default function AstrologyCalculator() {
                         >
                           90°
                         </text>
+                      </>
+                    )}
+
+                    {showSignsRing && (
+                      <>
+                        <circle cx="200" cy="200" r="132" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
+                        {zodiacRingItems.map((sign, index) => {
+                          const signPosition = polarToCartesian(200, 200, 132, adjustToCanvasAngle(sign.centerDegrees))
+                          const signGlyphSrc = ZODIAC_GLYPH_SVGS[sign.signKey]
+                          return (
+                            <g key={`sign-ring-${sign.signKey}-${index}`} style={{ pointerEvents: "none" }}>
+                              {signGlyphSrc ? (
+                                <image
+                                  href={signGlyphSrc}
+                                  x={signPosition.x - 7}
+                                  y={signPosition.y - 7}
+                                  width={14}
+                                  height={14}
+                                  preserveAspectRatio="xMidYMid meet"
+                                  opacity={0.3}
+                                />
+                              ) : (
+                                <text
+                                  x={signPosition.x}
+                                  y={signPosition.y}
+                                  textAnchor="middle"
+                                  dominantBaseline="middle"
+                                  className="fill-white text-[7px]"
+                                  style={{ opacity: 0.3, fontFamily: MONOTYPE_FONT_STACK }}
+                                >
+                                  {sign.label.slice(0, 3).toUpperCase()}
+                                </text>
+                              )}
+                            </g>
+                          )
+                        })}
+                      </>
+                    )}
+
+                    {showHousesRing && (
+                      <>
+                        <circle cx="200" cy="200" r="98" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
+                        {houseRingItems.map((house) => {
+                          const cuspStart = polarToCartesian(200, 200, 108, adjustToCanvasAngle(house.startDegrees))
+                          const cuspEnd = polarToCartesian(200, 200, 84, adjustToCanvasAngle(house.startDegrees))
+                          const houseLabelPos = polarToCartesian(200, 200, 98, adjustToCanvasAngle(house.centerDegrees))
+
+                          return (
+                            <g key={`house-ring-${house.id}`} style={{ pointerEvents: "none" }}>
+                              <line
+                                x1={cuspStart.x}
+                                y1={cuspStart.y}
+                                x2={cuspEnd.x}
+                                y2={cuspEnd.y}
+                                stroke="white"
+                                strokeWidth="0.75"
+                                opacity="0.3"
+                              />
+                              <text
+                                x={houseLabelPos.x}
+                                y={houseLabelPos.y}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                className="fill-white text-[8px]"
+                                style={{ opacity: 0.3, fontFamily: MONOTYPE_FONT_STACK }}
+                              >
+                                {house.id}
+                              </text>
+                            </g>
+                          )
+                        })}
                       </>
                     )}
 
@@ -3809,57 +3949,66 @@ export default function AstrologyCalculator() {
 
       <div className="fixed top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-2 py-2 w-full max-w-[560px]">
-            <div className="grid grid-cols-5 gap-1.5">
-              {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
-                <button
-                  key={`top-nav-${mode}`}
-                  onClick={() => setNavigationModeFromMenu(mode)}
-                  className={`font-mono text-[12px] uppercase tracking-wide border px-3 py-1.5 transition-colors ${
-                    navigationMode === mode
-                      ? "bg-white text-black border-white"
-                      : "bg-transparent text-white border-gray-600 hover:border-white"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+          <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-1.5 py-1.5 md:px-2 md:py-2 w-full max-w-[560px]">
+            <div className="grid grid-cols-4 gap-1.5">
+              {NAVIGATION_MODES.map((mode) => {
+                const isActiveMode = navigationMode === mode
+                return (
+                  <div
+                    key={`top-nav-${mode}`}
+                    className={`relative group border px-1 py-1 ${
+                      isActiveMode ? "border-white/95 bg-white/8" : "border-gray-600/85 bg-black/35"
+                    }`}
+                  >
+                    <button
+                      onClick={() => setNavigationModeFromMenu(mode)}
+                      className={`w-full font-mono text-[10px] md:text-[12px] uppercase tracking-wide border px-2 py-1 transition-colors ${
+                        isActiveMode
+                          ? "bg-white text-black border-white"
+                          : "bg-transparent text-white border-gray-600 hover:border-white"
+                      }`}
+                    >
+                      {NAV_MODE_HINT_LABEL[mode]}
+                    </button>
+                    <button
+                      onClick={() => downloadNavigationModeMp3(mode)}
+                      disabled={!horoscopeData || isExportingMp3}
+                      className={`mt-1 flex w-full items-center justify-center gap-1 border px-1 py-0.5 transition-colors ${
+                        !horoscopeData || isExportingMp3
+                          ? "border-gray-700 text-gray-500 cursor-not-allowed"
+                          : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
+                      }`}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+                        <path d="M3 8.5V12.5H13V8.5" />
+                        <path d="M8 2.5V9" />
+                        <path d="M5.8 6.8L8 9L10.2 6.8" />
+                      </svg>
+                      <span className="font-mono text-[8px] md:text-[9px] uppercase tracking-wide">MP3</span>
+                    </button>
+                    <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-5 whitespace-nowrap bg-black/90 border border-white/40 px-1 py-0.5 font-mono text-[7px] md:text-[8px] text-white/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {DOWNLOAD_TOOLTIP_TEXT}
+                    </span>
+                  </div>
+                )
+              })}
               <button
                 onClick={resetToInitialState}
-                className="font-mono text-[12px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
+                className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
               >
                 RESET
               </button>
             </div>
-            <div className="mt-1.5 flex gap-1.5">
-              <select
-                value={exportMode}
-                onChange={(e) => setExportMode(e.target.value as NavigationMode)}
-                className="flex-1 font-mono text-[11px] uppercase tracking-wide border border-gray-600 bg-black text-white px-2 py-1.5"
-              >
-                {(Object.entries(NAV_MODE_HINT_LABEL) as Array<[NavigationMode, string]>).map(([mode, label]) => (
-                  <option key={`export-${mode}`} value={mode}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => downloadNavigationModeMp3(exportMode)}
-                disabled={!horoscopeData || isExportingMp3}
-                className={`font-mono text-[11px] uppercase tracking-wide border px-3 py-1.5 transition-colors ${
-                  !horoscopeData || isExportingMp3
-                    ? "border-gray-700 text-gray-500 cursor-not-allowed"
-                    : "border-white text-white hover:bg-white hover:text-black"
-                }`}
-              >
-                {isExportingMp3 ? "RENDER MP3..." : "DOWNLOAD MP3"}
-              </button>
-            </div>
+            {isExportingMp3 && (
+              <div className="mt-1.5 text-center font-mono text-[9px] md:text-[11px] uppercase tracking-wide text-white/70">
+                RENDER MP3...
+              </div>
+            )}
             {pendingMp3Download && !isExportingMp3 && (
               <a
                 href={pendingMp3Download.url}
                 download={pendingMp3Download.fileName}
-                className="mt-1.5 block w-full text-center font-mono text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
+                className="mt-1.5 block w-full text-center font-mono text-[9px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
               >
                 SAVE MP3
               </a>

@@ -178,7 +178,7 @@
 @keyframes loading-subtitle-current-roll {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(42px);
   }
   to {
     opacity: 0.7;
@@ -189,7 +189,7 @@
 @keyframes loading-subtitle-previous-roll {
   from {
     opacity: 0.7;
-    transform: translateY(56px);
+    transform: translateY(110px);
   }
   to {
     opacity: 0.4;

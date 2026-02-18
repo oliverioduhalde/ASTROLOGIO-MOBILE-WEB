@@ -25,6 +25,35 @@ export interface HoroscopeData {
     House: number
     isRetrograde: boolean
   }>
+  houses: Array<{
+    id: number
+    label: string
+    ChartPosition: {
+      StartPosition: {
+        Ecliptic: {
+          DecimalDegrees: number
+        }
+      }
+      EndPosition: {
+        Ecliptic: {
+          DecimalDegrees: number
+        }
+      }
+    }
+    Sign: {
+      label: string
+    }
+  }>
+  zodiacCusps: Array<{
+    ChartPosition: {
+      Ecliptic: {
+        DecimalDegrees: number
+      }
+    }
+    Sign: {
+      label: string
+    }
+  }>
   mc: {
     label: string
     ChartPosition: {
@@ -195,8 +224,41 @@ export async function calculateHoroscope(formData: {
     },
   }
 
+  const houses = (horoscope.Houses || []).map((house: any) => ({
+    id: house.id || 0,
+    label: house.label || `${house.id || ""}`,
+    ChartPosition: {
+      StartPosition: {
+        Ecliptic: {
+          DecimalDegrees: house.ChartPosition?.StartPosition?.Ecliptic?.DecimalDegrees || 0,
+        },
+      },
+      EndPosition: {
+        Ecliptic: {
+          DecimalDegrees: house.ChartPosition?.EndPosition?.Ecliptic?.DecimalDegrees || 0,
+        },
+      },
+    },
+    Sign: {
+      label: house.Sign?.label || "Unknown",
+    },
+  }))
+
+  const zodiacCusps = (horoscope.ZodiacCusps || []).map((cusp: any) => ({
+    ChartPosition: {
+      Ecliptic: {
+        DecimalDegrees: cusp.ChartPosition?.Ecliptic?.DecimalDegrees || 0,
+      },
+    },
+    Sign: {
+      label: cusp.Sign?.label || "Unknown",
+    },
+  }))
+
   return {
     planets,
+    houses,
+    zodiacCusps,
     mc,
     ascendant,
     aspects,

@@ -134,6 +134,18 @@ const GLYPH_INTERACTION_EASE_OUT = "cubic-bezier(0.16, 0.84, 0.32, 1)"
 const DEFAULT_ASPECTS_SOUND_VOLUME = 11
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
+const LOADING_SUBTITLE_STEP_MS = 5200
+const MONOTYPE_FONT_STACK = 'Monaco, Menlo, "Courier New", monospace'
+const LOADING_INTRO_PARAGRAPHS = [
+  "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler's vision of celestial music.",
+  "It translates an astrological chart into a living sonic system where planetary motion becomes audible form.",
+  "In Chord mode (Astral Chord), the chart is heard as a dense, simultaneous harmonic field.",
+  "In Radial mode, listening follows a circular orbit that moves around the planets in continuous rotation.",
+  "In Chart mode, the experience becomes a sequential astrological reading, planet by planet.",
+  "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that body.",
+  "Its spatial placement and tuning emerge from astrological chart coordinates and interplanetary relationships calculated from the chart itself.",
+  "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here and now.",
+]
 
 function getGlyphGlowTiming(glyphName: string) {
   let hash = 0
@@ -262,6 +274,10 @@ export default function AstrologyCalculator() {
   const [showDegrees, setShowDegrees] = useState(false)
   const [showAngles, setShowAngles] = useState(false)
   const [showAstroChart, setShowAstroChart] = useState(false)
+  const [skipLoadingIntro, setSkipLoadingIntro] = useState(false)
+  const [loadingIntroIndex, setLoadingIntroIndex] = useState(0)
+  const [loadingIntroPrevIndex, setLoadingIntroPrevIndex] = useState<number | null>(null)
+  const [loadingIntroTick, setLoadingIntroTick] = useState(0)
   const [peakLevelLeftPre, setPeakLevelLeftPre] = useState(0)
   const [peakLevelRightPre, setPeakLevelRightPre] = useState(0)
   const [peakLevelLeftPost, setPeakLevelLeftPost] = useState(0)
@@ -337,6 +353,7 @@ export default function AstrologyCalculator() {
   const pressedGlyphReleaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const interactivePreviewClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const skipNextAutoCalculateRef = useRef(false)
+  const loadingIntroIndexRef = useRef(0)
   const [locationSuggestions, setLocationSuggestions] = useState<GeoSuggestion[]>([])
   const [isResolvingLocation, setIsResolvingLocation] = useState(false)
   const chartAspectsKeyRef = useRef("__chart__")
@@ -389,6 +406,28 @@ export default function AstrologyCalculator() {
       chordReverbMixPercent,
     })
   const lastPlayedPlanetRef = useRef<string | null>(null)
+  const showLoadingIntroScreen = loadingProgress < 100 && !skipLoadingIntro
+
+  useEffect(() => {
+    if (!showLoadingIntroScreen) return
+
+    loadingIntroIndexRef.current = 0
+    setLoadingIntroIndex(0)
+    setLoadingIntroPrevIndex(null)
+    setLoadingIntroTick(0)
+
+    const subtitleInterval = setInterval(() => {
+      const previousIndex = loadingIntroIndexRef.current
+      const nextIndex = (previousIndex + 1) % LOADING_INTRO_PARAGRAPHS.length
+      loadingIntroIndexRef.current = nextIndex
+      setLoadingIntroPrevIndex(previousIndex)
+      setLoadingIntroIndex(nextIndex)
+      setLoadingIntroTick((prev) => prev + 1)
+    }, LOADING_SUBTITLE_STEP_MS)
+
+    return () => clearInterval(subtitleInterval)
+  }, [showLoadingIntroScreen])
+
   const clearAspectTimers = useCallback(() => {
     Object.values(aspectClickTimersRef.current).forEach((timers) => {
       timers.forEach((timerId) => clearTimeout(timerId))
@@ -2119,13 +2158,22 @@ export default function AstrologyCalculator() {
 
   // Planet detection is handled inside the active navigation scheduler.
 
-  if (loadingProgress < 100) {
+  if (showLoadingIntroScreen) {
+    const currentIntroParagraph = LOADING_INTRO_PARAGRAPHS[loadingIntroIndex]
+    const previousIntroParagraph =
+      loadingIntroPrevIndex !== null ? LOADING_INTRO_PARAGRAPHS[loadingIntroPrevIndex] : null
+
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="mb-8">
+      <main className="min-h-screen bg-black text-white flex items-center justify-center p-4 relative">
+        <div className="w-full max-w-2xl">
+          <div className="mb-8 min-h-[260px]">
             <div className="w-full text-center">
-              <h1 className="font-mono text-3xl md:text-4xl uppercase tracking-widest text-center">ASTRO.LOG.IO</h1>
+              <h1
+                className="text-3xl md:text-4xl uppercase tracking-widest text-center"
+                style={{ fontFamily: MONOTYPE_FONT_STACK }}
+              >
+                ASTRO.LOG.IO
+              </h1>
               <div className="mt-3 h-[3px] w-full bg-white/20">
                 <div
                   className="h-full bg-white"
@@ -2136,12 +2184,39 @@ export default function AstrologyCalculator() {
                 ></div>
               </div>
             </div>
-            <div className="mt-3 flex items-center justify-between font-mono text-[7px] uppercase tracking-widest text-white/70">
-              <span>loading...</span>
+            <div className="mt-3 flex items-center justify-end text-[8px] uppercase tracking-[0.25em] text-white/50">
               <span>{loadingProgress}%</span>
+            </div>
+
+            <div className="mt-6 relative h-[170px] overflow-hidden">
+              {previousIntroParagraph && (
+                <p
+                  key={`loading-prev-${loadingIntroTick}-${loadingIntroPrevIndex}`}
+                  className="loading-subtitle-previous absolute left-0 right-0 top-6 mx-auto max-w-[760px] px-2 text-[12px] md:text-[14px] leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.4)", fontFamily: MONOTYPE_FONT_STACK, textAlign: "justify" }}
+                >
+                  {previousIntroParagraph}
+                </p>
+              )}
+
+              <p
+                key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
+                className="loading-subtitle-current absolute left-0 right-0 top-20 mx-auto max-w-[760px] px-2 text-[12px] md:text-[14px] leading-relaxed"
+                style={{ color: "rgba(255,255,255,0.7)", fontFamily: MONOTYPE_FONT_STACK, textAlign: "justify" }}
+              >
+                {currentIntroParagraph}
+              </p>
             </div>
           </div>
         </div>
+
+        <button
+          onClick={() => setSkipLoadingIntro(true)}
+          className="absolute bottom-6 right-6 border border-white/40 px-3 py-1 text-[11px] text-white/70 hover:text-white hover:border-white transition-colors"
+          style={{ fontFamily: MONOTYPE_FONT_STACK }}
+        >
+          Skip &gt;
+        </button>
       </main>
     )
   }

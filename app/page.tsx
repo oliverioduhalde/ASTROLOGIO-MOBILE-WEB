@@ -195,14 +195,10 @@ const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
 const LOADING_SUBTITLE_STEP_MS = 10400
 const MONOTYPE_FONT_STACK = 'Monaco, Menlo, "Courier New", monospace'
 const LOADING_INTRO_PARAGRAPHS = [
-  "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler's vision of celestial music.",
-  "It translates an astrological chart into a living sonic system where planetary motion becomes audible form.",
-  "In Chord mode (Astral Chord), the chart is heard as a dense, simultaneous harmonic field.",
-  "In Radial mode, listening follows a circular orbit that moves around the planets in continuous rotation.",
-  "In Chart mode, the experience becomes a sequential astrological reading, planet by planet.",
-  "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that body.",
-  "Its spatial placement and tuning emerge from astrological chart coordinates and interplanetary relationships calculated from the chart itself.",
-  "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here and now.",
+  "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler's vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
+  "In Chord mode (Astral Chord), the chart is heard as a dense, simultaneous harmonic field. In Orbit mode, listening follows a circular path that moves around the planets in continuous rotation. In Chart mode, the experience becomes a sequential astrological reading, planet by planet.",
+  "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that celestial body. Its spatial placement and tuning emerge from astrological chart coordinates, and interplanetary relationships are organized through astrological criteria.",
+  "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now. For a fully immersive experience, we recommend using headphones. Enjoy the spatial energies that surround us all.",
 ]
 
 const ASPECT_SYMBOL_BY_KEY: Record<MajorAspectKey, string> = {

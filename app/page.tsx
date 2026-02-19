@@ -203,14 +203,34 @@ const GLYPH_INTERACTION_EASE_OUT = "cubic-bezier(0.16, 0.84, 0.32, 1)"
 const DEFAULT_ASPECTS_SOUND_VOLUME = 11
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
-const LOADING_SUBTITLE_STEP_MS = 20000
+const LOADING_SUBTITLE_STEP_MS = 25000
 const MONOTYPE_FONT_STACK = 'Monaco, Menlo, "Courier New", monospace'
 const LOADING_INTRO_PARAGRAPHS = [
   "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler's vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
-  "In Chord mode (Astral Chord), the chart is heard as a dense, simultaneous harmonic field.\nIn Orbit mode, listening follows a circular path that moves around the planets in continuous rotation.\nIn Chart mode, the experience becomes a sequential astrological reading, planet by planet.",
+  "READING MODES",
   "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that celestial body. Its spatial placement and tuning emerge from astrological chart coordinates, and interplanetary relationships are organized through astrological criteria.",
-  "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now. For a fully immersive experience, we recommend using headphones. Enjoy the spatial energies that surround us all.",
+  "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now.\n\nFor a fully immersive experience, we recommend using headphones.\n\nEnjoy the spatial energies that surround us all.",
 ]
+
+function renderLoadingParagraph(index: number) {
+  if (index === 1) {
+    return (
+      <>
+        <strong>Chord</strong> mode (Astral Chord): the chart is heard as a dense, simultaneous harmonic field.
+        <br />
+        <br />
+        <strong>Orbit</strong> mode: listening follows a circular path that moves around the planets in continuous
+        rotation.
+        <br />
+        <br />
+        <strong>Chart</strong> mode: the experience becomes a sequential astrological reading, planet by planet.
+      </>
+    )
+  }
+
+  const paragraph = LOADING_INTRO_PARAGRAPHS[index] ?? ""
+  return <>{paragraph}</>
+}
 
 const ASPECT_SYMBOL_BY_KEY: Record<MajorAspectKey, string> = {
   conjunction: "☌",
@@ -601,30 +621,40 @@ export default function AstrologyCalculator() {
   }, [])
 
   const advanceLoadingIntroParagraph = useCallback(() => {
-    if (loadingIntroCompleted) return
-
-    const now = performance.now()
-    const elapsedInCurrentParagraph = Math.max(0, now - loadingIntroParagraphStartTimeRef.current)
-    const clampedElapsed = Math.min(LOADING_SUBTITLE_STEP_MS, elapsedInCurrentParagraph)
-    loadingIntroElapsedBeforeCurrentMsRef.current = Math.min(
-      totalLoadingIntroDurationMs,
-      loadingIntroElapsedBeforeCurrentMsRef.current + clampedElapsed,
-    )
-    loadingIntroParagraphStartTimeRef.current = now
-
     const lastParagraphIndex = LOADING_INTRO_PARAGRAPHS.length - 1
     if (loadingIntroIndexRef.current >= lastParagraphIndex) {
       loadingIntroElapsedBeforeCurrentMsRef.current = totalLoadingIntroDurationMs
+      loadingIntroParagraphStartTimeRef.current = performance.now()
       setLoadingIntroProgressPct(100)
       setLoadingIntroCompleted(true)
       clearLoadingIntroAdvanceTimeout()
       return
     }
 
-    loadingIntroIndexRef.current += 1
-    setLoadingIntroIndex(loadingIntroIndexRef.current)
+    const nextIndex = loadingIntroIndexRef.current + 1
+    loadingIntroIndexRef.current = nextIndex
+    loadingIntroElapsedBeforeCurrentMsRef.current = Math.min(totalLoadingIntroDurationMs, nextIndex * LOADING_SUBTITLE_STEP_MS)
+    loadingIntroParagraphStartTimeRef.current = performance.now()
+
+    setLoadingIntroCompleted(false)
+    setLoadingIntroIndex(nextIndex)
     setLoadingIntroTick((prev) => prev + 1)
-  }, [clearLoadingIntroAdvanceTimeout, loadingIntroCompleted, totalLoadingIntroDurationMs])
+    setLoadingIntroProgressPct((loadingIntroElapsedBeforeCurrentMsRef.current / totalLoadingIntroDurationMs) * 100)
+  }, [clearLoadingIntroAdvanceTimeout, totalLoadingIntroDurationMs])
+
+  const retreatLoadingIntroParagraph = useCallback(() => {
+    if (loadingIntroIndexRef.current <= 0) return
+
+    const prevIndex = loadingIntroIndexRef.current - 1
+    loadingIntroIndexRef.current = prevIndex
+    loadingIntroElapsedBeforeCurrentMsRef.current = Math.max(0, prevIndex * LOADING_SUBTITLE_STEP_MS)
+    loadingIntroParagraphStartTimeRef.current = performance.now()
+
+    setLoadingIntroCompleted(false)
+    setLoadingIntroIndex(prevIndex)
+    setLoadingIntroTick((prev) => prev + 1)
+    setLoadingIntroProgressPct((loadingIntroElapsedBeforeCurrentMsRef.current / totalLoadingIntroDurationMs) * 100)
+  }, [totalLoadingIntroDurationMs])
 
   useEffect(() => {
     if (!showLoadingIntroScreen) return
@@ -2513,7 +2543,8 @@ export default function AstrologyCalculator() {
   // Planet detection is handled inside the active navigation scheduler.
 
   if (showLoadingIntroScreen) {
-    const currentIntroParagraph = LOADING_INTRO_PARAGRAPHS[loadingIntroIndex]
+    const isFirstIntroParagraph = loadingIntroIndex <= 0
+    const isLastIntroParagraph = loadingIntroIndex >= LOADING_INTRO_PARAGRAPHS.length - 1
 
     return (
       <main
@@ -2543,11 +2574,12 @@ export default function AstrologyCalculator() {
               <span>{Math.round(loadingDisplayProgress)}%</span>
             </div>
 
-            <div className="mt-5 relative h-[320px] overflow-hidden">
+            <div className="mt-5 relative h-[360px] overflow-hidden">
               <div className="absolute left-0 right-0 top-14 mx-auto max-w-[760px] px-2 flex flex-col items-start gap-5">
                 <p
                   key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
-                  className="text-[15px] md:text-[18px] leading-[1.45]"
+                  onClick={advanceLoadingIntroParagraph}
+                  className="cursor-pointer text-[15px] md:text-[18px] leading-[1.45]"
                   style={{
                     color: "rgba(255,255,255,0.7)",
                     fontFamily: MONOTYPE_FONT_STACK,
@@ -2555,15 +2587,29 @@ export default function AstrologyCalculator() {
                     whiteSpace: "pre-line",
                   }}
                 >
-                  {currentIntroParagraph}
+                  {renderLoadingParagraph(loadingIntroIndex)}
                 </p>
-                <button
-                  onClick={advanceLoadingIntroParagraph}
-                  className="mt-5 play-idle-pulse border border-white bg-white text-black px-5 py-2 text-[18px] md:text-[20px] leading-none uppercase tracking-wide hover:bg-black hover:text-white transition-colors"
-                  style={{ fontFamily: MONOTYPE_FONT_STACK }}
-                >
-                  NEXT
-                </button>
+                <div className="mt-8 w-full flex items-center justify-between">
+                  <button
+                    onClick={retreatLoadingIntroParagraph}
+                    disabled={isFirstIntroParagraph}
+                    className={`w-16 h-16 md:w-20 md:h-20 border border-white font-mono text-[34px] md:text-[42px] leading-none transition-colors ${
+                      isFirstIntroParagraph
+                        ? "text-white/30 border-white/30 cursor-not-allowed"
+                        : "text-white bg-black hover:bg-white hover:text-black"
+                    }`}
+                    style={{ fontFamily: MONOTYPE_FONT_STACK }}
+                  >
+                    {"<"}
+                  </button>
+                  <button
+                    onClick={advanceLoadingIntroParagraph}
+                    className="play-idle-pulse w-16 h-16 md:w-20 md:h-20 border border-white font-mono text-[34px] md:text-[42px] leading-none text-white bg-black hover:bg-white hover:text-black transition-colors"
+                    style={{ fontFamily: MONOTYPE_FONT_STACK }}
+                  >
+                    {isLastIntroParagraph ? ">" : ">"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

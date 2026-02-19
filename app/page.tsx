@@ -525,6 +525,7 @@ export default function AstrologyCalculator() {
     stopAll,
     playBackgroundSound,
     stopBackgroundSound,
+    prepareOrbitalStarBackground,
     playElementBackground,
     stopElementBackground,
     loadingProgress,
@@ -555,6 +556,13 @@ export default function AstrologyCalculator() {
       reverbMixPercent,
       chordReverbMixPercent,
     })
+
+  useEffect(() => {
+    if (!horoscopeData?.planets?.length) return
+    const sunDegrees = horoscopeData.planets.find((planet) => planet.name === "sun")?.ChartPosition?.Ecliptic?.DecimalDegrees
+    const sunSignIndex = typeof sunDegrees === "number" ? Math.floor(norm360(sunDegrees) / 30) % 12 : null
+    void prepareOrbitalStarBackground(sunSignIndex, { modalEnabled, force: true })
+  }, [horoscopeData, modalEnabled, prepareOrbitalStarBackground])
   const lastPlayedPlanetRef = useRef<string | null>(null)
   const totalLoadingIntroDurationMs = LOADING_INTRO_PARAGRAPHS.length * LOADING_SUBTITLE_STEP_MS
   const showLoadingIntroScreen = !skipLoadingIntro && (loadingProgress < 100 || !loadingIntroCompleted)
@@ -1250,7 +1258,10 @@ export default function AstrologyCalculator() {
     const playElement = options?.playElement ?? true
 
     if (playBackground) {
-      playBackgroundSound()
+      playBackgroundSound({
+        sunSignIndex: modalSunSignIndex,
+        modalEnabled,
+      })
     } else {
       stopBackgroundSound()
     }
@@ -3321,9 +3332,9 @@ export default function AstrologyCalculator() {
 
                     {showSignsRing && (
                       <>
-                        <circle cx="200" cy="200" r="132" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
+                        <circle cx="200" cy="200" r="146" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
                         {zodiacRingItems.map((sign, index) => {
-                          const signPosition = polarToCartesian(200, 200, 132, adjustToCanvasAngle(sign.centerDegrees))
+                          const signPosition = polarToCartesian(200, 200, 146, adjustToCanvasAngle(sign.centerDegrees))
                           const signGlyphSrc = ZODIAC_GLYPH_SVGS[sign.signKey]
                           return (
                             <g key={`sign-ring-${sign.signKey}-${index}`} style={{ pointerEvents: "none" }}>
@@ -3357,11 +3368,11 @@ export default function AstrologyCalculator() {
 
                     {showHousesRing && (
                       <>
-                        <circle cx="200" cy="200" r="98" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
+                        <circle cx="200" cy="200" r="114" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
                         {houseRingItems.map((house) => {
-                          const cuspStart = polarToCartesian(200, 200, 108, adjustToCanvasAngle(house.startDegrees))
-                          const cuspEnd = polarToCartesian(200, 200, 84, adjustToCanvasAngle(house.startDegrees))
-                          const houseLabelPos = polarToCartesian(200, 200, 98, adjustToCanvasAngle(house.centerDegrees))
+                          const cuspStart = polarToCartesian(200, 200, 124, adjustToCanvasAngle(house.startDegrees))
+                          const cuspEnd = polarToCartesian(200, 200, 100, adjustToCanvasAngle(house.startDegrees))
+                          const houseLabelPos = polarToCartesian(200, 200, 114, adjustToCanvasAngle(house.centerDegrees))
 
                           return (
                             <g key={`house-ring-${house.id}`} style={{ pointerEvents: "none" }}>

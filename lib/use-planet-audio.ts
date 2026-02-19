@@ -167,6 +167,13 @@ const FM_PAD_GAIN_BOOST_FACTOR = 4 // +300% (4x total)
 const BOWL_SYNTH_OCTAVE_SHIFT_SEMITONES = 0
 const BOWL_GAIN_BOOST_FACTOR = 3
 const GLOBAL_REVERB_RETURN_GAIN = 1.8
+const ORBITAL_STAR_BACKGROUND_DURATION_SEC = 240
+const ORBITAL_STAR_BACKGROUND_FADE_IN_SEC = 8
+const ORBITAL_STAR_BACKGROUND_FADE_OUT_SEC = 10
+const ORBITAL_STAR_BACKGROUND_RENDER_PEAK_GAIN = 0.45
+const ORBITAL_STAR_BACKGROUND_PLANET_GAIN_BY_INDEX = [1, 0.9, 0.82]
+const ORBITAL_STAR_BACKGROUND_PAN_BY_INDEX = [-0.55, 0, 0.55]
+const ORBITAL_STAR_BACKGROUND_STAGGER_SEC = [0, 0.9, 1.8]
 const ASPECT_SEMITONE_OFFSETS: Record<string, number> = {
   Conjunción: 0,
   Conjunction: 0,
@@ -268,6 +275,17 @@ function getSignRulerPlanetName(sunSignIndex: number | null): string {
   if (sunSignIndex === null) return "sun"
   const proximity = SIGN_PLANET_PROXIMITY[mod12(sunSignIndex)]
   return proximity?.[0] ?? "sun"
+}
+
+function getTopRegencyPlanetsForSign(sunSignIndex: number | null): string[] {
+  if (sunSignIndex === null) {
+    return ["sun", "moon", "jupiter"]
+  }
+
+  const proximity = SIGN_PLANET_PROXIMITY[mod12(sunSignIndex)] || []
+  const topThree = proximity.slice(0, 3).map((name) => name.toLowerCase())
+  const fallback = [getSignRulerPlanetName(sunSignIndex), "moon", "sun"].map((name) => name.toLowerCase())
+  return Array.from(new Set([...topThree, ...fallback])).slice(0, 3)
 }
 
 function getPlanetVolumeMultiplier(planetName: string): number {
@@ -406,6 +424,9 @@ export function usePlanetAudio(
   const backgroundSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const backgroundGainRef = useRef<GainNode | null>(null)
   const backgroundBufferRef = useRef<AudioBuffer | null>(null)
+  const backgroundRenderPromiseRef = useRef<Promise<AudioBuffer | null> | null>(null)
+  const backgroundRenderRequestIdRef = useRef(0)
+  const backgroundSignIndexRef = useRef<number | null>(null)
   const elementBackgroundSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const elementBackgroundGainRef = useRef<GainNode | null>(null)
   const elementBackgroundNextSourceRef = useRef<AudioBufferSourceNode | null>(null)
@@ -766,7 +787,6 @@ export function usePlanetAudio(
 
         const allAudios = [
           ...Object.entries(planetAudioMap),
-          ["background", "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ASTROLOG%20FONDO%20ARIES%2044.1-1OFwQVOhZga6hl7H99PNa1gBlDxMA7.mp3"],
           ...Object.entries(elementAudioMap),
           ...Object.entries(tibetanSampleAudioMap),
         ]
@@ -782,7 +802,6 @@ export function usePlanetAudio(
           uranus: "Urano",
           neptune: "Neptuno",
           pluto: "Pluton",
-          background: "Fondo",
           fire: "Fuego",
           earth: "Tierra",
           air: "Aire",
@@ -831,7 +850,7 @@ export function usePlanetAudio(
 
         await Promise.all(loadAudioPromises)
 
-        backgroundBufferRef.current = audioBuffersRef.current["background"] || null
+        backgroundBufferRef.current = null
 
         setLoadingLabel("Finalizando")
         setLoadingProgress(100)
@@ -845,22 +864,186 @@ export function usePlanetAudio(
     return initPromiseRef.current
   }, [])
 
-  const playBackgroundSound = useCallback(async () => {
-    await initializeAudio()
+  const prepareOrbitalStarBackground = useCallback(
+    async (
+      sunSignIndex: number | null = modalSunSignIndexRef.current,
+      options?: {
+        modalEnabled?: boolean
+        force?: boolean
+      },
+    ): Promise<AudioBuffer | null> => {
+      await initializeAudio()
 
-    if (!audioContextRef.current || !backgroundBufferRef.current) {
-      console.log("[v0] Background audio not ready")
+      const ctx = audioContextRef.current
+      if (!ctx) return null
+
+      const normalizedSignIndex = typeof sunSignIndex === "number" ? mod12(sunSignIndex) : null
+      const resolvedModalEnabled = options?.modalEnabled ?? modalEnabledRef.current
+      const forceRender = options?.force ?? false
+
+      if (
+        !forceRender &&
+        backgroundBufferRef.current &&
+        backgroundSignIndexRef.current === normalizedSignIndex
+      ) {
+        return backgroundBufferRef.current
+      }
+
+      if (!forceRender && backgroundRenderPromiseRef.current && backgroundSignIndexRef.current === normalizedSignIndex) {
+        return backgroundRenderPromiseRef.current
+      }
+
+      const requestId = backgroundRenderRequestIdRef.current + 1
+      backgroundRenderRequestIdRef.current = requestId
+      backgroundSignIndexRef.current = normalizedSignIndex
+
+      const renderPromise = (async (): Promise<AudioBuffer | null> => {
+        const liveCtx = audioContextRef.current
+        if (!liveCtx) return null
+
+        const sampleRate = liveCtx.sampleRate || 48000
+        const totalFrames = Math.max(1, Math.ceil(ORBITAL_STAR_BACKGROUND_DURATION_SEC * sampleRate))
+        const offlineContext = new OfflineAudioContext(2, totalFrames, sampleRate)
+
+        const masterGainNode = offlineContext.createGain()
+        masterGainNode.gain.setValueAtTime(0, 0)
+        masterGainNode.gain.linearRampToValueAtTime(
+          ORBITAL_STAR_BACKGROUND_RENDER_PEAK_GAIN,
+          Math.min(ORBITAL_STAR_BACKGROUND_FADE_IN_SEC, ORBITAL_STAR_BACKGROUND_DURATION_SEC),
+        )
+        const fadeOutStartSec = Math.max(
+          ORBITAL_STAR_BACKGROUND_FADE_IN_SEC,
+          ORBITAL_STAR_BACKGROUND_DURATION_SEC - ORBITAL_STAR_BACKGROUND_FADE_OUT_SEC,
+        )
+        masterGainNode.gain.setValueAtTime(ORBITAL_STAR_BACKGROUND_RENDER_PEAK_GAIN, fadeOutStartSec)
+        masterGainNode.gain.linearRampToValueAtTime(0, ORBITAL_STAR_BACKGROUND_DURATION_SEC)
+        masterGainNode.connect(offlineContext.destination)
+
+        const topRegencyPlanets = getTopRegencyPlanetsForSign(normalizedSignIndex)
+        const tuningRate = centsToPlaybackRate(tuningCentsRef.current)
+        let scheduledSources = 0
+
+        topRegencyPlanets.forEach((planetName, index) => {
+          const normalizedPlanetName = planetName.toLowerCase()
+          const planetBuffer = audioBuffersRef.current[normalizedPlanetName]
+          if (!planetBuffer) return
+
+          const source = offlineContext.createBufferSource()
+          source.buffer = planetBuffer
+          source.loop = true
+
+          const startOffsetSec = planetBuffer.duration > 30.1 ? 30 : 0
+          if (planetBuffer.duration - startOffsetSec > 0.05) {
+            source.loopStart = startOffsetSec
+            source.loopEnd = planetBuffer.duration
+          }
+
+          const playbackRate =
+            getPlanetPrincipalPlaybackRate(normalizedPlanetName, resolvedModalEnabled, normalizedSignIndex) * tuningRate
+          source.playbackRate.setValueAtTime(Math.max(0.05, playbackRate), 0)
+
+          const planetGainNode = offlineContext.createGain()
+          planetGainNode.gain.value =
+            ORBITAL_STAR_BACKGROUND_PLANET_GAIN_BY_INDEX[index] ??
+            ORBITAL_STAR_BACKGROUND_PLANET_GAIN_BY_INDEX[ORBITAL_STAR_BACKGROUND_PLANET_GAIN_BY_INDEX.length - 1]
+
+          const stereoPanner = offlineContext.createStereoPanner()
+          stereoPanner.pan.value =
+            ORBITAL_STAR_BACKGROUND_PAN_BY_INDEX[index] ??
+            ORBITAL_STAR_BACKGROUND_PAN_BY_INDEX[ORBITAL_STAR_BACKGROUND_PAN_BY_INDEX.length - 1]
+
+          source.connect(planetGainNode)
+          planetGainNode.connect(stereoPanner)
+          stereoPanner.connect(masterGainNode)
+
+          const startSec = ORBITAL_STAR_BACKGROUND_STAGGER_SEC[index] ?? 0
+          source.start(startSec, startOffsetSec)
+          source.stop(ORBITAL_STAR_BACKGROUND_DURATION_SEC)
+          scheduledSources += 1
+        })
+
+        if (scheduledSources === 0) {
+          return null
+        }
+
+        const renderedBuffer = await offlineContext.startRendering()
+        if (backgroundRenderRequestIdRef.current !== requestId) return null
+
+        backgroundBufferRef.current = renderedBuffer
+        backgroundSignIndexRef.current = normalizedSignIndex
+        return renderedBuffer
+      })()
+
+      backgroundRenderPromiseRef.current = renderPromise
+
+      try {
+        return await renderPromise
+      } catch (error) {
+        if (backgroundRenderRequestIdRef.current === requestId) {
+          backgroundBufferRef.current = null
+        }
+        console.error("[v0] Error preparing orbital star background:", error)
+        return null
+      } finally {
+        if (backgroundRenderPromiseRef.current === renderPromise) {
+          backgroundRenderPromiseRef.current = null
+        }
+      }
+    },
+    [initializeAudio],
+  )
+
+  const playBackgroundSound = useCallback(async (
+    options?: {
+      sunSignIndex?: number | null
+      modalEnabled?: boolean
+      forceRegenerate?: boolean
+    },
+  ) => {
+    await initializeAudio()
+    const ctx = audioContextRef.current
+    if (!ctx) return
+
+    const requestedSignIndex =
+      typeof options?.sunSignIndex === "number" ? mod12(options.sunSignIndex) : modalSunSignIndexRef.current
+    const shouldForceRegenerate = options?.forceRegenerate ?? false
+    let backgroundBuffer = backgroundBufferRef.current
+
+    if (
+      shouldForceRegenerate ||
+      !backgroundBuffer ||
+      backgroundSignIndexRef.current !== (typeof requestedSignIndex === "number" ? mod12(requestedSignIndex) : null)
+    ) {
+      backgroundBuffer = await prepareOrbitalStarBackground(requestedSignIndex, {
+        modalEnabled: options?.modalEnabled,
+        force: shouldForceRegenerate,
+      })
+    }
+
+    if (!backgroundBuffer) {
+      console.log("[v0] Orbital star background is not ready")
       return
     }
 
-    try {
-      const ctx = audioContextRef.current
+    if (backgroundSourceRef.current) {
+      try {
+        backgroundSourceRef.current.stop()
+      } catch (e) {
+        // Already stopped
+      }
+      backgroundSourceRef.current = null
+    }
+    backgroundGainRef.current = null
 
+    try {
       backgroundGainRef.current = ctx.createGain()
-      backgroundGainRef.current.gain.value = (backgroundVolumeRef.current ?? 0) / 100
+      const targetGain = (backgroundVolumeRef.current ?? 0) / 100
+      const now = ctx.currentTime
+      backgroundGainRef.current.gain.setValueAtTime(0, now)
+      backgroundGainRef.current.gain.linearRampToValueAtTime(targetGain, now + ORBITAL_STAR_BACKGROUND_FADE_IN_SEC)
 
       backgroundSourceRef.current = ctx.createBufferSource()
-      backgroundSourceRef.current.buffer = backgroundBufferRef.current
+      backgroundSourceRef.current.buffer = backgroundBuffer
       backgroundSourceRef.current.loop = true
 
       backgroundSourceRef.current.connect(backgroundGainRef.current)
@@ -872,7 +1055,7 @@ export function usePlanetAudio(
     } catch (error) {
       console.error("[v0] Error playing background sound:", error)
     }
-  }, [initializeAudio])
+  }, [initializeAudio, prepareOrbitalStarBackground])
 
   const stopBackgroundSound = useCallback(() => {
     if (backgroundSourceRef.current && backgroundGainRef.current) {
@@ -880,7 +1063,7 @@ export function usePlanetAudio(
         const ctx = audioContextRef.current
         if (!ctx) return
 
-        const FADE_OUT_TIME = 15
+        const FADE_OUT_TIME = ORBITAL_STAR_BACKGROUND_FADE_OUT_SEC
         const currentTime = ctx.currentTime
 
         backgroundGainRef.current.gain.setValueAtTime(backgroundGainRef.current.gain.value, currentTime)
@@ -1687,6 +1870,13 @@ export function usePlanetAudio(
           typeof options.modalSunSignIndex === "number"
             ? options.modalSunSignIndex
             : modalSunSignIndexRef.current
+        let orbitalStarBackgroundBuffer: AudioBuffer | null = null
+        if (options.includeBackground) {
+          orbitalStarBackgroundBuffer = await prepareOrbitalStarBackground(modalSunSignIndex, {
+            modalEnabled,
+            force: false,
+          })
+        }
 
         const scheduleSample = (params: {
           bufferKey: string
@@ -1761,19 +1951,26 @@ export function usePlanetAudio(
           source.stop(endTime)
         }
 
-        if (options.includeBackground) {
-          const backgroundBuffer = audioBuffersRef.current.background
-          if (backgroundBuffer) {
-            const backgroundSource = offlineContext.createBufferSource()
-            const backgroundGainNode = offlineContext.createGain()
-            backgroundSource.buffer = backgroundBuffer
-            backgroundSource.loop = true
-            backgroundGainNode.gain.value = Math.max(0, (options.backgroundVolumePercent ?? backgroundVolumeRef.current) / 100)
-            backgroundSource.connect(backgroundGainNode)
-            backgroundGainNode.connect(masterGainNode)
-            backgroundSource.start(0)
-            backgroundSource.stop(durationSec)
-          }
+        if (options.includeBackground && orbitalStarBackgroundBuffer) {
+          const backgroundSource = offlineContext.createBufferSource()
+          const backgroundGainNode = offlineContext.createGain()
+          const backgroundTargetGain = Math.max(0, (options.backgroundVolumePercent ?? backgroundVolumeRef.current) / 100)
+          const backgroundFadeInSec = Math.max(0.01, Math.min(ORBITAL_STAR_BACKGROUND_FADE_IN_SEC, durationSec))
+          const backgroundFadeOutSec = Math.max(0.01, Math.min(ORBITAL_STAR_BACKGROUND_FADE_OUT_SEC, durationSec))
+          const backgroundFadeOutStart = Math.max(backgroundFadeInSec, durationSec - backgroundFadeOutSec)
+
+          backgroundSource.buffer = orbitalStarBackgroundBuffer
+          backgroundSource.loop = true
+
+          backgroundGainNode.gain.setValueAtTime(0, 0)
+          backgroundGainNode.gain.linearRampToValueAtTime(backgroundTargetGain, backgroundFadeInSec)
+          backgroundGainNode.gain.setValueAtTime(backgroundTargetGain, backgroundFadeOutStart)
+          backgroundGainNode.gain.linearRampToValueAtTime(0, durationSec)
+
+          backgroundSource.connect(backgroundGainNode)
+          backgroundGainNode.connect(masterGainNode)
+          backgroundSource.start(0)
+          backgroundSource.stop(durationSec)
         }
 
         if (options.includeElement && options.elementName) {
@@ -1877,7 +2074,7 @@ export function usePlanetAudio(
         return null
       }
     },
-    [initializeAudio],
+    [initializeAudio, prepareOrbitalStarBackground],
   )
 
   useEffect(() => {
@@ -1924,6 +2121,10 @@ export function usePlanetAudio(
       if (audioContextRef.current) {
         audioContextRef.current.close()
       }
+      backgroundRenderRequestIdRef.current += 1
+      backgroundRenderPromiseRef.current = null
+      backgroundBufferRef.current = null
+      backgroundSignIndexRef.current = null
       globalReverbSendRef.current = null
     }
   }, [stopAll, stopBackgroundSound, stopElementBackground])
@@ -1933,6 +2134,7 @@ export function usePlanetAudio(
     stopAll,
     playBackgroundSound,
     stopBackgroundSound,
+    prepareOrbitalStarBackground,
     playElementBackground,
     stopElementBackground,
     loadingProgress,

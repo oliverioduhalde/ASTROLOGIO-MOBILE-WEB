@@ -204,7 +204,7 @@ const DEFAULT_ASPECTS_SOUND_VOLUME = 11
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
 const LOADING_SUBTITLE_STEP_MS = 25000
-const MONOTYPE_FONT_STACK = 'Monaco, Menlo, "Courier New", monospace'
+const MONOTYPE_FONT_STACK = '"Roboto Mono", "Courier New", Courier, monospace'
 const LOADING_INTRO_PARAGRAPHS = [
   "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler's vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
   "READING MODES",
@@ -923,6 +923,25 @@ export default function AstrologyCalculator() {
         const result = Array.isArray(payload?.results) ? payload.results[0] : null
         if (result?.name && result?.country) {
           return formatSuggestion(result.name, result.admin1, result.country)
+        }
+      }
+
+      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=en&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`
+      const nominatimResponse = await fetch(nominatimUrl)
+      if (nominatimResponse.ok) {
+        const nominatimPayload = await nominatimResponse.json()
+        const address = nominatimPayload?.address || {}
+        const cityCandidate =
+          address.city ||
+          address.town ||
+          address.village ||
+          address.municipality ||
+          address.county ||
+          address.state ||
+          null
+        const countryCandidate = address.country || null
+        if (cityCandidate && countryCandidate) {
+          return formatSuggestion(String(cityCandidate), undefined, String(countryCandidate))
         }
       }
 
@@ -2596,7 +2615,7 @@ export default function AstrologyCalculator() {
                     className={`font-mono text-[20px] md:text-[24px] leading-none transition-colors px-2 py-1 ${
                       isFirstIntroParagraph
                         ? "text-white/30 cursor-not-allowed"
-                        : "text-white/80 hover:text-white"
+                        : "text-white/50 hover:text-white"
                     }`}
                     style={{ fontFamily: MONOTYPE_FONT_STACK }}
                   >
@@ -2604,7 +2623,7 @@ export default function AstrologyCalculator() {
                   </button>
                   <button
                     onClick={advanceLoadingIntroParagraph}
-                    className="play-idle-pulse font-mono text-[20px] md:text-[24px] leading-none text-white/80 hover:text-white transition-colors px-2 py-1"
+                    className="play-idle-pulse font-mono text-[20px] md:text-[24px] leading-none text-white/50 hover:text-white transition-colors px-2 py-1"
                     style={{ fontFamily: MONOTYPE_FONT_STACK }}
                   >
                     {isLastIntroParagraph ? ">" : ">"}

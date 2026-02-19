@@ -68,22 +68,24 @@ const EMPTY_SUBJECT_FORM: SubjectFormData = {
 }
 
 const MODE_NAME_BY_SIGN_INDEX: Record<number, string> = {
-  0: "Frigio dominante",
-  1: "Dorico",
-  2: "Lidio",
-  3: "Eolico",
-  4: "Jonico",
-  5: "Eolico",
-  6: "Jonico",
-  7: "Frigio",
-  8: "Mixolidio",
-  9: "Menor armonico",
-  10: "Lidio dominante",
-  11: "Locrio",
+  0: "Phrygian Dominant",
+  1: "Dorian",
+  2: "Lydian",
+  3: "Aeolian",
+  4: "Ionian",
+  5: "Aeolian",
+  6: "Ionian",
+  7: "Phrygian",
+  8: "Mixolydian",
+  9: "Harmonic Minor",
+  10: "Lydian Dominant",
+  11: "Locrian",
 }
 
 type AudioEngineMode = "samples" | "hybrid" | "fm_pad" | "tibetan_bowls" | "tibetan_samples"
 type NavigationMode = "astral_chord" | "radial" | "sequential"
+type SubjectPreset = "manual" | "here_now" | "ba" | "cairo" | "ba77"
+type MajorAspectKey = "conjunction" | "opposition" | "trine" | "square" | "sextile"
 
 const SEQUENTIAL_PLANET_ORDER = [
   "sun",
@@ -202,6 +204,90 @@ const LOADING_INTRO_PARAGRAPHS = [
   "Its spatial placement and tuning emerge from astrological chart coordinates and interplanetary relationships calculated from the chart itself.",
   "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here and now.",
 ]
+
+const ASPECT_SYMBOL_BY_KEY: Record<MajorAspectKey, string> = {
+  conjunction: "☌",
+  opposition: "☍",
+  trine: "△",
+  square: "▢",
+  sextile: "⚹",
+}
+
+const ASPECT_LABEL_BY_KEY_EN: Record<MajorAspectKey, string> = {
+  conjunction: "Conjunction",
+  opposition: "Opposition",
+  trine: "Trine",
+  square: "Square",
+  sextile: "Sextile",
+}
+
+function normalizeCompareText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+}
+
+function getMajorAspectKey(aspectType: string): MajorAspectKey | null {
+  const normalized = normalizeCompareText(aspectType)
+  if (!normalized) return null
+  if (normalized.includes("conj")) return "conjunction"
+  if (normalized.includes("opos") || normalized.includes("oppo")) return "opposition"
+  if (normalized.includes("trig") || normalized.includes("trin")) return "trine"
+  if (normalized.includes("cuad") || normalized.includes("squar")) return "square"
+  if (normalized.includes("sext")) return "sextile"
+  return null
+}
+
+function isMajorAspectType(aspectType: string): boolean {
+  return getMajorAspectKey(aspectType) !== null
+}
+
+function getMajorAspectLabel(aspectType: string): string {
+  const key = getMajorAspectKey(aspectType)
+  return key ? ASPECT_LABEL_BY_KEY_EN[key] : aspectType
+}
+
+function getMajorAspectSymbol(aspectType: string): string {
+  const key = getMajorAspectKey(aspectType)
+  return key ? ASPECT_SYMBOL_BY_KEY[key] : aspectType
+}
+
+function getMajorAspectStrokeColor(aspectType: string): string {
+  const key = getMajorAspectKey(aspectType)
+  if (key === "opposition") return "#FF8C00"
+  if (key === "conjunction") return "#9D4EDD"
+  if (key === "trine") return "#00FF00"
+  if (key === "square") return "#FF3B30"
+  if (key === "sextile") return "#0099FF"
+  return "#888"
+}
+
+function formatDateTimeLocalValue(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+function sanitizeLocationLabel(rawLocation: string): string {
+  const trimmed = rawLocation.trim()
+  if (!trimmed) return ""
+
+  const numericTokenPattern = /^[-+]?\d+(\.\d+)?$/
+  const parts = trimmed
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !numericTokenPattern.test(part))
+
+  if (parts.length >= 2) return `${parts[0]}, ${parts[parts.length - 1]}`
+  if (parts.length === 1) return parts[0]
+  return trimmed
+}
 
 function normalizeSignLabel(label: string): string {
   return label
@@ -341,6 +427,7 @@ export default function AstrologyCalculator() {
   const [showAstroChart, setShowAstroChart] = useState(false)
   const [skipLoadingIntro, setSkipLoadingIntro] = useState(false)
   const [loadingIntroCompleted, setLoadingIntroCompleted] = useState(false)
+  const [loadingIntroProgressPct, setLoadingIntroProgressPct] = useState(0)
   const [loadingIntroIndex, setLoadingIntroIndex] = useState(0)
   const [loadingIntroPrevIndex, setLoadingIntroPrevIndex] = useState<number | null>(null)
   const [loadingIntroTick, setLoadingIntroTick] = useState(0)
@@ -352,11 +439,12 @@ export default function AstrologyCalculator() {
   const [showPointerInfo, setShowPointerInfo] = useState(false)
   const [showVuMeter, setShowVuMeter] = useState(false)
   const [showModeInfo, setShowModeInfo] = useState(false)
+  const [advancedMenuEnabled, setAdvancedMenuEnabled] = useState(false)
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
   const [isExportingMp3, setIsExportingMp3] = useState(false)
   const [pendingMp3Download, setPendingMp3Download] = useState<{ url: string; fileName: string } | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
-  const [selectedPreset, setSelectedPreset] = useState<"ba" | "cairo" | "manual" | "ba77">("manual")
+  const [selectedPreset, setSelectedPreset] = useState<SubjectPreset>("manual")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
   const [horoscopeData, setHoroscopeData] = useState<HoroscopeData | null>(null)
   const [error, setError] = useState<string>("")
@@ -419,6 +507,7 @@ export default function AstrologyCalculator() {
   const interactivePreviewClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const skipNextAutoCalculateRef = useRef(false)
   const loadingIntroIndexRef = useRef(0)
+  const loadingIntroStartTimeRef = useRef(0)
   const [locationSuggestions, setLocationSuggestions] = useState<GeoSuggestion[]>([])
   const [isResolvingLocation, setIsResolvingLocation] = useState(false)
   const chartAspectsKeyRef = useRef("__chart__")
@@ -471,32 +560,83 @@ export default function AstrologyCalculator() {
       chordReverbMixPercent,
     })
   const lastPlayedPlanetRef = useRef<string | null>(null)
+  const totalLoadingIntroDurationMs = LOADING_INTRO_PARAGRAPHS.length * LOADING_SUBTITLE_STEP_MS
   const showLoadingIntroScreen = !skipLoadingIntro && (loadingProgress < 100 || !loadingIntroCompleted)
+  const loadingDisplayProgress = useMemo(() => {
+    if (!loadingIntroCompleted) return Math.min(99, loadingIntroProgressPct)
+    if (loadingProgress >= 100) return 100
+    return 99
+  }, [loadingIntroCompleted, loadingIntroProgressPct, loadingProgress])
 
   useEffect(() => {
     if (!showLoadingIntroScreen) return
 
     loadingIntroIndexRef.current = 0
+    loadingIntroStartTimeRef.current = performance.now()
+    const introStartTime = loadingIntroStartTimeRef.current
+    let lastRenderedParagraphIndex = 0
+    let animationFrameId: number | null = null
+
     setLoadingIntroIndex(0)
     setLoadingIntroPrevIndex(null)
     setLoadingIntroTick(0)
     setLoadingIntroCompleted(false)
+    setLoadingIntroProgressPct(0)
 
-    const subtitleInterval = setInterval(() => {
-      const previousIndex = loadingIntroIndexRef.current
-      const nextIndex = (previousIndex + 1) % LOADING_INTRO_PARAGRAPHS.length
-      const hasDisplayedFullPass = previousIndex === LOADING_INTRO_PARAGRAPHS.length - 1
-      loadingIntroIndexRef.current = nextIndex
-      setLoadingIntroPrevIndex(previousIndex)
-      setLoadingIntroIndex(nextIndex)
-      setLoadingIntroTick((prev) => prev + 1)
-      if (hasDisplayedFullPass) {
-        setLoadingIntroCompleted(true)
+    const updateLoadingTimeline = () => {
+      const now = performance.now()
+      const elapsedMs = Math.max(0, now - introStartTime)
+      const boundedElapsedMs = Math.min(totalLoadingIntroDurationMs, elapsedMs)
+      const progressPct = (boundedElapsedMs / totalLoadingIntroDurationMs) * 100
+      setLoadingIntroProgressPct(progressPct)
+
+      const paragraphIndex = Math.min(
+        LOADING_INTRO_PARAGRAPHS.length - 1,
+        Math.floor(boundedElapsedMs / LOADING_SUBTITLE_STEP_MS),
+      )
+      if (paragraphIndex !== lastRenderedParagraphIndex) {
+        setLoadingIntroPrevIndex(lastRenderedParagraphIndex)
+        setLoadingIntroIndex(paragraphIndex)
+        setLoadingIntroTick((prev) => prev + 1)
+        loadingIntroIndexRef.current = paragraphIndex
+        lastRenderedParagraphIndex = paragraphIndex
       }
-    }, LOADING_SUBTITLE_STEP_MS)
 
-    return () => clearInterval(subtitleInterval)
-  }, [showLoadingIntroScreen])
+      if (boundedElapsedMs >= totalLoadingIntroDurationMs) {
+        setLoadingIntroCompleted(true)
+        setLoadingIntroProgressPct(100)
+        return
+      }
+
+      animationFrameId = requestAnimationFrame(updateLoadingTimeline)
+    }
+
+    animationFrameId = requestAnimationFrame(updateLoadingTimeline)
+
+    return () => {
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId)
+      }
+    }
+  }, [showLoadingIntroScreen, totalLoadingIntroDurationMs])
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "o" && event.key !== "O") return
+
+      const target = event.target as HTMLElement | null
+      const tagName = target?.tagName?.toLowerCase()
+      const isEditableTarget =
+        !!target && (target.isContentEditable || tagName === "input" || tagName === "textarea" || tagName === "select")
+      if (isEditableTarget) return
+
+      event.preventDefault()
+      setAdvancedMenuEnabled((prev) => !prev)
+    }
+
+    window.addEventListener("keydown", handleGlobalKeyDown)
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown)
+  }, [])
 
   const clearAspectTimers = useCallback(() => {
     Object.values(aspectClickTimersRef.current).forEach((timers) => {
@@ -615,15 +755,15 @@ export default function AstrologyCalculator() {
     return Math.max(-60, Math.min(0, db))
   }
 
-  const formatSuggestion = (name: string, admin1: string | undefined, country: string) => {
-    return [name, admin1, country].filter(Boolean).join(", ")
+  const formatSuggestion = (name: string, _admin1: string | undefined, country: string) => {
+    return [name, country].filter(Boolean).join(", ")
   }
 
   const searchLocation = useCallback(async (query: string, count = 6): Promise<GeoSuggestion[]> => {
     const trimmed = query.trim()
     if (!trimmed) return []
 
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=${count}&language=es&format=json`
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=${count}&language=en&format=json`
     const response = await fetch(url)
     if (!response.ok) return []
 
@@ -680,8 +820,37 @@ export default function AstrologyCalculator() {
     [locationSuggestions, searchLocation],
   )
 
+  const reverseGeocodeLocation = useCallback(async (latitude: number, longitude: number): Promise<string | null> => {
+    try {
+      const url = `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&count=1&language=en&format=json`
+      const response = await fetch(url)
+      if (!response.ok) return null
+      const payload = await response.json()
+      const result = Array.isArray(payload?.results) ? payload.results[0] : null
+      if (!result?.name || !result?.country) return null
+      return formatSuggestion(result.name, result.admin1, result.country)
+    } catch {
+      return null
+    }
+  }, [])
+
+  const getCurrentPosition = useCallback(() => {
+    return new Promise<GeolocationPosition>((resolve, reject) => {
+      if (typeof window === "undefined" || !window.navigator?.geolocation) {
+        reject(new Error("GeolocationUnavailable"))
+        return
+      }
+
+      window.navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 120000,
+      })
+    })
+  }, [])
+
   useEffect(() => {
-    if (!showSubject || selectedPreset !== "manual") return
+    if (!showSubject || (selectedPreset !== "manual" && selectedPreset !== "here_now")) return
 
     const q = formData.location.trim()
     if (q.length < 2) {
@@ -702,7 +871,7 @@ export default function AstrologyCalculator() {
   }, [formData.location, searchLocation, selectedPreset, showSubject])
 
   useEffect(() => {
-    if (selectedPreset !== "manual" || !showSubject) {
+    if ((selectedPreset !== "manual" && selectedPreset !== "here_now") || !showSubject) {
       setLocationSuggestions([])
     }
   }, [selectedPreset, showSubject])
@@ -746,7 +915,7 @@ export default function AstrologyCalculator() {
           (aspect) =>
             (aspect.point1.name.toLowerCase() === planetName.toLowerCase() ||
               aspect.point2.name.toLowerCase() === planetName.toLowerCase()) &&
-            ["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"].includes(aspect.aspectType) &&
+            isMajorAspectType(aspect.aspectType) &&
             (!aspectsPoint1Only || aspect.point1.name.toLowerCase() === planetName.toLowerCase()),
         ) || []
 
@@ -925,7 +1094,7 @@ export default function AstrologyCalculator() {
       (aspect) =>
         (aspect.point1.name.toLowerCase() === currentPlanetUnderPointer.toLowerCase() ||
           aspect.point2.name.toLowerCase() === currentPlanetUnderPointer.toLowerCase()) &&
-        ["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"].includes(aspect.aspectType),
+        isMajorAspectType(aspect.aspectType),
     )
 
     if (aspectsForPlanet.length === 0) return
@@ -1382,11 +1551,11 @@ export default function AstrologyCalculator() {
   const startAstralChordMode = () => {
     if (!horoscopeData?.planets) return
     const runId = navigationRunIdRef.current
-    const allowedAspects = new Set(["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"])
     const allMajorAspects =
       horoscopeData.aspects?.filter(
         (aspect) =>
-          allowedAspects.has(aspect.aspectType) && aspect.point1.name.toLowerCase() !== aspect.point2.name.toLowerCase(),
+          isMajorAspectType(aspect.aspectType) &&
+          aspect.point1.name.toLowerCase() !== aspect.point2.name.toLowerCase(),
       ) || []
 
     if (allMajorAspects.length > 0) {
@@ -1544,7 +1713,6 @@ export default function AstrologyCalculator() {
       | null => {
       if (!horoscopeData?.planets) return null
 
-      const majorAspectTypes = new Set(["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"])
       const getDeclination = (planetName: string): number => {
         const found = horoscopeData.planets.find((planet) => planet.name.toLowerCase() === planetName.toLowerCase())
         return found?.declination || 0
@@ -1553,7 +1721,7 @@ export default function AstrologyCalculator() {
       const getAspectEvents = (planetName: string, aspectsPoint1Only: boolean): OfflineMp3AspectEvent[] => {
         const events: OfflineMp3AspectEvent[] = []
         for (const aspect of horoscopeData.aspects || []) {
-          if (!majorAspectTypes.has(aspect.aspectType)) continue
+          if (!isMajorAspectType(aspect.aspectType)) continue
 
           const point1 = aspect.point1.name.toLowerCase()
           const point2 = aspect.point2.name.toLowerCase()
@@ -1687,10 +1855,10 @@ export default function AstrologyCalculator() {
       .split(",")
       .map((part) => part.trim())
       .filter(Boolean)
-    const rawCity = locationParts[0] || "CIUDAD"
-    const rawCountry = locationParts.length > 1 ? locationParts[locationParts.length - 1] : "PAIS"
-    const city = sanitizeFileToken(rawCity, "CIUDAD")
-    const country = sanitizeFileToken(rawCountry, "PAIS")
+    const rawCity = locationParts[0] || "CITY"
+    const rawCountry = locationParts.length > 1 ? locationParts[locationParts.length - 1] : "COUNTRY"
+    const city = sanitizeFileToken(rawCity, "CITY")
+    const country = sanitizeFileToken(rawCountry, "COUNTRY")
     const modeSuffix = EXPORT_MODE_SUFFIX[mode]
     return `ASTRO.LOG.IO_${yyyymmddhhmm}_${city}_${country}_${modeSuffix}.mp3`
   }, [formData.datetime, formData.location])
@@ -1700,7 +1868,7 @@ export default function AstrologyCalculator() {
       if (!horoscopeData || isExportingMp3) return
       const plan = buildOfflineMp3Plan(mode)
       if (!plan || plan.events.length === 0) {
-        setError("No se pudo generar el plan de exportación MP3.")
+        setError("Could not build the MP3 export plan.")
         return
       }
 
@@ -1752,13 +1920,13 @@ export default function AstrologyCalculator() {
           reverbMixPercent: mode === "astral_chord" ? chordReverbMixPercent : reverbMixPercent,
         })
         if (!mp3Blob) {
-          setError("No se pudo generar el MP3.")
+          setError("Could not render the MP3 file.")
           setIsExportingMp3(false)
           setPendingMp3Download(null)
           return
         }
         if (mp3Blob.size === 0) {
-          setError("MP3 vacío: el render no generó datos de audio.")
+          setError("Empty MP3: audio render produced no data.")
           setIsExportingMp3(false)
           setPendingMp3Download(null)
           return
@@ -1792,14 +1960,14 @@ export default function AstrologyCalculator() {
           document.body.appendChild(anchor)
           anchor.click()
           document.body.removeChild(anchor)
-          setError("Si no se descargó automático por bloqueo del navegador, toca SAVE MP3.")
+          setError("If browser auto-download is blocked, press SAVE MP3.")
         } else {
           setError("")
         }
         setNavigationMode(mode)
       } catch (error) {
-        console.error("[v0] Error exportando MP3 offline:", error)
-        setError("Error al exportar MP3.")
+        console.error("[v0] Offline MP3 export error:", error)
+        setError("MP3 export failed.")
         setPendingMp3Download(null)
       } finally {
         setIsExportingMp3(false)
@@ -1865,13 +2033,13 @@ export default function AstrologyCalculator() {
     }
 
     let payload: SubjectFormData = trimmed
-    let presetToUse: "ba" | "cairo" | "manual" | "ba77" = selectedPreset
+    let presetToUse: SubjectPreset = selectedPreset
 
     if (Object.values(trimmed).every((value) => value === "")) {
       payload = PRESET_BA77_FORM
       presetToUse = "ba77"
       setFormData({ ...PRESET_BA77_FORM })
-      setSelectedPreset("ba77")
+      setSelectedPreset("manual")
     } else {
       if (trimmed.location) {
         const resolved = await resolveLocationAndUpdateCoords(trimmed.location)
@@ -1889,7 +2057,7 @@ export default function AstrologyCalculator() {
 
       const isComplete = Object.values(trimmed).every((value) => value !== "")
       if (!isComplete) {
-        setError("Completa todos los datos o deja todo vacío para usar el preset 28/09/1977.")
+        setError("Complete all fields, or leave all fields empty to load the 28/09/1977 preset.")
         return
       }
       payload = trimmed
@@ -1900,7 +2068,7 @@ export default function AstrologyCalculator() {
     const longitude = Number.parseFloat(payload.longitude.replace(",", "."))
 
     if (!birthDate || !birthTime || Number.isNaN(latitude) || Number.isNaN(longitude)) {
-      setError("Formato inválido. Revisa fecha/hora, latitud y longitud.")
+      setError("Invalid format. Check date/time, latitude and longitude.")
       return
     }
 
@@ -1937,35 +2105,67 @@ export default function AstrologyCalculator() {
       setShowChart(true)
       setShowSubject(false)
     } catch (err) {
-      setError("Error al calcular el horóscopo. Verifica los datos ingresados.")
+      setError("Could not calculate the astrological chart. Check the entered data.")
       console.error(err)
     } finally {
       setLoading(false)
     }
   }
 
-  const applyPresetBA = () => {
-    setFormData({ ...PRESET_BA_FORM })
-    setSelectedPreset("ba")
-  }
-
-  const applyPresetCairo = () => {
-    setFormData({ ...PRESET_CAIRO_FORM })
-    setSelectedPreset("cairo")
-  }
-
-  const applyPresetBA77 = () => {
-    setFormData({ ...PRESET_BA77_FORM })
-    setSelectedPreset("ba77")
-  }
-
   const setManualMode = () => {
     setFormData({ ...EMPTY_SUBJECT_FORM })
     setSelectedPreset("manual")
+    setError("")
+  }
+
+  const applyHereAndNow = async () => {
+    const now = new Date()
+    const nowDateTime = formatDateTimeLocalValue(now)
+
+    setError("")
+    setSelectedPreset("here_now")
+    setFormData({
+      datetime: nowDateTime,
+      location: "",
+      latitude: "",
+      longitude: "",
+    })
+
+    try {
+      const position = await getCurrentPosition()
+      const latitude = position.coords.latitude
+      const longitude = position.coords.longitude
+      const resolvedLocation = await reverseGeocodeLocation(latitude, longitude)
+
+      setFormData({
+        datetime: nowDateTime,
+        location: resolvedLocation ? sanitizeLocationLabel(resolvedLocation) : "",
+        latitude: latitude.toFixed(4),
+        longitude: longitude.toFixed(4),
+      })
+
+      if (!resolvedLocation) {
+        setError("Geolocation returned coordinates, but city/country was not resolved. Please complete location manually.")
+      }
+    } catch (geoError: any) {
+      const denied = geoError?.code === 1
+      setSelectedPreset("manual")
+      setFormData({
+        datetime: nowDateTime,
+        location: "",
+        latitude: "",
+        longitude: "",
+      })
+      setError(
+        denied
+          ? "Geolocation permission was denied. Please enter location manually."
+          : "Geolocation is unavailable. Please enter location manually.",
+      )
+    }
   }
 
   const isManualSubjectReady =
-    selectedPreset === "manual" &&
+    (selectedPreset === "manual" || selectedPreset === "here_now") &&
     formData.datetime.trim() !== "" &&
     formData.location.trim() !== "" &&
     formData.latitude.trim() !== "" &&
@@ -2059,12 +2259,10 @@ export default function AstrologyCalculator() {
   }, [horoscopeData?.houses])
 
   const getAspectsForPlanet = (planetName: string) => {
-    const allowedAspects = ["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"]
     return (
       horoscopeData?.aspects?.filter(
         (aspect) =>
-          (aspect.point1.name === planetName || aspect.point2.name === planetName) &&
-          allowedAspects.includes(aspect.aspectType),
+          (aspect.point1.name === planetName || aspect.point2.name === planetName) && isMajorAspectType(aspect.aspectType),
       ) || []
     )
   }
@@ -2216,36 +2414,36 @@ export default function AstrologyCalculator() {
       loadingIntroPrevIndex !== null ? LOADING_INTRO_PARAGRAPHS[loadingIntroPrevIndex] : null
 
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center p-4 relative">
-        <div className="w-full max-w-2xl">
-          <div className="mb-8 min-h-[380px]">
-            <div className="w-full text-center">
+      <main className="min-h-screen bg-black text-white flex items-start justify-center p-4 pt-8 md:pt-10 relative">
+        <div className="w-full max-w-3xl">
+          <div className="mb-8 min-h-[420px]">
+            <div className="w-full text-center pt-1">
               <h1
                 className="text-3xl md:text-4xl uppercase tracking-widest text-center"
                 style={{ fontFamily: MONOTYPE_FONT_STACK }}
               >
                 ASTRO.LOG.IO
               </h1>
-              <div className="mt-3 h-[3px] w-full bg-white/20">
+              <div className="mt-2 h-[3px] w-full bg-white/20">
                 <div
                   className="h-full bg-white"
                   style={{
-                    width: `${loadingProgress}%`,
+                    width: `${loadingDisplayProgress}%`,
                     transition: "width 0.05s linear",
                   }}
                 ></div>
               </div>
             </div>
             <div className="mt-3 flex items-center justify-end text-[8px] uppercase tracking-[0.25em] text-white/50">
-              <span>{loadingProgress}%</span>
+              <span>{Math.round(loadingDisplayProgress)}%</span>
             </div>
 
-            <div className="mt-6 relative h-[280px] overflow-hidden">
+            <div className="mt-5 relative h-[300px] overflow-hidden">
               {previousIntroParagraph && (
                 <p
                   key={`loading-prev-${loadingIntroTick}-${loadingIntroPrevIndex}`}
-                  className="loading-subtitle-previous absolute left-0 right-0 top-10 mx-auto max-w-[840px] px-2 text-[24px] md:text-[28px] leading-relaxed"
-                  style={{ color: "rgba(255,255,255,0.4)", fontFamily: MONOTYPE_FONT_STACK, textAlign: "justify" }}
+                  className="loading-subtitle-previous absolute left-0 right-0 top-8 mx-auto max-w-[860px] px-2 text-[17px] md:text-[20px] leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.1)", fontFamily: MONOTYPE_FONT_STACK, textAlign: "justify" }}
                 >
                   {previousIntroParagraph}
                 </p>
@@ -2253,7 +2451,7 @@ export default function AstrologyCalculator() {
 
               <p
                 key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
-                className="loading-subtitle-current absolute left-0 right-0 top-24 mx-auto max-w-[840px] px-2 text-[24px] md:text-[28px] leading-relaxed"
+                className="loading-subtitle-current absolute left-0 right-0 top-20 mx-auto max-w-[860px] px-2 text-[17px] md:text-[20px] leading-relaxed"
                 style={{ color: "rgba(255,255,255,0.7)", fontFamily: MONOTYPE_FONT_STACK, textAlign: "justify" }}
               >
                 {currentIntroParagraph}
@@ -2264,7 +2462,7 @@ export default function AstrologyCalculator() {
 
         <button
           onClick={() => setSkipLoadingIntro(true)}
-          className="absolute bottom-6 right-6 border border-white/40 px-3 py-1 text-[11px] text-white/70 hover:text-white hover:border-white transition-colors"
+          className="absolute bottom-6 right-6 border border-white/40 px-7 py-2.5 text-[26px] text-white/70 hover:text-white hover:border-white transition-colors leading-none"
           style={{ fontFamily: MONOTYPE_FONT_STACK }}
         >
           Skip &gt;
@@ -2280,14 +2478,101 @@ export default function AstrologyCalculator() {
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="font-mono text-[9px] uppercase tracking-wider border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
+              className="font-mono text-[12px] uppercase tracking-wider border border-white px-4 py-2 hover:bg-white hover:text-black transition-colors"
             >
               {menuOpen ? "✕" : "☰"}
             </button>
 
             {menuOpen && (
               <div className="absolute top-full left-0 mt-2 bg-black border border-white p-3 z-10 min-w-[200px] max-h-[85vh] overflow-y-auto md:scale-[2.3] md:origin-top-left">
-                <div className="space-y-1">
+                <div className="mb-2 flex items-center justify-between font-mono text-[7px] uppercase tracking-wide text-white/80">
+                  <span>Menu</span>
+                  <span>Advanced {advancedMenuEnabled ? "ON" : "OFF"} [O]</span>
+                </div>
+
+                <div className={advancedMenuEnabled ? "hidden" : "space-y-2"}>
+                  <div className="grid grid-cols-2 gap-1">
+                    <label className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-wide cursor-pointer border border-white/60 px-1.5 py-1">
+                      <input
+                        type="checkbox"
+                        checked={showSubject}
+                        onChange={(e) => setShowSubject(e.target.checked)}
+                        className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
+                      />
+                      Subject
+                    </label>
+                    <label className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-wide cursor-pointer border border-white/60 px-1.5 py-1">
+                      <input
+                        type="checkbox"
+                        checked={showSignsRing}
+                        onChange={(e) => setShowSignsRing(e.target.checked)}
+                        className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
+                      />
+                      Signs
+                    </label>
+                    <label className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-wide cursor-pointer border border-white/60 px-1.5 py-1">
+                      <input
+                        type="checkbox"
+                        checked={showHousesRing}
+                        onChange={(e) => setShowHousesRing(e.target.checked)}
+                        className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
+                      />
+                      Houses
+                    </label>
+                    <label className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-wide cursor-pointer border border-white/60 px-1.5 py-1">
+                      <input
+                        type="checkbox"
+                        checked={showAngles}
+                        onChange={(e) => setShowAngles(e.target.checked)}
+                        className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
+                      />
+                      MC
+                    </label>
+                  </div>
+
+                  <div className="border-t border-gray-600 my-1"></div>
+
+                  <div className="grid grid-cols-2 gap-1">
+                    {NAVIGATION_MODES.map((mode) => (
+                      <button
+                        key={`minimal-nav-${mode}`}
+                        onClick={() => setNavigationModeFromMenu(mode)}
+                        className={`font-mono text-[8px] uppercase tracking-wide border px-1 py-1 transition-colors ${
+                          navigationMode === mode
+                            ? "bg-white text-black border-white"
+                            : "bg-transparent text-white border-gray-600 hover:border-white"
+                        }`}
+                      >
+                        {NAV_MODE_HINT_LABEL[mode]}
+                      </button>
+                    ))}
+                    <button
+                      onClick={resetToInitialState}
+                      className="font-mono text-[8px] uppercase tracking-wide border border-white px-1 py-1 hover:bg-white hover:text-black transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+
+                  <div className="border-t border-gray-600 my-1"></div>
+
+                  <div className="flex items-center gap-1">
+                    <label className="font-mono text-[8px] uppercase tracking-wide w-12 flex-shrink-0">Engine</label>
+                    <select
+                      value={audioEngineMode}
+                      onChange={(e) => setAudioEngineMode(e.target.value as AudioEngineMode)}
+                      className="bg-black border border-white text-white text-[8px] px-1 py-0.5 flex-1 font-mono"
+                    >
+                      <option value="samples">Samples</option>
+                      <option value="hybrid">Hybrid</option>
+                      <option value="fm_pad">FM Pad</option>
+                      <option value="tibetan_bowls">Tibetan Bowls</option>
+                      <option value="tibetan_samples">Tibetan Samples</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className={advancedMenuEnabled ? "space-y-1" : "hidden"}>
                   <button
                     onClick={() => {
                       setShowSubject(false)
@@ -2405,7 +2690,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowAngles(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Angles
+                    MC
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -2573,7 +2858,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Elemento
+                        Element
                       </label>
                       <input
                         type="range"
@@ -2812,10 +3097,10 @@ export default function AstrologyCalculator() {
             )}
           </div>
 
-          <h1 className="text-[19px] md:text-[22px] font-mono absolute left-1/2 transform -translate-x-1/2">ASTRO.LOG.IO</h1>
+          <h1 className="text-[23px] md:text-[26px] font-mono absolute left-1/2 transform -translate-x-1/2">ASTRO.LOG.IO</h1>
           {showModeInfo && (
             <div className="absolute left-14 md:left-20 top-1/2 -translate-y-1/2 font-mono text-[12px] md:text-[14px] uppercase tracking-widest text-white/85">
-              {modalEnabled ? `Modo: ${currentModeLabel}` : "Modo: OFF"}
+              {modalEnabled ? `Mode: ${currentModeLabel}` : "Mode: OFF"}
             </div>
           )}
 
@@ -2826,36 +3111,6 @@ export default function AstrologyCalculator() {
           <div className="space-y-2">
             <div className="flex flex-wrap gap-1.5 mb-2">
               <button
-                onClick={applyPresetBA}
-                className={`px-2.5 py-1 text-[10px] font-mono border transition-colors ${
-                  selectedPreset === "ba"
-                    ? "bg-white text-black border-white"
-                    : "bg-transparent text-white border-gray-600 hover:border-white"
-                }`}
-              >
-                19740916 BA
-              </button>
-              <button
-                onClick={applyPresetCairo}
-                className={`px-2.5 py-1 text-[10px] font-mono border transition-colors ${
-                  selectedPreset === "cairo"
-                    ? "bg-white text-black border-white"
-                    : "bg-transparent text-white border-gray-600 hover:border-white"
-                }`}
-              >
-                19700101 Cairo
-              </button>
-              <button
-                onClick={applyPresetBA77}
-                className={`px-2.5 py-1 text-[10px] font-mono border transition-colors ${
-                  selectedPreset === "ba77"
-                    ? "bg-white text-black border-white"
-                    : "bg-transparent text-white border-gray-600 hover:border-white"
-                }`}
-              >
-                19770928 BA
-              </button>
-              <button
                 onClick={setManualMode}
                 className={`px-2.5 py-1 text-[10px] font-mono border transition-colors ${
                   selectedPreset === "manual"
@@ -2863,14 +3118,26 @@ export default function AstrologyCalculator() {
                     : "bg-transparent text-white border-gray-600 hover:border-white"
                 }`}
               >
-                Manual
+                MANUAL
+              </button>
+              <button
+                onClick={() => {
+                  void applyHereAndNow()
+                }}
+                className={`px-2.5 py-1 text-[10px] font-mono border transition-colors ${
+                  selectedPreset === "here_now"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white border-gray-600 hover:border-white"
+                }`}
+              >
+                HERE &amp; NOW
               </button>
             </div>
 
-            {selectedPreset === "manual" && (
+            {(selectedPreset === "manual" || selectedPreset === "here_now") && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Fecha y Hora</label>
+                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Date &amp; Time</label>
                   <input
                     type="datetime-local"
                     value={formData.datetime}
@@ -2879,7 +3146,7 @@ export default function AstrologyCalculator() {
                   />
                 </div>
                 <div className="relative">
-                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Lugar</label>
+                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Location</label>
                   <input
                     type="text"
                     value={formData.location}
@@ -2895,10 +3162,10 @@ export default function AstrologyCalculator() {
                       }
                     }}
                     className="w-full bg-black border border-gray-500 text-white p-2 text-[20px] font-mono focus:border-white focus:outline-none"
-                    placeholder="Ciudad o País"
+                    placeholder="City, Country"
                   />
                   {isResolvingLocation && (
-                    <div className="mt-1 text-[12px] font-mono text-white/70">Resolviendo ubicación...</div>
+                    <div className="mt-1 text-[12px] font-mono text-white/70">Resolving location...</div>
                   )}
                   {locationSuggestions.length > 0 && (
                     <div className="absolute z-20 mt-1 w-full border border-gray-500 bg-black max-h-44 overflow-y-auto">
@@ -2924,7 +3191,7 @@ export default function AstrologyCalculator() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Latitud</label>
+                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Latitude</label>
                   <input
                     type="number"
                     step="0.0001"
@@ -2934,7 +3201,7 @@ export default function AstrologyCalculator() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Longitud</label>
+                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Longitude</label>
                   <input
                     type="number"
                     step="0.0001"
@@ -3253,41 +3520,8 @@ export default function AstrologyCalculator() {
                     })}
 
                     {showAngles &&
-                      horoscopeData.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees !== undefined &&
                       horoscopeData.mc?.ChartPosition?.Ecliptic?.DecimalDegrees !== undefined && (
                         <>
-                          {/* ASC */}
-                          {(() => {
-                            const ascLong = horoscopeData.ascendant.ChartPosition?.Ecliptic?.DecimalDegrees
-                            if (ascLong === undefined) return null
-                            const theta = adjustToCanvasAngle(ascLong)
-                            const innerPos = polarToCartesian(200, 200, 50, theta)
-                            const outerPos = polarToCartesian(200, 200, 190, theta)
-                            const labelPos = polarToCartesian(200, 200, 175, theta)
-                            return (
-                              <g>
-                                <line
-                                  x1={innerPos.x}
-                                  y1={innerPos.y}
-                                  x2={outerPos.x}
-                                  y2={outerPos.y}
-                                  stroke="#FFD700"
-                                  strokeWidth="2"
-                                />
-                                <text
-                                  x={labelPos.x}
-                                  y={labelPos.y}
-                                  textAnchor="middle"
-                                  dominantBaseline="middle"
-                                  fill="#FFD700"
-                                  fontSize="12"
-                                  fontWeight="bold"
-                                >
-                                  ASC
-                                </text>
-                              </g>
-                            )
-                          })()}
                           {/* MC */}
                           {(() => {
                             const mcLong = horoscopeData.mc.ChartPosition?.Ecliptic?.DecimalDegrees
@@ -3303,17 +3537,17 @@ export default function AstrologyCalculator() {
                                   y1={innerPos.y}
                                   x2={outerPos.x}
                                   y2={outerPos.y}
-                                  stroke="#FFD700"
-                                  strokeWidth="2"
+                                  stroke="white"
+                                  strokeWidth="1.4"
                                 />
                                 <text
                                   x={labelPos.x}
                                   y={labelPos.y}
                                   textAnchor="middle"
                                   dominantBaseline="middle"
-                                  fill="#FFD700"
-                                  fontSize="12"
-                                  fontWeight="bold"
+                                  fill="white"
+                                  fontSize="11"
+                                  style={{ fontFamily: MONOTYPE_FONT_STACK }}
                                 >
                                   MC
                                 </text>
@@ -3361,19 +3595,8 @@ export default function AstrologyCalculator() {
                         if (!trimmedSegment) return null
 
                         // Determine color; all aspect lines use 1px width.
-                        let stroke = "#888"
+                        const stroke = getMajorAspectStrokeColor(aspect.aspectType)
                         const strokeWidth = 1
-                        if (aspect.aspectType === "Oposición") {
-                          stroke = "#FF8C00"
-                        } else if (aspect.aspectType === "Conjunción") {
-                          stroke = "#9D4EDD"
-                        } else if (aspect.aspectType === "Trígono") {
-                          stroke = "#00FF00"
-                        } else if (aspect.aspectType === "Cuadrado") {
-                          stroke = "#FF3B30"
-                        } else if (aspect.aspectType === "Sextil") {
-                          stroke = "#0099FF"
-                        }
 
                         return (
                           <g key={index} style={{ pointerEvents: "none" }}>
@@ -3533,21 +3756,9 @@ export default function AstrologyCalculator() {
                           if (!trimmedSegment) return null
 
                           // Determine color; all aspect lines use 1px width.
-                          let aspectColor = "#888"
+                          const aspectColor = getMajorAspectStrokeColor(aspect.aspectType)
                           const aspectWidth = 1
                           let aspectOpacity = Math.min(data.opacity, MAX_ASPECT_LINE_OPACITY)
-
-                          if (aspect.aspectType === "Oposición") {
-                            aspectColor = "#FF8C00"
-                          } else if (aspect.aspectType === "Conjunción") {
-                            aspectColor = "#9D4EDD"
-                          } else if (aspect.aspectType === "Trígono") {
-                            aspectColor = "#00FF00"
-                          } else if (aspect.aspectType === "Cuadrado") {
-                            aspectColor = "#FF3B30"
-                          } else if (aspect.aspectType === "Sextil") {
-                            aspectColor = "#0099FF"
-                          }
 
                           return (
                             <g key={`aspect-${planetName}-${index}`} style={{ pointerEvents: "none" }}>
@@ -3573,7 +3784,12 @@ export default function AstrologyCalculator() {
                         }),
                       )}
                   </svg>
-                  {/* Removed debug pointer angle display */}
+                  {navigationMode === "sequential" && (
+                    <div className="pointer-events-none absolute right-2 bottom-2 text-right font-mono text-[10px] md:text-[12px] uppercase tracking-wide text-white/70">
+                      <div>{formData.datetime ? new Date(formData.datetime).toLocaleString("en-US") : "No Date"}</div>
+                      <div>{sanitizeLocationLabel(formData.location) || "No Location"}</div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -3582,15 +3798,15 @@ export default function AstrologyCalculator() {
               <div className="">
                 <div className="bg-white text-black p-3 font-mono flex items-center justify-between">
                   <div>
-                    <h2 className="text-[10px] uppercase tracking-wider">Datos Astrológicos</h2>
+                    <h2 className="text-[10px] uppercase tracking-wider">Astrological Data</h2>
                     <p className="text-[9px] mt-1 opacity-60">
                       ASC: {horoscopeData.ascendant.sign.label}{" "}
                       {horoscopeData.ascendant.ChartPosition.Ecliptic.ArcDegreesFormatted30}
                     </p>
                   </div>
                   <div className="text-right text-[9px] opacity-60">
-                    <div>{formData.location}</div>
-                    <div>{new Date(formData.datetime).toLocaleString("es-AR")}</div>
+                    <div>{sanitizeLocationLabel(formData.location)}</div>
+                    <div>{new Date(formData.datetime).toLocaleString("en-US")}</div>
                   </div>
                 </div>
 
@@ -3599,24 +3815,24 @@ export default function AstrologyCalculator() {
                     <thead>
                       <tr className="bg-gray-800">
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Glifo
+                          Glyph
                         </th>
                         <th className="text-right p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Eclíptica (°)
+                          Ecliptic (°)
                         </th>
                         <th className="text-left p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Signo
+                          Sign
                         </th>
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Casa
+                          House
                         </th>
                         <th className="text-left p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Posición
+                          Position
                         </th>
                         <th className="text-right p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Horizonte (°)
+                          Horizon (°)
                         </th>
-                        <th className="text-center p-2 font-normal uppercase tracking-wide">Retrógrado</th>
+                        <th className="text-center p-2 font-normal uppercase tracking-wide">Retrograde</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3709,8 +3925,8 @@ export default function AstrologyCalculator() {
               <div className="">
                 <div className="bg-white text-black p-3 font-mono flex items-center justify-between">
                   <div>
-                    <h2 className="text-[10px] uppercase tracking-wider">Aspectos Astrológicos</h2>
-                    <p className="text-[9px] mt-1 opacity-60">Conjunción, Oposición, Trígono, Cuadrado, Sextil</p>
+                    <h2 className="text-[10px] uppercase tracking-wider">Astrological Aspects</h2>
+                    <p className="text-[9px] mt-1 opacity-60">Conjunction, Opposition, Trine, Square, Sextile</p>
                   </div>
                   <div className="text-right text-[9px] opacity-60">
                     <div>
@@ -3743,18 +3959,18 @@ export default function AstrologyCalculator() {
                     <thead>
                       <tr className="bg-gray-800">
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Planeta 1
+                          Planet 1
                         </th>
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Aspecto
+                          Aspect
                         </th>
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Planeta 2
+                          Planet 2
                         </th>
                         <th className="text-right p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Ángulo (°)
+                          Angle (°)
                         </th>
-                        <th className="text-right p-2 font-normal uppercase tracking-wide">Orbe (°)</th>
+                        <th className="text-right p-2 font-normal uppercase tracking-wide">Orb (°)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3774,29 +3990,14 @@ export default function AstrologyCalculator() {
                             "asc",
                             "mc",
                           ]
-                          const allowedAspects = ["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"]
                           return (
                             mainPlanets.includes(aspect.point1.name) &&
                             mainPlanets.includes(aspect.point2.name) &&
-                            allowedAspects.includes(aspect.aspectType)
+                            isMajorAspectType(aspect.aspectType)
                           )
                         })
                         .map((aspect, index) => {
-                          // Determine aspect type symbol
-                          let aspectSymbol = aspect.aspectType
-
-                          // Map aspect types to symbols only
-                          if (aspect.aspectType === "Conjunción") {
-                            aspectSymbol = "☌"
-                          } else if (aspect.aspectType === "Oposición") {
-                            aspectSymbol = "☍"
-                          } else if (aspect.aspectType === "Trígono") {
-                            aspectSymbol = "△"
-                          } else if (aspect.aspectType === "Cuadrado") {
-                            aspectSymbol = "▢"
-                          } else if (aspect.aspectType === "Sextil") {
-                            aspectSymbol = "⚹"
-                          }
+                          const aspectSymbol = getMajorAspectSymbol(aspect.aspectType)
 
                           // Check if it's MC or ASC for small font
                           const isSmallFont =
@@ -3828,7 +4029,9 @@ export default function AstrologyCalculator() {
                                 )}
                               </td>
                               <td className="p-2 border-r border-gray-700 text-center">
-                                <span className="text-lg">{aspectSymbol}</span>
+                                <span className="text-lg" title={getMajorAspectLabel(aspect.aspectType)}>
+                                  {aspectSymbol}
+                                </span>
                               </td>
                               <td className="p-2 border-r border-gray-700 text-center">
                                 {PLANET_GLYPH_SVGS[aspect.point2.name] ? (
@@ -3879,30 +4082,27 @@ export default function AstrologyCalculator() {
                       }}
                     >
                       <h2 className="text-[10px] uppercase tracking-wider mb-1">
-                        Aspectos de {planetName.toUpperCase()}
+                        Aspects of {planetName.toUpperCase()}
                       </h2>
                       {aspects.map((aspect, index) => {
-                        const allowedAspects = ["Conjunción", "Oposición", "Trígono", "Cuadrado", "Sextil"]
-                        if (!allowedAspects.includes(aspect.aspectType)) return null
+                        const aspectKey = getMajorAspectKey(aspect.aspectType)
+                        if (!aspectKey) return null
 
-                        let aspectSymbol = aspect.aspectType
+                        const aspectSymbol = getMajorAspectSymbol(aspect.aspectType)
                         let aspectColor = "text-white"
                         let brightness = "brightness-75"
 
-                        if (aspect.aspectType === "Oposición") {
+                        if (aspectKey === "opposition") {
                           aspectColor = "text-red-400"
                           brightness = "brightness-100"
-                        } else if (aspect.aspectType === "Cuadrado") {
+                        } else if (aspectKey === "square") {
                           aspectColor = "text-violet-400"
                           brightness = "brightness-100"
-                        } else if (aspect.aspectType === "Conjunción") {
-                          aspectSymbol = "☌"
+                        } else if (aspectKey === "conjunction") {
                           aspectColor = "text-yellow-300"
-                        } else if (aspect.aspectType === "Trígono") {
-                          aspectSymbol = "△"
+                        } else if (aspectKey === "trine") {
                           aspectColor = "text-green-400"
-                        } else if (aspect.aspectType === "Sextil") {
-                          aspectSymbol = "⚹"
+                        } else if (aspectKey === "sextile") {
                           aspectColor = "text-blue-400"
                         }
 
@@ -3923,7 +4123,9 @@ export default function AstrologyCalculator() {
                                 PLANET_GLYPH_FALLBACK_LABELS[aspect.point1.name] || aspect.point1.label
                               )}
                             </span>
-                            <span className={`text-lg ${aspectColor} ${brightness}`}>{aspectSymbol}</span>
+                            <span className={`text-lg ${aspectColor} ${brightness}`} title={getMajorAspectLabel(aspect.aspectType)}>
+                              {aspectSymbol}
+                            </span>
                             <span className="inline-flex items-center justify-center min-w-[14px]">
                               {PLANET_GLYPH_SVGS[aspect.point2.name] ? (
                                 <img
@@ -3974,18 +4176,17 @@ export default function AstrologyCalculator() {
                     <button
                       onClick={() => downloadNavigationModeMp3(mode)}
                       disabled={!horoscopeData || isExportingMp3}
-                      className={`mt-1 flex w-full items-center justify-center gap-1 border px-1 py-0.5 transition-colors ${
+                      className={`mt-1 flex w-full items-center justify-center border px-2 py-1 transition-colors ${
                         !horoscopeData || isExportingMp3
                           ? "border-gray-700 text-gray-500 cursor-not-allowed"
                           : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
                       }`}
                     >
-                      <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
                         <path d="M3 8.5V12.5H13V8.5" />
                         <path d="M8 2.5V9" />
                         <path d="M5.8 6.8L8 9L10.2 6.8" />
                       </svg>
-                      <span className="font-mono text-[8px] md:text-[9px] uppercase tracking-wide">MP3</span>
                     </button>
                     <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-5 whitespace-nowrap bg-black/90 border border-white/40 px-1 py-0.5 font-mono text-[7px] md:text-[8px] text-white/80 opacity-0 group-hover:opacity-100 transition-opacity">
                       {DOWNLOAD_TOOLTIP_TEXT}

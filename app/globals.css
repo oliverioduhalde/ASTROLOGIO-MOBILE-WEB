@@ -192,18 +192,18 @@
     transform: translateY(110px);
   }
   to {
-    opacity: 0.4;
+    opacity: 0.1;
     transform: translateY(0);
   }
 }
 
 .loading-subtitle-current {
-  animation: loading-subtitle-current-roll 0.85s ease-out forwards;
+  animation: loading-subtitle-current-roll 1.7s ease-out forwards;
   will-change: transform, opacity;
 }
 
 .loading-subtitle-previous {
-  animation: loading-subtitle-previous-roll 0.9s ease-out forwards;
+  animation: loading-subtitle-previous-roll 1.8s ease-out forwards;
   will-change: transform, opacity;
 }
 

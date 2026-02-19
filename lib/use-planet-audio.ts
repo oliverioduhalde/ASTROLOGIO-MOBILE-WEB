@@ -169,11 +169,21 @@ const BOWL_GAIN_BOOST_FACTOR = 3
 const GLOBAL_REVERB_RETURN_GAIN = 1.8
 const ASPECT_SEMITONE_OFFSETS: Record<string, number> = {
   Conjunción: 0,
+  Conjunction: 0,
+  conjunction: 0,
   Oposición: 14,
+  Opposition: 14,
+  opposition: 14,
   Cuadrado: 6,
+  Square: 6,
+  square: 6,
   Cuadratura: 6,
   Trígono: 7,
+  Trine: 7,
+  trine: 7,
   Sextil: 5,
+  Sextile: 5,
+  sextile: 5,
 }
 
 function mod12(value: number): number {

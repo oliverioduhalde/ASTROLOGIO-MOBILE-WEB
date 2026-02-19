@@ -116,7 +116,7 @@ export async function calculateHoroscope(formData: {
     aspectWithPoints: ["bodies", "points", "angles"],
     aspectTypes: ["major", "minor"],
     customOrbs: {},
-    language: "es",
+    language: "en",
   })
 
   const celestialBodies = horoscope.CelestialBodies

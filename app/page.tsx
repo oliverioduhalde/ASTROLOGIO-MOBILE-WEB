@@ -2024,6 +2024,26 @@ export default function AstrologyCalculator() {
     startNavigationMode(mode)
   }
 
+  const handlePlaybackTogglePress = () => {
+    const mode = navigationMode
+
+    if (mode === "radial" && isLoopRunning && !isPaused) {
+      setIsPaused(true)
+      cancelPointerLoop()
+      loopElapsedBeforePauseMsRef.current = Math.max(0, performance.now() - loopStartTimeRef.current)
+      return
+    }
+
+    if (mode === "radial" && isPaused) {
+      setIsPaused(false)
+      setIsLoopRunning(true)
+      beginPointerLoop(loopElapsedBeforePauseMsRef.current)
+      return
+    }
+
+    startNavigationMode(mode)
+  }
+
   const handleCalculate = async () => {
     let trimmed = {
       datetime: formData.datetime.trim(),
@@ -2184,6 +2204,7 @@ export default function AstrologyCalculator() {
   const shouldShowOrbitPointer =
     showPointer &&
     (isLoopRunning || (!isLoopRunning && navigationMode === "sequential"))
+  const isPlaybackActive = isLoopRunning && !isPaused
 
   const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
   const chartRotation = 180 - ascDegrees
@@ -3785,11 +3806,28 @@ export default function AstrologyCalculator() {
                       )}
                   </svg>
                   {navigationMode === "sequential" && (
-                    <div className="pointer-events-none absolute right-2 bottom-2 text-right font-mono text-[10px] md:text-[12px] uppercase tracking-wide text-white/70">
+                    <div className="pointer-events-none absolute right-2 bottom-8 text-right font-mono text-[10px] md:text-[12px] uppercase tracking-wide text-white/70">
                       <div>{formData.datetime ? new Date(formData.datetime).toLocaleString("en-US") : "No Date"}</div>
                       <div>{sanitizeLocationLabel(formData.location) || "No Location"}</div>
                     </div>
                   )}
+                  <button
+                    type="button"
+                    onClick={handlePlaybackTogglePress}
+                    className="absolute right-2 bottom-2 flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors"
+                    title={isPlaybackActive ? "Stop" : "Play"}
+                    style={{ width: 10, height: 10 }}
+                  >
+                    {isPlaybackActive ? (
+                      <svg width="6" height="6" viewBox="0 0 6 6" fill="currentColor" aria-hidden="true">
+                        <rect x="1" y="1" width="4" height="4" />
+                      </svg>
+                    ) : (
+                      <svg width="6" height="6" viewBox="0 0 6 6" fill="currentColor" aria-hidden="true">
+                        <path d="M1.2 1 L5 3 L1.2 5 Z" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
               </div>
             )}

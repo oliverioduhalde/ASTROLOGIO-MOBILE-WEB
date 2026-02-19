@@ -3814,7 +3814,7 @@ export default function AstrologyCalculator() {
                   <button
                     type="button"
                     onClick={handlePlaybackTogglePress}
-                    className={`absolute left-2 bottom-4 flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors ${
+                    className={`fixed left-4 md:left-8 bottom-[46px] z-30 flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors ${
                       !isPlaybackActive ? "play-idle-pulse" : ""
                     }`}
                     title={isPlaybackActive ? "Stop" : "Play"}

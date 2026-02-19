@@ -212,7 +212,7 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.1);
+    transform: scale(1.05);
   }
   100% {
     transform: scale(1);
@@ -220,7 +220,7 @@
 }
 
 .play-idle-pulse {
-  animation: play-idle-pulse 0.5s ease-in-out infinite;
+  animation: play-idle-pulse 5s ease-in-out infinite;
   will-change: transform;
 }
 

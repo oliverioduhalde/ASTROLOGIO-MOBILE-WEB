@@ -178,7 +178,7 @@
 @keyframes loading-subtitle-current-roll {
   from {
     opacity: 0;
-    transform: translateY(42px);
+    transform: translateY(0);
   }
   to {
     opacity: 0.7;
@@ -198,13 +198,30 @@
 }
 
 .loading-subtitle-current {
-  animation: loading-subtitle-current-roll 3.4s ease-out forwards;
+  animation: loading-subtitle-current-roll 0.8s ease-out forwards;
   will-change: transform, opacity;
 }
 
 .loading-subtitle-previous {
   animation: loading-subtitle-previous-roll 3.6s ease-out forwards;
   will-change: transform, opacity;
+}
+
+@keyframes play-idle-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.play-idle-pulse {
+  animation: play-idle-pulse 0.5s ease-in-out infinite;
+  will-change: transform;
 }
 
 /* Aspect line smooth transition styles */

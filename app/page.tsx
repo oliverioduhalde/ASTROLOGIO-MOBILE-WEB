@@ -192,7 +192,7 @@ const GLYPH_INTERACTION_EASE_OUT = "cubic-bezier(0.16, 0.84, 0.32, 1)"
 const DEFAULT_ASPECTS_SOUND_VOLUME = 11
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
-const LOADING_SUBTITLE_STEP_MS = 12000
+const LOADING_SUBTITLE_STEP_MS = 15000
 const MONOTYPE_FONT_STACK = 'Monaco, Menlo, "Courier New", monospace'
 const LOADING_INTRO_PARAGRAPHS = [
   "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler's vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
@@ -2471,7 +2471,7 @@ export default function AstrologyCalculator() {
                 style={{
                   color: "rgba(255,255,255,0.7)",
                   fontFamily: MONOTYPE_FONT_STACK,
-                  textAlign: "justify",
+                  textAlign: "left",
                   whiteSpace: "pre-line",
                 }}
               >
@@ -3814,16 +3814,18 @@ export default function AstrologyCalculator() {
                   <button
                     type="button"
                     onClick={handlePlaybackTogglePress}
-                    className="absolute left-2 bottom-2 flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors"
+                    className={`absolute left-2 bottom-4 flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors ${
+                      !isPlaybackActive ? "play-idle-pulse" : ""
+                    }`}
                     title={isPlaybackActive ? "Stop" : "Play"}
-                    style={{ width: 40, height: 40 }}
+                    style={{ width: 48, height: 48 }}
                   >
                     {isPlaybackActive ? (
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <rect x="5" y="5" width="10" height="10" />
                       </svg>
                     ) : (
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path d="M6 4 L16 10 L6 16 Z" />
                       </svg>
                     )}
@@ -4190,20 +4192,20 @@ export default function AstrologyCalculator() {
 
       <div className="fixed top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-2 py-2 md:px-2.5 md:py-2.5 w-full max-w-[672px]">
-            <div className="grid grid-cols-4 gap-2">
+          <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-1.5 py-1.5 md:px-2 md:py-2 w-full max-w-[560px]">
+            <div className="grid grid-cols-4 gap-1.5">
               {NAVIGATION_MODES.map((mode) => {
                 const isActiveMode = navigationMode === mode
                 return (
                   <div
                     key={`top-nav-${mode}`}
-                    className={`relative group border px-1.5 py-1.5 ${
+                    className={`relative group border px-1 py-1 ${
                       isActiveMode ? "border-white/95 bg-white/8" : "border-gray-600/85 bg-black/35"
                     }`}
                   >
                     <button
                       onClick={() => setNavigationModeFromMenu(mode)}
-                      className={`w-full font-mono text-[12px] md:text-[14px] uppercase tracking-wide border px-2.5 py-1.5 transition-colors ${
+                      className={`w-full font-mono text-[10px] md:text-[12px] uppercase tracking-wide border px-1.5 py-1 transition-colors ${
                         isActiveMode
                           ? "bg-white text-black border-white"
                           : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -4214,7 +4216,7 @@ export default function AstrologyCalculator() {
                     <button
                       onClick={() => downloadNavigationModeMp3(mode)}
                       disabled={!horoscopeData || isExportingMp3}
-                      className={`mt-1.5 flex w-full items-center justify-center border px-2.5 py-1.5 transition-colors ${
+                      className={`mt-1 flex w-full items-center justify-center border px-1.5 py-1 transition-colors ${
                         !horoscopeData || isExportingMp3
                           ? "border-gray-700 text-gray-500 cursor-not-allowed"
                           : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
@@ -4234,7 +4236,7 @@ export default function AstrologyCalculator() {
               })}
               <button
                 onClick={resetToInitialState}
-                className="font-mono text-[12px] md:text-[14px] uppercase tracking-wide border border-white px-2.5 py-1.5 hover:bg-white hover:text-black transition-colors"
+                className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors"
               >
                 RESET
               </button>

@@ -192,7 +192,7 @@ const GLYPH_INTERACTION_EASE_OUT = "cubic-bezier(0.16, 0.84, 0.32, 1)"
 const DEFAULT_ASPECTS_SOUND_VOLUME = 11
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
-const LOADING_SUBTITLE_STEP_MS = 5200
+const LOADING_SUBTITLE_STEP_MS = 10400
 const MONOTYPE_FONT_STACK = 'Monaco, Menlo, "Courier New", monospace'
 const LOADING_INTRO_PARAGRAPHS = [
   "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler's vision of celestial music.",
@@ -2433,6 +2433,8 @@ export default function AstrologyCalculator() {
     const currentIntroParagraph = LOADING_INTRO_PARAGRAPHS[loadingIntroIndex]
     const previousIntroParagraph =
       loadingIntroPrevIndex !== null ? LOADING_INTRO_PARAGRAPHS[loadingIntroPrevIndex] : null
+    const nextIntroParagraph =
+      loadingIntroIndex < LOADING_INTRO_PARAGRAPHS.length - 1 ? LOADING_INTRO_PARAGRAPHS[loadingIntroIndex + 1] : null
 
     return (
       <main className="min-h-screen bg-black text-white flex items-start justify-center p-4 pt-8 md:pt-10 relative">
@@ -2477,6 +2479,15 @@ export default function AstrologyCalculator() {
               >
                 {currentIntroParagraph}
               </p>
+              {nextIntroParagraph && (
+                <p
+                  key={`loading-next-${loadingIntroTick}-${loadingIntroIndex + 1}`}
+                  className="loading-subtitle-current absolute left-0 right-0 top-36 mx-auto max-w-[860px] px-2 text-[17px] md:text-[20px] leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.7)", fontFamily: MONOTYPE_FONT_STACK, textAlign: "justify" }}
+                >
+                  {nextIntroParagraph}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -2499,7 +2510,7 @@ export default function AstrologyCalculator() {
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="font-mono text-[12px] uppercase tracking-wider border border-white px-4 py-2 hover:bg-white hover:text-black transition-colors"
+              className="w-14 h-14 flex items-center justify-center font-mono text-[22px] uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors"
             >
               {menuOpen ? "✕" : "☰"}
             </button>
@@ -3814,17 +3825,17 @@ export default function AstrologyCalculator() {
                   <button
                     type="button"
                     onClick={handlePlaybackTogglePress}
-                    className="absolute right-2 bottom-2 flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors"
+                    className="absolute left-2 bottom-2 flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors"
                     title={isPlaybackActive ? "Stop" : "Play"}
-                    style={{ width: 10, height: 10 }}
+                    style={{ width: 40, height: 40 }}
                   >
                     {isPlaybackActive ? (
-                      <svg width="6" height="6" viewBox="0 0 6 6" fill="currentColor" aria-hidden="true">
-                        <rect x="1" y="1" width="4" height="4" />
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <rect x="5" y="5" width="10" height="10" />
                       </svg>
                     ) : (
-                      <svg width="6" height="6" viewBox="0 0 6 6" fill="currentColor" aria-hidden="true">
-                        <path d="M1.2 1 L5 3 L1.2 5 Z" />
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M6 4 L16 10 L6 16 Z" />
                       </svg>
                     )}
                   </button>
@@ -4190,20 +4201,20 @@ export default function AstrologyCalculator() {
 
       <div className="fixed top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-1.5 py-1.5 md:px-2 md:py-2 w-full max-w-[560px]">
-            <div className="grid grid-cols-4 gap-1.5">
+          <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-2 py-2 md:px-2.5 md:py-2.5 w-full max-w-[672px]">
+            <div className="grid grid-cols-4 gap-2">
               {NAVIGATION_MODES.map((mode) => {
                 const isActiveMode = navigationMode === mode
                 return (
                   <div
                     key={`top-nav-${mode}`}
-                    className={`relative group border px-1 py-1 ${
+                    className={`relative group border px-1.5 py-1.5 ${
                       isActiveMode ? "border-white/95 bg-white/8" : "border-gray-600/85 bg-black/35"
                     }`}
                   >
                     <button
                       onClick={() => setNavigationModeFromMenu(mode)}
-                      className={`w-full font-mono text-[10px] md:text-[12px] uppercase tracking-wide border px-2 py-1 transition-colors ${
+                      className={`w-full font-mono text-[12px] md:text-[14px] uppercase tracking-wide border px-2.5 py-1.5 transition-colors ${
                         isActiveMode
                           ? "bg-white text-black border-white"
                           : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -4214,19 +4225,19 @@ export default function AstrologyCalculator() {
                     <button
                       onClick={() => downloadNavigationModeMp3(mode)}
                       disabled={!horoscopeData || isExportingMp3}
-                      className={`mt-1 flex w-full items-center justify-center border px-2 py-1 transition-colors ${
+                      className={`mt-1.5 flex w-full items-center justify-center border px-2.5 py-1.5 transition-colors ${
                         !horoscopeData || isExportingMp3
                           ? "border-gray-700 text-gray-500 cursor-not-allowed"
                           : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
                       }`}
                     >
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
+                      <svg width="19" height="19" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
                         <path d="M3 8.5V12.5H13V8.5" />
                         <path d="M8 2.5V9" />
                         <path d="M5.8 6.8L8 9L10.2 6.8" />
                       </svg>
                     </button>
-                    <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-5 whitespace-nowrap bg-black/90 border border-white/40 px-1 py-0.5 font-mono text-[7px] md:text-[8px] text-white/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-6 whitespace-nowrap bg-black/90 border border-white/40 px-1.5 py-1 font-mono text-[8px] md:text-[10px] text-white/80 opacity-0 group-hover:opacity-100 transition-opacity">
                       {DOWNLOAD_TOOLTIP_TEXT}
                     </span>
                   </div>
@@ -4234,7 +4245,7 @@ export default function AstrologyCalculator() {
               })}
               <button
                 onClick={resetToInitialState}
-                className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
+                className="font-mono text-[12px] md:text-[14px] uppercase tracking-wide border border-white px-2.5 py-1.5 hover:bg-white hover:text-black transition-colors"
               >
                 RESET
               </button>

@@ -83,6 +83,7 @@ const MODE_NAME_BY_SIGN_INDEX: Record<number, string> = {
 }
 
 type AudioEngineMode = "samples" | "fm_pad" | "tibetan_samples"
+type InterfaceTheme = "white" | "neon_blue" | "phosphor_green"
 type NavigationMode = "astral_chord" | "radial" | "sequential"
 type SubjectPreset = "manual" | "here_now" | "ba" | "cairo" | "ba77"
 type MajorAspectKey = "conjunction" | "opposition" | "trine" | "square" | "sextile"
@@ -129,6 +130,11 @@ const ENGINE_OPTIONS: Array<{ value: AudioEngineMode; label: string }> = [
   { value: "samples", label: "ASTROLOG SOUNDS" },
   { value: "tibetan_samples", label: "TIBETAN BOWLS" },
   { value: "fm_pad", label: "SYNTH" },
+]
+const INTERFACE_THEME_OPTIONS: Array<{ value: InterfaceTheme; label: string }> = [
+  { value: "white", label: "White" },
+  { value: "neon_blue", label: "Neon Blue" },
+  { value: "phosphor_green", label: "Phosphor Green" },
 ]
 // Zodiac SVG set sourced from Tabler Icons (MIT).
 const ZODIAC_GLYPH_SVGS: Record<string, string> = {
@@ -473,6 +479,7 @@ export default function AstrologyCalculator() {
   const [tuningCents, setTuningCents] = useState(0)
   const [modalEnabled, setModalEnabled] = useState(true)
   const [audioEngineMode, setAudioEngineMode] = useState<AudioEngineMode>("samples")
+  const [interfaceTheme, setInterfaceTheme] = useState<InterfaceTheme>("white")
   const [synthVolume, setSynthVolume] = useState(450)
 
   const [glyphAnimationManager] = useState(() => new GlyphAnimationManager())
@@ -571,6 +578,15 @@ export default function AstrologyCalculator() {
   const lastPlayedPlanetRef = useRef<string | null>(null)
   const totalLoadingIntroDurationMs = LOADING_INTRO_PARAGRAPHS.length * LOADING_SUBTITLE_STEP_MS
   const showLoadingIntroScreen = loadingProgress < 100 || !loadingIntroCompleted
+  const interfaceThemeFilter = useMemo(() => {
+    if (interfaceTheme === "neon_blue") {
+      return "sepia(1) saturate(8.5) hue-rotate(163deg) brightness(1.04) contrast(1.07)"
+    }
+    if (interfaceTheme === "phosphor_green") {
+      return "sepia(1) saturate(7.8) hue-rotate(66deg) brightness(1.03) contrast(1.08)"
+    }
+    return "none"
+  }, [interfaceTheme])
   const loadingDisplayProgress = useMemo(() => {
     if (!loadingIntroCompleted) return Math.min(99, loadingIntroProgressPct)
     if (loadingProgress >= 100) return 100
@@ -2500,7 +2516,10 @@ export default function AstrologyCalculator() {
     const currentIntroParagraph = LOADING_INTRO_PARAGRAPHS[loadingIntroIndex]
 
     return (
-      <main className="min-h-screen bg-black text-white flex items-start justify-center p-4 pt-8 md:pt-10 relative">
+      <main
+        className="min-h-screen bg-black text-white flex items-start justify-center p-4 pt-8 md:pt-10 relative"
+        style={{ filter: interfaceThemeFilter }}
+      >
         <div className="w-full max-w-3xl">
           <div className="mb-8 min-h-[420px]">
             <div className="w-full text-center pt-1">
@@ -2554,7 +2573,7 @@ export default function AstrologyCalculator() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-4 md:p-8">
+    <main className="min-h-screen bg-black text-white p-4 md:p-8" style={{ filter: interfaceThemeFilter }}>
       <div className="max-w-[1400px] mx-auto">
         <div className="relative mb-6 pb-3 border-b border-white flex items-center justify-between min-h-[66px] md:min-h-[84px] md:pr-[620px]">
           <div className="relative">
@@ -2657,6 +2676,27 @@ export default function AstrologyCalculator() {
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div className="border-t border-gray-600 my-1"></div>
+
+                  <div className="space-y-1">
+                    <div className="font-mono text-[10px] uppercase tracking-wide">Interface</div>
+                    <div className="grid grid-cols-1 gap-1">
+                      {INTERFACE_THEME_OPTIONS.map((option) => (
+                        <button
+                          key={`minimal-interface-${option.value}`}
+                          onClick={() => setInterfaceTheme(option.value)}
+                          className={`font-mono text-[10px] border px-1.5 py-1 transition-colors ${
+                            interfaceTheme === option.value
+                              ? "bg-white text-black border-white"
+                              : "bg-transparent text-white border-gray-600 hover:border-white"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -2840,6 +2880,27 @@ export default function AstrologyCalculator() {
                     />
                     Mode Info
                   </label>
+
+                  <div className="border-t border-gray-600 my-1"></div>
+
+                  <div className="space-y-1">
+                    <div className="font-mono text-[8.4px] uppercase tracking-wide">Interface</div>
+                    <div className="grid grid-cols-1 gap-1">
+                      {INTERFACE_THEME_OPTIONS.map((option) => (
+                        <button
+                          key={`advanced-interface-${option.value}`}
+                          onClick={() => setInterfaceTheme(option.value)}
+                          className={`font-mono text-[8.5px] border px-1.5 py-1 transition-colors ${
+                            interfaceTheme === option.value
+                              ? "bg-white text-black border-white"
+                              : "bg-transparent text-white border-gray-600 hover:border-white"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
                   <div className="border-t border-gray-600 my-1"></div>
 

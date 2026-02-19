@@ -192,11 +192,11 @@ const GLYPH_INTERACTION_EASE_OUT = "cubic-bezier(0.16, 0.84, 0.32, 1)"
 const DEFAULT_ASPECTS_SOUND_VOLUME = 11
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
-const LOADING_SUBTITLE_STEP_MS = 10400
+const LOADING_SUBTITLE_STEP_MS = 60000
 const MONOTYPE_FONT_STACK = 'Monaco, Menlo, "Courier New", monospace'
 const LOADING_INTRO_PARAGRAPHS = [
   "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler's vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
-  "In Chord mode (Astral Chord), the chart is heard as a dense, simultaneous harmonic field. In Orbit mode, listening follows a circular path that moves around the planets in continuous rotation. In Chart mode, the experience becomes a sequential astrological reading, planet by planet.",
+  "In Chord mode (Astral Chord), the chart is heard as a dense, simultaneous harmonic field.\nIn Orbit mode, listening follows a circular path that moves around the planets in continuous rotation.\nIn Chart mode, the experience becomes a sequential astrological reading, planet by planet.",
   "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that celestial body. Its spatial placement and tuning emerge from astrological chart coordinates, and interplanetary relationships are organized through astrological criteria.",
   "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now. For a fully immersive experience, we recommend using headphones. Enjoy the spatial energies that surround us all.",
 ]
@@ -2438,10 +2438,6 @@ export default function AstrologyCalculator() {
 
   if (showLoadingIntroScreen) {
     const currentIntroParagraph = LOADING_INTRO_PARAGRAPHS[loadingIntroIndex]
-    const previousIntroParagraph =
-      loadingIntroPrevIndex !== null ? LOADING_INTRO_PARAGRAPHS[loadingIntroPrevIndex] : null
-    const nextIntroParagraph =
-      loadingIntroIndex < LOADING_INTRO_PARAGRAPHS.length - 1 ? LOADING_INTRO_PARAGRAPHS[loadingIntroIndex + 1] : null
 
     return (
       <main className="min-h-screen bg-black text-white flex items-start justify-center p-4 pt-8 md:pt-10 relative">
@@ -2469,32 +2465,18 @@ export default function AstrologyCalculator() {
             </div>
 
             <div className="mt-5 relative h-[300px] overflow-hidden">
-              {previousIntroParagraph && (
-                <p
-                  key={`loading-prev-${loadingIntroTick}-${loadingIntroPrevIndex}`}
-                  className="loading-subtitle-previous absolute left-0 right-0 top-8 mx-auto max-w-[860px] px-2 text-[17px] md:text-[20px] leading-relaxed"
-                  style={{ color: "rgba(255,255,255,0.1)", fontFamily: MONOTYPE_FONT_STACK, textAlign: "justify" }}
-                >
-                  {previousIntroParagraph}
-                </p>
-              )}
-
               <p
                 key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
-                className="loading-subtitle-current absolute left-0 right-0 top-20 mx-auto max-w-[860px] px-2 text-[17px] md:text-[20px] leading-relaxed"
-                style={{ color: "rgba(255,255,255,0.7)", fontFamily: MONOTYPE_FONT_STACK, textAlign: "justify" }}
+                className="loading-subtitle-current absolute left-0 right-0 top-16 mx-auto max-w-[760px] px-2 text-[15px] md:text-[18px] leading-[1.45]"
+                style={{
+                  color: "rgba(255,255,255,0.7)",
+                  fontFamily: MONOTYPE_FONT_STACK,
+                  textAlign: "justify",
+                  whiteSpace: "pre-line",
+                }}
               >
                 {currentIntroParagraph}
               </p>
-              {nextIntroParagraph && (
-                <p
-                  key={`loading-next-${loadingIntroTick}-${loadingIntroIndex + 1}`}
-                  className="loading-subtitle-current absolute left-0 right-0 top-36 mx-auto max-w-[860px] px-2 text-[17px] md:text-[20px] leading-relaxed"
-                  style={{ color: "rgba(255,255,255,0.7)", fontFamily: MONOTYPE_FONT_STACK, textAlign: "justify" }}
-                >
-                  {nextIntroParagraph}
-                </p>
-              )}
             </div>
           </div>
         </div>

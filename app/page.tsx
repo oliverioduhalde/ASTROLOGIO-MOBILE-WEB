@@ -192,7 +192,7 @@ const GLYPH_INTERACTION_EASE_OUT = "cubic-bezier(0.16, 0.84, 0.32, 1)"
 const DEFAULT_ASPECTS_SOUND_VOLUME = 11
 const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
-const LOADING_SUBTITLE_STEP_MS = 15000
+const LOADING_SUBTITLE_STEP_MS = 20000
 const MONOTYPE_FONT_STACK = 'Monaco, Menlo, "Courier New", monospace'
 const LOADING_INTRO_PARAGRAPHS = [
   "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler's vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
@@ -421,11 +421,9 @@ export default function AstrologyCalculator() {
   const [showDegrees, setShowDegrees] = useState(false)
   const [showAngles, setShowAngles] = useState(false)
   const [showAstroChart, setShowAstroChart] = useState(false)
-  const [skipLoadingIntro, setSkipLoadingIntro] = useState(false)
   const [loadingIntroCompleted, setLoadingIntroCompleted] = useState(false)
   const [loadingIntroProgressPct, setLoadingIntroProgressPct] = useState(0)
   const [loadingIntroIndex, setLoadingIntroIndex] = useState(0)
-  const [loadingIntroPrevIndex, setLoadingIntroPrevIndex] = useState<number | null>(null)
   const [loadingIntroTick, setLoadingIntroTick] = useState(0)
   const [peakLevelLeftPre, setPeakLevelLeftPre] = useState(0)
   const [peakLevelRightPre, setPeakLevelRightPre] = useState(0)
@@ -503,7 +501,9 @@ export default function AstrologyCalculator() {
   const interactivePreviewClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const skipNextAutoCalculateRef = useRef(false)
   const loadingIntroIndexRef = useRef(0)
-  const loadingIntroStartTimeRef = useRef(0)
+  const loadingIntroElapsedBeforeCurrentMsRef = useRef(0)
+  const loadingIntroParagraphStartTimeRef = useRef(0)
+  const loadingIntroAdvanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [locationSuggestions, setLocationSuggestions] = useState<GeoSuggestion[]>([])
   const [isResolvingLocation, setIsResolvingLocation] = useState(false)
   const chartAspectsKeyRef = useRef("__chart__")
@@ -565,50 +565,71 @@ export default function AstrologyCalculator() {
   }, [horoscopeData, modalEnabled, prepareOrbitalStarBackground])
   const lastPlayedPlanetRef = useRef<string | null>(null)
   const totalLoadingIntroDurationMs = LOADING_INTRO_PARAGRAPHS.length * LOADING_SUBTITLE_STEP_MS
-  const showLoadingIntroScreen = !skipLoadingIntro && (loadingProgress < 100 || !loadingIntroCompleted)
+  const showLoadingIntroScreen = loadingProgress < 100 || !loadingIntroCompleted
   const loadingDisplayProgress = useMemo(() => {
     if (!loadingIntroCompleted) return Math.min(99, loadingIntroProgressPct)
     if (loadingProgress >= 100) return 100
     return 99
   }, [loadingIntroCompleted, loadingIntroProgressPct, loadingProgress])
 
+  const clearLoadingIntroAdvanceTimeout = useCallback(() => {
+    if (loadingIntroAdvanceTimeoutRef.current) {
+      clearTimeout(loadingIntroAdvanceTimeoutRef.current)
+      loadingIntroAdvanceTimeoutRef.current = null
+    }
+  }, [])
+
+  const advanceLoadingIntroParagraph = useCallback(() => {
+    if (loadingIntroCompleted) return
+
+    const now = performance.now()
+    const elapsedInCurrentParagraph = Math.max(0, now - loadingIntroParagraphStartTimeRef.current)
+    const clampedElapsed = Math.min(LOADING_SUBTITLE_STEP_MS, elapsedInCurrentParagraph)
+    loadingIntroElapsedBeforeCurrentMsRef.current = Math.min(
+      totalLoadingIntroDurationMs,
+      loadingIntroElapsedBeforeCurrentMsRef.current + clampedElapsed,
+    )
+    loadingIntroParagraphStartTimeRef.current = now
+
+    const lastParagraphIndex = LOADING_INTRO_PARAGRAPHS.length - 1
+    if (loadingIntroIndexRef.current >= lastParagraphIndex) {
+      loadingIntroElapsedBeforeCurrentMsRef.current = totalLoadingIntroDurationMs
+      setLoadingIntroProgressPct(100)
+      setLoadingIntroCompleted(true)
+      clearLoadingIntroAdvanceTimeout()
+      return
+    }
+
+    loadingIntroIndexRef.current += 1
+    setLoadingIntroIndex(loadingIntroIndexRef.current)
+    setLoadingIntroTick((prev) => prev + 1)
+  }, [clearLoadingIntroAdvanceTimeout, loadingIntroCompleted, totalLoadingIntroDurationMs])
+
   useEffect(() => {
     if (!showLoadingIntroScreen) return
 
     loadingIntroIndexRef.current = 0
-    loadingIntroStartTimeRef.current = performance.now()
-    const introStartTime = loadingIntroStartTimeRef.current
-    let lastRenderedParagraphIndex = 0
-    let animationFrameId: number | null = null
+    loadingIntroElapsedBeforeCurrentMsRef.current = 0
+    loadingIntroParagraphStartTimeRef.current = performance.now()
 
     setLoadingIntroIndex(0)
-    setLoadingIntroPrevIndex(null)
     setLoadingIntroTick(0)
     setLoadingIntroCompleted(false)
     setLoadingIntroProgressPct(0)
 
+    let animationFrameId: number | null = null
     const updateLoadingTimeline = () => {
       const now = performance.now()
-      const elapsedMs = Math.max(0, now - introStartTime)
+      const elapsedMs =
+        loadingIntroElapsedBeforeCurrentMsRef.current + Math.max(0, now - loadingIntroParagraphStartTimeRef.current)
       const boundedElapsedMs = Math.min(totalLoadingIntroDurationMs, elapsedMs)
       const progressPct = (boundedElapsedMs / totalLoadingIntroDurationMs) * 100
       setLoadingIntroProgressPct(progressPct)
 
-      const paragraphIndex = Math.min(
-        LOADING_INTRO_PARAGRAPHS.length - 1,
-        Math.floor(boundedElapsedMs / LOADING_SUBTITLE_STEP_MS),
-      )
-      if (paragraphIndex !== lastRenderedParagraphIndex) {
-        setLoadingIntroPrevIndex(lastRenderedParagraphIndex)
-        setLoadingIntroIndex(paragraphIndex)
-        setLoadingIntroTick((prev) => prev + 1)
-        loadingIntroIndexRef.current = paragraphIndex
-        lastRenderedParagraphIndex = paragraphIndex
-      }
-
       if (boundedElapsedMs >= totalLoadingIntroDurationMs) {
         setLoadingIntroCompleted(true)
         setLoadingIntroProgressPct(100)
+        clearLoadingIntroAdvanceTimeout()
         return
       }
 
@@ -621,8 +642,22 @@ export default function AstrologyCalculator() {
       if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId)
       }
+      clearLoadingIntroAdvanceTimeout()
     }
-  }, [showLoadingIntroScreen, totalLoadingIntroDurationMs])
+  }, [clearLoadingIntroAdvanceTimeout, showLoadingIntroScreen, totalLoadingIntroDurationMs])
+
+  useEffect(() => {
+    if (!showLoadingIntroScreen || loadingIntroCompleted) return
+
+    clearLoadingIntroAdvanceTimeout()
+    loadingIntroAdvanceTimeoutRef.current = setTimeout(() => {
+      advanceLoadingIntroParagraph()
+    }, LOADING_SUBTITLE_STEP_MS)
+
+    return () => {
+      clearLoadingIntroAdvanceTimeout()
+    }
+  }, [advanceLoadingIntroParagraph, clearLoadingIntroAdvanceTimeout, loadingIntroCompleted, loadingIntroIndex, showLoadingIntroScreen])
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
@@ -706,6 +741,10 @@ export default function AstrologyCalculator() {
       if (interactivePreviewClearTimeoutRef.current) {
         clearTimeout(interactivePreviewClearTimeoutRef.current)
         interactivePreviewClearTimeoutRef.current = null
+      }
+      if (loadingIntroAdvanceTimeoutRef.current) {
+        clearTimeout(loadingIntroAdvanceTimeoutRef.current)
+        loadingIntroAdvanceTimeoutRef.current = null
       }
     }
   }, [clearAspectTimers])
@@ -2464,30 +2503,31 @@ export default function AstrologyCalculator() {
               <span>{Math.round(loadingDisplayProgress)}%</span>
             </div>
 
-            <div className="mt-5 relative h-[300px] overflow-hidden">
-              <p
-                key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
-                className="loading-subtitle-current absolute left-0 right-0 top-16 mx-auto max-w-[760px] px-2 text-[15px] md:text-[18px] leading-[1.45]"
-                style={{
-                  color: "rgba(255,255,255,0.7)",
-                  fontFamily: MONOTYPE_FONT_STACK,
-                  textAlign: "left",
-                  whiteSpace: "pre-line",
-                }}
-              >
-                {currentIntroParagraph}
-              </p>
+            <div className="mt-5 relative h-[320px] overflow-hidden">
+              <div className="absolute left-0 right-0 top-14 mx-auto max-w-[760px] px-2 flex flex-col items-start gap-5">
+                <p
+                  key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
+                  className="text-[15px] md:text-[18px] leading-[1.45]"
+                  style={{
+                    color: "rgba(255,255,255,0.7)",
+                    fontFamily: MONOTYPE_FONT_STACK,
+                    textAlign: "left",
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {currentIntroParagraph}
+                </p>
+                <button
+                  onClick={advanceLoadingIntroParagraph}
+                  className="border border-white bg-white text-black px-5 py-2 text-[18px] md:text-[20px] leading-none uppercase tracking-wide hover:bg-black hover:text-white transition-colors"
+                  style={{ fontFamily: MONOTYPE_FONT_STACK }}
+                >
+                  NEXT
+                </button>
+              </div>
             </div>
           </div>
         </div>
-
-        <button
-          onClick={() => setSkipLoadingIntro(true)}
-          className="absolute bottom-6 right-6 border border-white/40 px-7 py-2.5 text-[26px] text-white/70 hover:text-white hover:border-white transition-colors leading-none"
-          style={{ fontFamily: MONOTYPE_FONT_STACK }}
-        >
-          Skip &gt;
-        </button>
       </main>
     )
   }

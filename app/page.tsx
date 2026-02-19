@@ -2593,10 +2593,10 @@ export default function AstrologyCalculator() {
                   <button
                     onClick={retreatLoadingIntroParagraph}
                     disabled={isFirstIntroParagraph}
-                    className={`w-16 h-16 md:w-20 md:h-20 border border-white font-mono text-[34px] md:text-[42px] leading-none transition-colors ${
+                    className={`font-mono text-[20px] md:text-[24px] leading-none transition-colors px-2 py-1 ${
                       isFirstIntroParagraph
-                        ? "text-white/30 border-white/30 cursor-not-allowed"
-                        : "text-white bg-black hover:bg-white hover:text-black"
+                        ? "text-white/30 cursor-not-allowed"
+                        : "text-white/80 hover:text-white"
                     }`}
                     style={{ fontFamily: MONOTYPE_FONT_STACK }}
                   >
@@ -2604,7 +2604,7 @@ export default function AstrologyCalculator() {
                   </button>
                   <button
                     onClick={advanceLoadingIntroParagraph}
-                    className="play-idle-pulse w-16 h-16 md:w-20 md:h-20 border border-white font-mono text-[34px] md:text-[42px] leading-none text-white bg-black hover:bg-white hover:text-black transition-colors"
+                    className="play-idle-pulse font-mono text-[20px] md:text-[24px] leading-none text-white/80 hover:text-white transition-colors px-2 py-1"
                     style={{ fontFamily: MONOTYPE_FONT_STACK }}
                   >
                     {isLastIntroParagraph ? ">" : ">"}

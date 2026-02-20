@@ -2825,8 +2825,6 @@ export default function AstrologyCalculator() {
     )
   }
 
-  const hasTopPanelHover = topPanelHoverKey !== null
-
   return (
     <main className="min-h-screen bg-black text-white p-4 md:p-8" style={{ filter: interfaceThemeFilter }}>
       <div className="max-w-[1400px] mx-auto">
@@ -3826,6 +3824,9 @@ export default function AstrologyCalculator() {
                       const glyphSize = 20 * baseGlyphScale
                       const glyphGlowTiming = getGlyphGlowTiming(planet.name)
                       const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
+                      const themeGlyphPulseAnimation = themePulseEnabled
+                        ? "play-idle-pulse 5s ease-in-out infinite"
+                        : undefined
                       const glyphCoreFilter = "drop-shadow(0 0 1.6px rgba(255,255,255,0.58))"
                       const glyphHaloBaseFilter =
                         "url(#glyph-halo-only) drop-shadow(0 0 6.4px rgba(255,255,255,0.98)) drop-shadow(0 0 16px rgba(255,255,255,0.88))"
@@ -3836,11 +3837,11 @@ export default function AstrologyCalculator() {
                       return (
                         <g
                           key={planet.name}
-                          className={themePulseEnabled ? "play-idle-pulse" : undefined}
                           style={{
                             cursor: "pointer",
                             transformBox: "fill-box",
                             transformOrigin: "center",
+                            animation: themeGlyphPulseAnimation,
                           }}
                           onPointerDown={(event) => {
                             event.preventDefault()
@@ -4700,7 +4701,7 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
-      <div className="fixed top-[52px] inset-x-0 z-[35] pointer-events-none md:hidden">
+      <div className="fixed top-[44px] inset-x-0 z-[35] pointer-events-none md:hidden">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] px-4">
           <div className="border-b border-white/90" />
         </div>
@@ -4708,24 +4709,12 @@ export default function AstrologyCalculator() {
 
       <div className="fixed top-[5px] md:top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto w-full max-w-[430px] h-[42px] md:h-auto md:w-full md:max-w-[560px]">
-            <div className="grid grid-cols-5 md:grid-cols-4 gap-0.5 h-full items-center content-center md:gap-1.5 md:h-auto">
-              <div
-                className={`relative p-0 md:hidden transition-opacity duration-150 ${
-                  hasTopPanelHover
-                    ? topPanelHoverKey === "menu:button"
-                      ? "opacity-100"
-                      : "opacity-50"
-                    : "opacity-100"
-                }`}
-              >
+          <div className="pointer-events-auto w-full max-w-[430px] h-[34px] md:h-auto md:w-full md:max-w-[560px]">
+            <div className="grid grid-cols-5 md:grid-cols-4 gap-0.5 h-full items-stretch content-stretch md:gap-1.5 md:h-auto">
+              <div className="relative p-0 md:hidden">
                 <button
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  onMouseEnter={() => setTopPanelHoverKey("menu:button")}
-                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "menu:button" ? null : current))}
-                  onFocus={() => setTopPanelHoverKey("menu:button")}
-                  onBlur={() => setTopPanelHoverKey((current) => (current === "menu:button" ? null : current))}
-                  className={`flex w-full h-[34px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                  className={`flex w-full h-full items-center justify-center border px-0.5 py-0 transition-colors ${
                     menuOpen
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
@@ -4744,16 +4733,12 @@ export default function AstrologyCalculator() {
                 const downloadHoverKey = `download:${mode}`
                 const isModeHoverActive = topPanelHoverKey === modeHoverKey
                 const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
-                const isPairHoverActive = isModeHoverActive || isDownloadHoverActive
-                const isCardHoverActive = isModeHoverActive || isDownloadHoverActive
                 const isModeButtonActive = isActiveMode || isModeHoverActive
                 const tooltipAnchorClassMobile = "right-0 left-auto translate-x-0"
                 return (
                   <div
                     key={`top-nav-${mode}`}
-                    className={`relative p-0 md:p-0.5 md:px-1 md:py-1 transition-opacity duration-150 ${
-                      hasTopPanelHover ? (isCardHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"
-                    }`}
+                    className="relative p-0 md:p-0.5 md:px-1 md:py-1"
                   >
                     <div className="relative">
                       <button
@@ -4767,7 +4752,7 @@ export default function AstrologyCalculator() {
                           isModeButtonActive
                             ? "border-white bg-white/80 text-black"
                             : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
-                        } ${hasTopPanelHover ? (isPairHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
+                        }`}
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
@@ -4796,9 +4781,9 @@ export default function AstrologyCalculator() {
                             : isDownloadHoverActive
                               ? "border-white bg-white/80 text-black"
                               : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
-                        } ${hasTopPanelHover ? (isPairHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
+                        }`}
                       >
-                        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.55">
                           <path d="M3 8.5V12.5H13V8.5" />
                           <path d="M8 2.5V9" />
                           <path d="M5.8 6.8L8 9L10.2 6.8" />
@@ -4820,15 +4805,7 @@ export default function AstrologyCalculator() {
                   </div>
                 )
               })}
-              <div
-                className={`relative p-0 md:p-0.5 md:px-1 md:py-1 transition-opacity duration-150 ${
-                  hasTopPanelHover
-                    ? topPanelHoverKey === "reset:main" || topPanelHoverKey === "reset:info"
-                      ? "opacity-100"
-                      : "opacity-50"
-                    : "opacity-100"
-                }`}
-              >
+              <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
                 <button
                   onClick={resetToInitialState}
                   onMouseEnter={() => setTopPanelHoverKey("reset:main")}
@@ -4868,9 +4845,7 @@ export default function AstrologyCalculator() {
               <a
                 href={pendingMp3Download.url}
                 download={pendingMp3Download.fileName}
-                className={`mt-1.5 block w-full text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors ${
-                  hasTopPanelHover ? "opacity-50" : "opacity-100"
-                }`}
+                className="mt-1.5 block w-full text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
               >
                 SAVE MP3
               </a>

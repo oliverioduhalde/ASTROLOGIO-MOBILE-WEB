@@ -4882,8 +4882,8 @@ export default function AstrologyCalculator() {
 
       {showInfoOverlay && (
         <div className="fixed inset-0 z-50 bg-black/92">
-          <div className="h-full flex items-center justify-center px-10 md:px-20">
-            <div className="relative w-full max-w-[900px] min-h-[420px] md:min-h-[520px] px-3 py-4 md:px-4 md:py-5 flex flex-col">
+          <div className="h-full flex items-center justify-center px-4 md:px-8">
+            <div className="relative w-full max-w-[1200px] min-h-[420px] md:min-h-[520px] px-3 py-4 md:px-5 md:py-5 flex flex-col">
               <button
                 onClick={retreatInfoParagraph}
                 className="absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"

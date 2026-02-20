@@ -3560,7 +3560,7 @@ export default function AstrologyCalculator() {
             <button
               onClick={handleCalculate}
               disabled={loading}
-              className={`mt-[10px] block w-full mx-auto bg-white text-black py-2 text-[18px] font-mono text-center hover:bg-gray-200 transition-colors disabled:opacity-50 ${
+              className={`mt-8 block w-full mx-auto bg-white text-black py-2 text-[18px] font-mono text-center hover:bg-gray-200 transition-colors disabled:opacity-50 ${
                 isManualSubjectReady ? "send-minimal-ready" : ""
               }`}
             >
@@ -4579,16 +4579,16 @@ export default function AstrologyCalculator() {
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+70px)] w-[280px] border border-white/75 bg-black/88 px-2.5 py-2 text-center font-mono text-[13px] md:text-[15px] normal-case leading-tight text-white opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100">
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-[60%] top-[calc(100%+110px)] w-[280px] border border-white/75 bg-black/88 px-2.5 py-2 text-center font-mono text-[13px] md:text-[15px] normal-case leading-tight text-white opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100">
                         {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
                       </span>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[58px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100" />
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[98px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100" />
                     </div>
                     <div className="relative group/download mt-1">
                       <button
                         onClick={() => downloadNavigationModeMp3(mode)}
                         disabled={!horoscopeData || isExportingMp3}
-                        className={`flex w-full items-center justify-center border px-1.5 py-1 transition-colors ${
+                        className={`flex w-full items-center justify-center border px-1.5 py-1 brightness-50 hover:brightness-100 focus:brightness-100 transition-colors ${
                           !horoscopeData || isExportingMp3
                             ? "border-gray-700 text-gray-500 cursor-not-allowed"
                             : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
@@ -4600,10 +4600,10 @@ export default function AstrologyCalculator() {
                           <path d="M5.8 6.8L8 9L10.2 6.8" />
                         </svg>
                       </button>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+70px)] whitespace-nowrap border border-white/75 bg-black/88 px-2.5 py-2 font-mono text-[13px] md:text-[15px] text-white opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100">
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-[60%] top-[calc(100%+110px)] whitespace-nowrap border border-white/75 bg-black/88 px-2.5 py-2 font-mono text-[13px] md:text-[15px] text-white opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100">
                         {DOWNLOAD_TOOLTIP_TEXT}
                       </span>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[58px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100" />
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[98px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100" />
                     </div>
                   </div>
                 )
@@ -4632,7 +4632,7 @@ export default function AstrologyCalculator() {
               <a
                 href={pendingMp3Download.url}
                 download={pendingMp3Download.fileName}
-                className="mt-1.5 block w-full text-center font-mono text-[9px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
+                className="mt-1.5 block w-full text-center font-mono text-[9px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 brightness-50 hover:brightness-100 hover:bg-white hover:text-black transition-colors"
               >
                 SAVE MP3
               </a>
@@ -4651,7 +4651,7 @@ export default function AstrologyCalculator() {
           </button>
           <button
             onClick={retreatInfoParagraph}
-            className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
+            className="absolute left-8 md:left-14 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
             style={{ fontFamily: MONOTYPE_FONT_STACK }}
             aria-label="Previous info page"
           >
@@ -4659,7 +4659,7 @@ export default function AstrologyCalculator() {
           </button>
           <button
             onClick={advanceInfoParagraph}
-            className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
+            className="absolute right-8 md:right-14 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
             style={{ fontFamily: MONOTYPE_FONT_STACK }}
             aria-label="Next info page"
           >
@@ -4674,8 +4674,18 @@ export default function AstrologyCalculator() {
               >
                 {INFO_PARAGRAPHS[infoParagraphIndex]}
               </p>
-              <div className="mt-5 text-center font-mono text-[9px] md:text-[11px] uppercase tracking-[0.22em] text-white/55">
-                {infoParagraphIndex + 1} / {INFO_PARAGRAPHS.length}
+              <div className="mt-5 flex items-center justify-center gap-2.5">
+                {INFO_PARAGRAPHS.map((_, index) => {
+                  const isActive = index === infoParagraphIndex
+                  return (
+                    <span
+                      key={`info-dot-${index}`}
+                      className={`block h-2.5 w-2.5 rounded-full border border-white/80 transition-opacity duration-200 ${
+                        isActive ? "bg-white opacity-100" : "bg-white/15 opacity-45"
+                      }`}
+                    />
+                  )
+                })}
               </div>
             </div>
           </div>

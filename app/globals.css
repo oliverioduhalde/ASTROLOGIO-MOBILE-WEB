@@ -207,6 +207,20 @@
   will-change: transform, opacity;
 }
 
+@keyframes loading-intro-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.7;
+  }
+}
+
+.loading-intro-fade-in {
+  animation: loading-intro-fade-in 10s ease forwards;
+  will-change: opacity;
+}
+
 @keyframes play-idle-pulse {
   0% {
     transform: scale(1);

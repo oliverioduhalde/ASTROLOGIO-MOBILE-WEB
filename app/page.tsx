@@ -718,7 +718,14 @@ export default function AstrologyCalculator() {
   }, [])
 
   const advanceInfoParagraph = useCallback(() => {
-    setInfoParagraphIndex((prev) => (prev + 1) % INFO_PARAGRAPHS.length)
+    setInfoParagraphIndex((prev) => {
+      const next = prev + 1
+      if (next >= INFO_PARAGRAPHS.length) {
+        setShowInfoOverlay(false)
+        return 0
+      }
+      return next
+    })
   }, [])
 
   const retreatInfoParagraph = useCallback(() => {
@@ -2698,7 +2705,7 @@ export default function AstrologyCalculator() {
                 <p
                   key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
                   onClick={advanceLoadingIntroParagraph}
-                  className="font-mono cursor-pointer text-[24px] md:text-[29px] leading-[1.36]"
+                  className="loading-intro-fade-in font-mono cursor-pointer text-[22px] md:text-[26px] leading-[1.36]"
                   style={{
                     color: "rgba(255,255,255,0.7)",
                     textAlign: "left",
@@ -4161,12 +4168,10 @@ export default function AstrologyCalculator() {
                         }),
                       )}
                   </svg>
-                  {navigationMode === "sequential" && (
-                    <div className="pointer-events-none absolute right-2 bottom-8 text-right font-mono text-[10px] md:text-[12px] uppercase tracking-wide text-white/70">
-                      <div>{formData.datetime ? new Date(formData.datetime).toLocaleString("en-US") : "No Date"}</div>
-                      <div>{sanitizeLocationLabel(formData.location) || "No Location"}</div>
-                    </div>
-                  )}
+                  <div className="pointer-events-none absolute right-2 bottom-8 text-right font-mono text-[12px] md:text-[14px] uppercase tracking-wide text-white/70">
+                    <div>{formData.datetime ? new Date(formData.datetime).toLocaleString("en-US") : "No Date"}</div>
+                    <div>{sanitizeLocationLabel(formData.location) || "No Location"}</div>
+                  </div>
                   <div className="fixed bottom-[86px] inset-x-0 z-30 pointer-events-none">
                     <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-start">
                       <button
@@ -4574,10 +4579,10 @@ export default function AstrologyCalculator() {
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+70px)] w-[280px] border border-white/75 bg-black/88 px-2.5 py-2 text-center font-mono text-[13px] md:text-[15px] normal-case leading-tight text-white opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100">
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+70px)] w-[280px] border border-white/75 bg-black/88 px-2.5 py-2 text-center font-mono text-[13px] md:text-[15px] normal-case leading-tight text-white opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100">
                         {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
                       </span>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+12px)] h-[58px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100" />
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[58px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100" />
                     </div>
                     <div className="relative group/download mt-1">
                       <button
@@ -4595,10 +4600,10 @@ export default function AstrologyCalculator() {
                           <path d="M5.8 6.8L8 9L10.2 6.8" />
                         </svg>
                       </button>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+70px)] whitespace-nowrap border border-white/75 bg-black/88 px-2.5 py-2 font-mono text-[13px] md:text-[15px] text-white opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100">
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+70px)] whitespace-nowrap border border-white/75 bg-black/88 px-2.5 py-2 font-mono text-[13px] md:text-[15px] text-white opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100">
                         {DOWNLOAD_TOOLTIP_TEXT}
                       </span>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+12px)] h-[58px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100" />
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[58px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100" />
                     </div>
                   </div>
                 )
@@ -4640,7 +4645,7 @@ export default function AstrologyCalculator() {
         <div className="fixed inset-0 z-50 bg-black/92">
           <button
             onClick={closeInfoOverlay}
-            className="absolute top-3 right-3 border border-white/70 px-2 py-1 font-mono text-[10px] md:text-[12px] uppercase tracking-wide text-white/85 hover:bg-white hover:text-black transition-colors"
+            className="absolute top-6 right-8 md:right-12 border border-white/70 px-2 py-1 font-mono text-[10px] md:text-[12px] uppercase tracking-wide text-white/85 hover:bg-white hover:text-black transition-colors"
           >
             CLOSE
           </button>

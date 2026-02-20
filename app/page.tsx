@@ -2706,7 +2706,7 @@ export default function AstrologyCalculator() {
                 <p
                   key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
                   onClick={advanceLoadingIntroParagraph}
-                  className="loading-intro-fade-in font-mono cursor-pointer text-[22px] md:text-[26px] leading-[1.36]"
+                  className="loading-intro-fade-in font-mono cursor-pointer text-[18px] md:text-[26px] leading-[1.36]"
                   style={{
                     color: "rgba(255,255,255,0.7)",
                     textAlign: "left",
@@ -3450,7 +3450,9 @@ export default function AstrologyCalculator() {
             )}
           </div>
 
-          <h1 className="text-[23px] md:text-[26px] font-mono absolute left-1/2 transform -translate-x-1/2">ASTRO.LOG.IO</h1>
+          <h1 className="text-[18px] md:text-[26px] font-mono fixed md:absolute top-1 md:top-auto left-1/2 transform -translate-x-1/2 z-[60] md:z-auto pointer-events-none">
+            ASTRO.LOG.IO
+          </h1>
           {showModeInfo && (
             <div className="absolute left-14 md:left-20 top-1/2 -translate-y-1/2 font-mono text-[12px] md:text-[14px] uppercase tracking-widest text-white/85">
               {modalEnabled ? `Mode: ${currentModeLabel}` : "Mode: OFF"}
@@ -3465,7 +3467,7 @@ export default function AstrologyCalculator() {
             <div className="flex flex-wrap gap-1.5 mb-2">
               <button
                 onClick={setManualMode}
-                className={`px-5 py-2 text-[18px] font-mono border transition-colors ${
+                className={`px-5 py-2 text-[14px] md:text-[18px] font-mono border transition-colors ${
                   selectedPreset === "manual"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -3477,7 +3479,7 @@ export default function AstrologyCalculator() {
                 onClick={() => {
                   void applyHereAndNow()
                 }}
-                className={`px-5 py-2 text-[18px] font-mono border transition-colors ${
+                className={`px-5 py-2 text-[14px] md:text-[18px] font-mono border transition-colors ${
                   selectedPreset === "here_now"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -3490,16 +3492,16 @@ export default function AstrologyCalculator() {
             {(selectedPreset === "manual" || selectedPreset === "here_now") && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Date &amp; Time</label>
+                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Date &amp; Time</label>
                   <input
                     type="datetime-local"
                     value={formData.datetime}
                     onChange={(e) => setFormData({ ...formData, datetime: e.target.value })}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[20px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
                 <div className="relative">
-                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Location</label>
+                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Location</label>
                   <input
                     type="text"
                     value={formData.location}
@@ -3514,11 +3516,11 @@ export default function AstrologyCalculator() {
                         void resolveLocationAndUpdateCoords(formData.location)
                       }
                     }}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[20px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
                     placeholder="City, Country"
                   />
                   {isResolvingLocation && (
-                    <div className="mt-1 text-[12px] font-mono text-white/70">Resolving location...</div>
+                    <div className="mt-1 text-[10px] md:text-[12px] font-mono text-white/70">Resolving location...</div>
                   )}
                   {locationSuggestions.length > 0 && (
                     <div className="absolute z-20 mt-1 w-full border border-gray-500 bg-black max-h-44 overflow-y-auto">
@@ -3526,7 +3528,7 @@ export default function AstrologyCalculator() {
                         <button
                           key={`${suggestion.display}-${index}`}
                           type="button"
-                          className="w-full text-left px-2 py-2 text-[15px] font-mono text-white hover:bg-white hover:text-black transition-colors border-b border-gray-700 last:border-b-0"
+                          className="w-full text-left px-2 py-2 text-[12px] md:text-[15px] font-mono text-white hover:bg-white hover:text-black transition-colors border-b border-gray-700 last:border-b-0"
                           onClick={() => {
                             setFormData((prev) => ({
                               ...prev,
@@ -3544,23 +3546,23 @@ export default function AstrologyCalculator() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Latitude</label>
+                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Latitude</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={formData.latitude}
                     onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[20px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[18px] text-gray-300 mb-1 font-mono">Longitude</label>
+                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Longitude</label>
                   <input
                     type="number"
                     step="0.0001"
                     value={formData.longitude}
                     onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[20px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
               </div>
@@ -3569,7 +3571,7 @@ export default function AstrologyCalculator() {
             <button
               onClick={handleCalculate}
               disabled={loading}
-              className={`mt-8 block w-full mx-auto bg-white text-black py-2 text-[18px] font-mono text-center hover:bg-gray-200 transition-colors disabled:opacity-50 ${
+              className={`mt-8 block w-full mx-auto bg-white text-black py-2 text-[15px] md:text-[18px] font-mono text-center hover:bg-gray-200 transition-colors disabled:opacity-50 ${
                 isManualSubjectReady ? "send-minimal-ready" : ""
               }`}
             >
@@ -4180,7 +4182,7 @@ export default function AstrologyCalculator() {
                   </svg>
                   <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+4px)] md:bottom-[86px] inset-x-0 z-30 pointer-events-none">
                     <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-                      <div className="border border-white/70 bg-black/75 px-2.5 py-2 text-right font-mono text-[11px] md:text-[13px] uppercase tracking-wide text-white/80">
+                      <div className="border border-white/70 bg-black/75 px-2.5 py-2 text-right font-mono text-[10px] md:text-[13px] uppercase tracking-wide text-white/80">
                         <div>
                           {formData.datetime ? new Date(formData.datetime).toLocaleDateString("en-US") : "No Date"}
                         </div>
@@ -4579,11 +4581,11 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
-      <div className="fixed top-2 inset-x-0 z-40 pointer-events-none">
+      <div className="fixed top-12 md:top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
           <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-1.5 py-1.5 md:px-2 md:py-2 w-[calc(100%-88px)] max-w-[430px] md:w-full md:max-w-[560px]">
             <div className="grid grid-cols-4 gap-1.5">
-              {NAVIGATION_MODES.map((mode) => {
+              {NAVIGATION_MODES.map((mode, modeIndex) => {
                 const isActiveMode = navigationMode === mode
                 const modeHoverKey = `mode:${mode}`
                 const downloadHoverKey = `download:${mode}`
@@ -4591,6 +4593,12 @@ export default function AstrologyCalculator() {
                 const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
                 const isPairHoverActive = isModeHoverActive || isDownloadHoverActive
                 const isCardHoverActive = isModeHoverActive || isDownloadHoverActive
+                const tooltipAnchorClassMobile =
+                  modeIndex === 0
+                    ? "left-0 translate-x-0"
+                    : modeIndex === NAVIGATION_MODES.length - 1
+                      ? "right-0 left-auto translate-x-0"
+                      : "left-1/2 -translate-x-1/2"
                 return (
                   <div
                     key={`top-nav-${mode}`}
@@ -4605,7 +4613,7 @@ export default function AstrologyCalculator() {
                         onMouseLeave={() => setTopPanelHoverKey((current) => (current === modeHoverKey ? null : current))}
                         onFocus={() => setTopPanelHoverKey(modeHoverKey)}
                         onBlur={() => setTopPanelHoverKey((current) => (current === modeHoverKey ? null : current))}
-                        className={`w-full font-mono text-[10px] md:text-[12px] uppercase tracking-wide border px-1.5 py-1 transition-colors ${
+                        className={`w-full font-mono text-[8px] md:text-[12px] uppercase tracking-wide border px-1.5 py-1 transition-colors ${
                           isActiveMode
                             ? "bg-white text-black border-white"
                             : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -4614,7 +4622,7 @@ export default function AstrologyCalculator() {
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
                       <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-[55%] top-[calc(100%+170px)] w-[320px] border border-white/75 bg-black/88 px-3 py-2.5 text-left font-mono text-[14px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+170px)] w-[220px] md:w-[320px] border border-white/75 bg-black/88 px-2.5 md:px-3 py-2.5 text-left font-mono text-[10px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-150 ${
                           isModeHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
@@ -4642,14 +4650,14 @@ export default function AstrologyCalculator() {
                             : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
                         } ${isPairHoverActive ? "opacity-100" : "opacity-50"}`}
                       >
-                        <svg width="19" height="19" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
                           <path d="M3 8.5V12.5H13V8.5" />
                           <path d="M8 2.5V9" />
                           <path d="M5.8 6.8L8 9L10.2 6.8" />
                         </svg>
                       </button>
                       <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-[55%] top-[calc(100%+170px)] whitespace-nowrap border border-white/75 bg-black/88 px-3 py-2.5 font-mono text-[14px] md:text-[16px] text-left text-white transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+170px)] whitespace-nowrap border border-white/75 bg-black/88 px-2.5 md:px-3 py-2.5 font-mono text-[10px] md:text-[16px] text-left text-white transition-opacity duration-150 ${
                           isDownloadHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
@@ -4664,27 +4672,23 @@ export default function AstrologyCalculator() {
                   </div>
                 )
               })}
-              <div className="flex flex-col gap-1.5">
+              <div className={`relative border px-1 py-1 transition-opacity duration-150 ${hasTopPanelHover ? "opacity-50" : "opacity-100"}`}>
                 <button
                   onClick={resetToInitialState}
-                  className={`font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors ${
-                    hasTopPanelHover ? "opacity-50" : "opacity-100"
-                  }`}
+                  className="w-full font-mono text-[8px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors"
                 >
                   RESET
                 </button>
                 <button
                   onClick={openInfoOverlay}
-                  className={`font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors ${
-                    hasTopPanelHover ? "opacity-50" : "opacity-100"
-                  }`}
+                  className="mt-1 w-full font-mono text-[8px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors"
                 >
                   INFO
                 </button>
               </div>
             </div>
             {isExportingMp3 && (
-              <div className="mt-1.5 text-center font-mono text-[9px] md:text-[11px] uppercase tracking-wide text-white/70">
+              <div className="mt-1.5 text-center font-mono text-[8px] md:text-[11px] uppercase tracking-wide text-white/70">
                 RENDER MP3...
               </div>
             )}
@@ -4692,7 +4696,7 @@ export default function AstrologyCalculator() {
               <a
                 href={pendingMp3Download.url}
                 download={pendingMp3Download.fileName}
-                className={`mt-1.5 block w-full text-center font-mono text-[9px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors ${
+                className={`mt-1.5 block w-full text-center font-mono text-[8px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors ${
                   hasTopPanelHover ? "opacity-50" : "opacity-100"
                 }`}
               >
@@ -4724,7 +4728,7 @@ export default function AstrologyCalculator() {
                 {">"}
               </button>
               <p
-                className="flex-1 font-mono text-[18px] md:text-[24px] leading-[1.58] text-white/88"
+                className="flex-1 font-mono text-[15px] md:text-[24px] leading-[1.58] text-white/88"
                 style={{ whiteSpace: "pre-line", textAlign: "left" }}
               >
                 {INFO_PARAGRAPHS[infoParagraphIndex]}

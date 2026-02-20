@@ -238,6 +238,17 @@
   will-change: transform;
 }
 
+@keyframes theme-twinkle {
+  0% {
+    opacity: 0.56;
+    filter: brightness(0.74);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
 /* Aspect line smooth transition styles */
 .aspect-line {
   transition: opacity 0.1s linear;

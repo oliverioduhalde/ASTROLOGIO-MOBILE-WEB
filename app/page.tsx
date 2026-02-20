@@ -387,6 +387,20 @@ function getGlyphGlowTiming(glyphName: string) {
   }
 }
 
+function getTwinkleTiming(token: string) {
+  let hash = 0
+  for (let i = 0; i < token.length; i += 1) {
+    hash = (hash * 33 + token.charCodeAt(i)) % 100000
+  }
+  const frequencyHz = 0.25 + ((hash % 1000) / 1000) * 0.25 // 0.25..0.5 Hz
+  const durationSec = 1 / frequencyHz // 2..4s
+  const delaySec = -((Math.floor(hash / 11) % 6000) / 1000) // desync phase start
+  return {
+    durationSec: durationSec.toFixed(3),
+    delaySec: delaySec.toFixed(3),
+  }
+}
+
 function adjustPlanetPositions(planets: { name: string; degrees: number }[], minSeparation = 12) {
   const sorted = [...planets].sort((a, b) => a.degrees - b.degrees)
   const adjusted: { name: string; adjustedDegrees: number }[] = []
@@ -619,8 +633,8 @@ export default function AstrologyCalculator() {
   }, [formData.location])
 
   const effectiveMasterVolume = navigationMode === "astral_chord" ? masterVolume * 0.6 : masterVolume
-  const themeGlyphPulseEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
-  const themeUiPulseEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
+  const themeTwinkleEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
+  const chartInfoTwinkleTiming = useMemo(() => getTwinkleTiming("chart-info"), [])
 
   // Added hook for planet audio
   const {
@@ -3810,6 +3824,10 @@ export default function AstrologyCalculator() {
                       const glyphSize = 20 * baseGlyphScale
                       const glyphGlowTiming = getGlyphGlowTiming(planet.name)
                       const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
+                      const glyphTwinkleTiming = getTwinkleTiming(`glyph-${planet.name}`)
+                      const glyphTwinkleAnimation = themeTwinkleEnabled
+                        ? `theme-twinkle ${glyphTwinkleTiming.durationSec}s ease-in-out ${glyphTwinkleTiming.delaySec}s infinite alternate`
+                        : undefined
                       const glyphCoreFilter = "drop-shadow(0 0 1.6px rgba(255,255,255,0.58))"
                       const glyphHaloBaseFilter =
                         "url(#glyph-halo-only) drop-shadow(0 0 6.4px rgba(255,255,255,0.98)) drop-shadow(0 0 16px rgba(255,255,255,0.88))"
@@ -3820,11 +3838,11 @@ export default function AstrologyCalculator() {
                       return (
                         <g
                           key={planet.name}
-                          className={themeGlyphPulseEnabled ? "play-idle-pulse" : undefined}
                           style={{
                             cursor: "pointer",
                             transformBox: "fill-box",
                             transformOrigin: "center",
+                            animation: glyphTwinkleAnimation,
                           }}
                           onPointerDown={(event) => {
                             event.preventDefault()
@@ -4260,6 +4278,13 @@ export default function AstrologyCalculator() {
                             ? "scale-[1] md:scale-100 border-white bg-white text-black"
                             : "scale-[0.66] md:scale-100 border-white/70 bg-black/75 text-white/80"
                         }`}
+                        style={
+                          themeTwinkleEnabled
+                            ? {
+                                animation: `theme-twinkle ${chartInfoTwinkleTiming.durationSec}s ease-in-out ${chartInfoTwinkleTiming.delaySec}s infinite alternate`,
+                              }
+                            : undefined
+                        }
                         onPointerEnter={() => setIsSubjectBoxHovered(true)}
                         onPointerLeave={() => setIsSubjectBoxHovered(false)}
                         onTouchStart={() => {
@@ -4684,14 +4709,14 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
-      <div className="fixed top-4 md:top-2 inset-x-0 z-40 pointer-events-none">
+      <div className="fixed top-[5px] md:top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto w-full max-w-[430px] h-14 md:h-auto md:w-full md:max-w-[560px]">
-            <div className="grid grid-cols-5 md:grid-cols-4 gap-0.5 h-full items-center content-center -translate-y-[5px] md:translate-y-0 md:gap-1.5 md:h-auto">
+          <div className="pointer-events-auto w-full max-w-[430px] h-[42px] md:h-auto md:w-full md:max-w-[560px]">
+            <div className="grid grid-cols-5 md:grid-cols-4 gap-0.5 h-full items-center content-center md:gap-1.5 md:h-auto">
               <div
                 className={`relative p-0 md:hidden transition-opacity duration-150 ${
                   hasTopPanelHover
-                    ? topPanelHoverKey === "menu:main" || topPanelHoverKey === "menu:toggle"
+                    ? topPanelHoverKey === "menu:button"
                       ? "opacity-100"
                       : "opacity-50"
                     : "opacity-100"
@@ -4699,27 +4724,21 @@ export default function AstrologyCalculator() {
               >
                 <button
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  onMouseEnter={() => setTopPanelHoverKey("menu:main")}
-                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "menu:main" ? null : current))}
-                  onFocus={() => setTopPanelHoverKey("menu:main")}
-                  onBlur={() => setTopPanelHoverKey((current) => (current === "menu:main" ? null : current))}
-                  className={`w-full h-[13px] font-mono text-[4.5px] uppercase tracking-wide border px-0.5 py-0 transition-colors bg-gray-500/50 text-white border-gray-600 hover:border-white ${
-                    themeUiPulseEnabled ? "play-idle-pulse" : ""
+                  onMouseEnter={() => setTopPanelHoverKey("menu:button")}
+                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "menu:button" ? null : current))}
+                  onFocus={() => setTopPanelHoverKey("menu:button")}
+                  onBlur={() => setTopPanelHoverKey((current) => (current === "menu:button" ? null : current))}
+                  className={`flex w-full h-[34px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                    menuOpen
+                      ? "border-white bg-white/80 text-black"
+                      : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
                   }`}
                 >
-                  MENU
-                </button>
-                <button
-                  onClick={() => setMenuOpen((prev) => !prev)}
-                  onMouseEnter={() => setTopPanelHoverKey("menu:toggle")}
-                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "menu:toggle" ? null : current))}
-                  onFocus={() => setTopPanelHoverKey("menu:toggle")}
-                  onBlur={() => setTopPanelHoverKey((current) => (current === "menu:toggle" ? null : current))}
-                  className={`mt-0 flex w-full h-[13px] items-center justify-center border px-0.5 py-0 transition-colors bg-gray-500/50 text-white border-gray-600 hover:border-white font-mono text-[4.5px] uppercase tracking-wide ${
-                    themeUiPulseEnabled ? "play-idle-pulse" : ""
-                  }`}
-                >
-                  {menuOpen ? "✕" : "☰"}
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+                    <path d="M2.5 4H13.5" />
+                    <path d="M2.5 8H13.5" />
+                    <path d="M2.5 12H13.5" />
+                  </svg>
                 </button>
               </div>
               {TOP_PANEL_MODE_ORDER.map((mode) => {
@@ -4730,6 +4749,7 @@ export default function AstrologyCalculator() {
                 const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
                 const isPairHoverActive = isModeHoverActive || isDownloadHoverActive
                 const isCardHoverActive = isModeHoverActive || isDownloadHoverActive
+                const isModeButtonActive = isActiveMode || isModeHoverActive
                 const tooltipAnchorClassMobile = "right-0 left-auto translate-x-0"
                 return (
                   <div
@@ -4745,13 +4765,11 @@ export default function AstrologyCalculator() {
                         onMouseLeave={() => setTopPanelHoverKey((current) => (current === modeHoverKey ? null : current))}
                         onFocus={() => setTopPanelHoverKey(modeHoverKey)}
                         onBlur={() => setTopPanelHoverKey((current) => (current === modeHoverKey ? null : current))}
-                        className={`w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
-                          isActiveMode
-                            ? "bg-gray-500/50 md:bg-transparent text-white border-white"
-                            : "bg-gray-500/50 md:bg-transparent text-white border-gray-600 hover:border-white"
-                        } ${hasTopPanelHover ? (isPairHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"} ${
-                          themeUiPulseEnabled ? "play-idle-pulse" : ""
-                        }`}
+                        className={`w-full h-[17px] md:h-auto font-mono text-[6px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                          isModeButtonActive
+                            ? "border-white bg-white/80 text-black"
+                            : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
+                        } ${hasTopPanelHover ? (isPairHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
@@ -4778,15 +4796,15 @@ export default function AstrologyCalculator() {
                         onFocus={() => setTopPanelHoverKey(downloadHoverKey)}
                         onBlur={() => setTopPanelHoverKey((current) => (current === downloadHoverKey ? null : current))}
                         disabled={!horoscopeData || isExportingMp3}
-                        className={`flex w-full h-[13px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                        className={`flex w-full h-[17px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           !horoscopeData || isExportingMp3
-                            ? "bg-gray-500/50 md:bg-transparent border-gray-700 text-gray-500 cursor-not-allowed"
-                            : isActiveMode
-                              ? "bg-gray-500/50 md:bg-transparent border-white text-white"
-                              : "bg-gray-500/50 md:bg-transparent border-gray-600 text-white hover:border-white"
-                        } ${isPairHoverActive ? "opacity-100" : "opacity-50"} ${themeUiPulseEnabled ? "play-idle-pulse" : ""}`}
+                            ? "border-white/25 bg-transparent text-white/35 cursor-not-allowed"
+                            : isDownloadHoverActive
+                              ? "border-white bg-white/80 text-black"
+                              : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
+                        } ${isPairHoverActive ? "opacity-100" : "opacity-50"}`}
                       >
-                        <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
+                        <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
                           <path d="M3 8.5V12.5H13V8.5" />
                           <path d="M8 2.5V9" />
                           <path d="M5.8 6.8L8 9L10.2 6.8" />
@@ -4823,9 +4841,11 @@ export default function AstrologyCalculator() {
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("reset:main")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                  className={`w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors bg-transparent text-white border-gray-600 hover:border-white ${
-                    themeUiPulseEnabled ? "play-idle-pulse" : ""
-                  } bg-gray-500/50 md:bg-transparent`}
+                  className={`w-full h-[17px] md:h-auto font-mono text-[6px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                    topPanelHoverKey === "reset:main"
+                      ? "border-white bg-white/80 text-black"
+                      : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
+                  }`}
                 >
                   RESET
                 </button>
@@ -4835,9 +4855,11 @@ export default function AstrologyCalculator() {
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("reset:info")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                  className={`mt-0 md:mt-1 flex w-full h-[13px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide ${
-                    themeUiPulseEnabled ? "play-idle-pulse" : ""
-                  } bg-gray-500/50 md:bg-transparent`}
+                  className={`mt-0 md:mt-1 flex w-full h-[17px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors font-mono text-[6px] md:text-[12px] uppercase tracking-wide ${
+                    topPanelHoverKey === "reset:info"
+                      ? "border-white bg-white/80 text-black"
+                      : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
+                  }`}
                 >
                   INFO
                 </button>

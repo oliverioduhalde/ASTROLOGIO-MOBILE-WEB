@@ -4701,7 +4701,7 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
-      <div className="fixed top-[44px] inset-x-0 z-[35] pointer-events-none md:hidden">
+      <div className="fixed top-[48px] inset-x-0 z-[35] pointer-events-none md:hidden">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] px-4">
           <div className="border-b border-white/90" />
         </div>
@@ -4709,7 +4709,7 @@ export default function AstrologyCalculator() {
 
       <div className="fixed top-[5px] md:top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto w-full max-w-[430px] h-[34px] md:h-auto md:w-full md:max-w-[560px]">
+          <div className="pointer-events-auto w-full max-w-[430px] h-[38px] md:h-auto md:w-full md:max-w-[560px]">
             <div className="grid grid-cols-5 md:grid-cols-4 gap-0.5 h-full items-stretch content-stretch md:gap-1.5 md:h-auto">
               <div className="relative p-0 md:hidden">
                 <button
@@ -4748,7 +4748,7 @@ export default function AstrologyCalculator() {
                         }}
                         onMouseEnter={() => showTopPanelHint(modeHoverKey)}
                         onFocus={() => showTopPanelHint(modeHoverKey)}
-                        className={`w-full h-[17px] md:h-auto font-mono text-[6px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                        className={`w-full h-[19px] md:h-auto font-mono text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           isModeButtonActive
                             ? "border-white bg-white/80 text-black"
                             : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
@@ -4775,7 +4775,7 @@ export default function AstrologyCalculator() {
                         onMouseEnter={() => showTopPanelHint(downloadHoverKey)}
                         onFocus={() => showTopPanelHint(downloadHoverKey)}
                         disabled={!horoscopeData || isExportingMp3}
-                        className={`flex w-full h-[17px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                        className={`flex w-full h-[19px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           !horoscopeData || isExportingMp3
                             ? "border-white/25 bg-transparent text-white/25 cursor-not-allowed"
                             : isDownloadHoverActive
@@ -4812,7 +4812,7 @@ export default function AstrologyCalculator() {
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("reset:main")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                  className={`w-full h-[17px] md:h-auto font-mono text-[6px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                  className={`w-full h-[19px] md:h-auto font-mono text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                     topPanelHoverKey === "reset:main"
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
@@ -4826,7 +4826,7 @@ export default function AstrologyCalculator() {
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("reset:info")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                  className={`mt-0 md:mt-1 flex w-full h-[17px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors font-mono text-[6px] md:text-[12px] uppercase tracking-wide ${
+                  className={`mt-0 md:mt-1 flex w-full h-[19px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors font-mono text-[6px] md:text-[12px] leading-none uppercase tracking-wide ${
                     topPanelHoverKey === "reset:info"
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"

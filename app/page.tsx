@@ -517,6 +517,7 @@ export default function AstrologyCalculator() {
   const [showVuMeter, setShowVuMeter] = useState(false)
   const [showModeInfo, setShowModeInfo] = useState(false)
   const [advancedMenuEnabled, setAdvancedMenuEnabled] = useState(false)
+  const [isSubjectBoxHovered, setIsSubjectBoxHovered] = useState(false)
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
   const [topPanelHoverKey, setTopPanelHoverKey] = useState<string | null>(null)
   const [isExportingMp3, setIsExportingMp3] = useState(false)
@@ -594,6 +595,7 @@ export default function AstrologyCalculator() {
   const [locationSuggestions, setLocationSuggestions] = useState<GeoSuggestion[]>([])
   const [isResolvingLocation, setIsResolvingLocation] = useState(false)
   const chartAspectsKeyRef = useRef("__chart__")
+  const subjectHoverTouchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const modalSunSignIndex = useMemo(() => {
     const sunDegrees = horoscopeData?.planets?.find((p) => p.name === "sun")?.ChartPosition?.Ecliptic?.DecimalDegrees
@@ -616,6 +618,7 @@ export default function AstrologyCalculator() {
   }, [formData.location])
 
   const effectiveMasterVolume = navigationMode === "astral_chord" ? masterVolume * 0.6 : masterVolume
+  const themeGlyphPulseEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
 
   // Added hook for planet audio
   const {
@@ -1419,6 +1422,10 @@ export default function AstrologyCalculator() {
 
   useEffect(() => {
     return () => {
+      if (subjectHoverTouchTimeoutRef.current) {
+        clearTimeout(subjectHoverTouchTimeoutRef.current)
+        subjectHoverTouchTimeoutRef.current = null
+      }
       if (mobileDownloadArmTimeoutRef.current) {
         clearTimeout(mobileDownloadArmTimeoutRef.current)
         mobileDownloadArmTimeoutRef.current = null
@@ -3811,7 +3818,12 @@ export default function AstrologyCalculator() {
                       return (
                         <g
                           key={planet.name}
-                          style={{ cursor: "pointer" }}
+                          className={themeGlyphPulseEnabled ? "play-idle-pulse" : undefined}
+                          style={{
+                            cursor: "pointer",
+                            transformBox: "fill-box",
+                            transformOrigin: "center",
+                          }}
                           onPointerDown={(event) => {
                             event.preventDefault()
                             handlePlanetMouseDown(planet.name, originalDegrees)
@@ -4240,7 +4252,38 @@ export default function AstrologyCalculator() {
                   </svg>
                   <div className="fixed bottom-0 pb-[calc(env(safe-area-inset-bottom)*0.4)] translate-y-[100px] md:translate-y-0 md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
                     <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-                      <div className="origin-bottom-right scale-[0.66] md:scale-100 border border-white/70 bg-black/75 px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight text-white/80">
+                      <div
+                        className={`pointer-events-auto origin-bottom-right scale-[0.66] md:scale-100 border px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight transition-colors ${
+                          isSubjectBoxHovered
+                            ? "border-white bg-white text-black"
+                            : "border-white/70 bg-black/75 text-white/80"
+                        }`}
+                        onPointerEnter={() => setIsSubjectBoxHovered(true)}
+                        onPointerLeave={() => setIsSubjectBoxHovered(false)}
+                        onTouchStart={() => {
+                          if (subjectHoverTouchTimeoutRef.current) {
+                            clearTimeout(subjectHoverTouchTimeoutRef.current)
+                            subjectHoverTouchTimeoutRef.current = null
+                          }
+                          setIsSubjectBoxHovered(true)
+                        }}
+                        onTouchEnd={() => {
+                          if (subjectHoverTouchTimeoutRef.current) {
+                            clearTimeout(subjectHoverTouchTimeoutRef.current)
+                          }
+                          subjectHoverTouchTimeoutRef.current = setTimeout(() => {
+                            setIsSubjectBoxHovered(false)
+                            subjectHoverTouchTimeoutRef.current = null
+                          }, 220)
+                        }}
+                        onTouchCancel={() => {
+                          if (subjectHoverTouchTimeoutRef.current) {
+                            clearTimeout(subjectHoverTouchTimeoutRef.current)
+                            subjectHoverTouchTimeoutRef.current = null
+                          }
+                          setIsSubjectBoxHovered(false)
+                        }}
+                      >
                         <div>
                           {formData.datetime ? new Date(formData.datetime).toLocaleDateString("en-US") : "No Date"}
                         </div>

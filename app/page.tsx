@@ -4567,12 +4567,13 @@ export default function AstrologyCalculator() {
                 const isModeHoverActive = topPanelHoverKey === modeHoverKey
                 const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
                 const isCardHoverActive = isModeHoverActive || isDownloadHoverActive
+                const hasTopHover = topPanelHoverKey !== null
                 return (
                   <div
                     key={`top-nav-${mode}`}
                     className={`relative border px-1 py-1 transition-opacity duration-150 ${
                       isActiveMode ? "border-white/95 bg-white/8" : "border-gray-600/85 bg-black/35"
-                    } ${isCardHoverActive ? "opacity-100" : "opacity-50"}`}
+                    } ${hasTopHover ? (isCardHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
                   >
                     <div className="relative">
                       <button
@@ -4585,19 +4586,19 @@ export default function AstrologyCalculator() {
                           isActiveMode
                             ? "bg-white text-black border-white"
                             : "bg-transparent text-white border-gray-600 hover:border-white"
-                        } ${isModeHoverActive ? "opacity-100" : "opacity-50"}`}
+                        } ${hasTopHover ? (isModeHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
                       <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-[55%] top-[calc(100%+150px)] w-[280px] border border-white/75 bg-black/88 px-2.5 py-2 text-left font-mono text-[13px] md:text-[15px] normal-case leading-tight text-white transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute left-1/2 -translate-x-[55%] top-[calc(100%+170px)] w-[320px] border border-white/75 bg-black/88 px-3 py-2.5 text-left font-mono text-[14px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-150 ${
                           isModeHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
                         {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
                       </span>
                       <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[138px] w-px bg-white/75 transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[158px] w-px bg-white/75 transition-opacity duration-150 ${
                           isModeHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       />
@@ -4616,7 +4617,7 @@ export default function AstrologyCalculator() {
                           !horoscopeData || isExportingMp3
                             ? "border-gray-700 text-gray-500 cursor-not-allowed"
                             : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
-                        } ${isDownloadHoverActive ? "opacity-100" : "opacity-50"}`}
+                        } ${hasTopHover ? (isDownloadHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
                       >
                         <svg width="19" height="19" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
                           <path d="M3 8.5V12.5H13V8.5" />
@@ -4625,14 +4626,14 @@ export default function AstrologyCalculator() {
                         </svg>
                       </button>
                       <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-[55%] top-[calc(100%+150px)] whitespace-nowrap border border-white/75 bg-black/88 px-2.5 py-2 font-mono text-[13px] md:text-[15px] text-left text-white transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute left-1/2 -translate-x-[55%] top-[calc(100%+170px)] whitespace-nowrap border border-white/75 bg-black/88 px-3 py-2.5 font-mono text-[14px] md:text-[16px] text-left text-white transition-opacity duration-150 ${
                           isDownloadHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
                         {DOWNLOAD_TOOLTIP_TEXT}
                       </span>
                       <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[138px] w-px bg-white/75 transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[158px] w-px bg-white/75 transition-opacity duration-150 ${
                           isDownloadHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       />

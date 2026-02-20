@@ -4741,16 +4741,16 @@ export default function AstrologyCalculator() {
                 <button
                   ref={mobileMenuButtonRef}
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className={`flex w-full h-full items-center justify-center border px-0.5 py-0 transition-colors ${
+                  className={`flex w-full h-[38px] items-center justify-center border px-0.5 py-0 transition-colors ${
                     menuOpen
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
                   }`}
                 >
                   <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-                    <path d="M2.5 4H13.5" />
+                    <path d="M2.5 5H13.5" />
                     <path d="M2.5 8H13.5" />
-                    <path d="M2.5 12H13.5" />
+                    <path d="M2.5 11H13.5" />
                   </svg>
                 </button>
               </div>

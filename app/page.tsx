@@ -212,7 +212,7 @@ const LOADING_INTRO_PARAGRAPHS = [
 ]
 const INFO_PARAGRAPHS = [
   "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler’s vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
-  "In Chord mode (Astral Chord), the chart is heard as a dense, simultaneous harmonic field.\nIn Orbit mode, listening follows a circular path that moves around the planets in continuous rotation.\nIn Chart mode, the experience becomes a sequential astrological reading, planet by planet.",
+  "CHORD MODE: the chart is heard as a dense, simultaneous harmonic field.\nCHART MODE: the experience becomes a sequential astrological reading, planet by planet.\nORBIT MODE: listening follows a circular path that moves around the planets in continuous rotation.",
   "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that celestial body. Its spatial placement and tuning emerge from astrological chart coordinates, and interplanetary relationships are organized through astrological criteria.",
   "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now.\nFor a fully immersive experience, we recommend using headphones.\nEnjoy the spatial energies that surround us all.",
 ]
@@ -225,6 +225,27 @@ const NAV_MODE_INSTRUCTION_BY_MODE: Record<NavigationMode, string> = {
 function renderLoadingParagraph(index: number) {
   const paragraph = LOADING_INTRO_PARAGRAPHS[index] ?? ""
   return <>{paragraph}</>
+}
+
+function renderInfoParagraph(index: number) {
+  const paragraph = INFO_PARAGRAPHS[index] ?? ""
+  if (index !== 1) return <>{paragraph}</>
+
+  return (
+    <>
+      <span className="block">
+        <span className="font-bold uppercase">CHORD MODE</span>: the chart is heard as a dense, simultaneous harmonic field.
+      </span>
+      <span className="block">
+        <span className="font-bold uppercase">CHART MODE</span>: the experience becomes a sequential astrological reading,
+        planet by planet.
+      </span>
+      <span className="block">
+        <span className="font-bold uppercase">ORBIT MODE</span>: listening follows a circular path that moves around the
+        planets in continuous rotation.
+      </span>
+    </>
+  )
 }
 
 const ASPECT_SYMBOL_BY_KEY: Record<MajorAspectKey, string> = {
@@ -4296,7 +4317,7 @@ export default function AstrologyCalculator() {
                       )}
                   </svg>
                   <div className="fixed bottom-0 pb-[calc(env(safe-area-inset-bottom)*0.4)] translate-y-[100px] md:translate-y-0 md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
-                    <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
+                    <div className="relative mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
                       <div
                         className={`pointer-events-auto origin-bottom-right border px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight transition-all duration-200 ${
                           isSubjectBoxHovered
@@ -4340,6 +4361,25 @@ export default function AstrologyCalculator() {
                         </div>
                         <div>{subjectLocationLines.city}</div>
                         <div>{subjectLocationLines.country}</div>
+                      </div>
+                      <div
+                        className={`pointer-events-none absolute right-4 md:right-8 bottom-[74px] md:bottom-[76px] origin-bottom-right border border-white/75 bg-black/88 px-2.5 py-2 md:px-3 md:py-2.5 text-right font-mono uppercase tracking-wide leading-tight transition-opacity duration-500 ${
+                          isSubjectBoxHovered ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        <div className="text-[9px] md:text-[14px]">
+                          {formData.datetime ? new Date(formData.datetime).toLocaleDateString("en-US") : "No Date"}
+                        </div>
+                        <div className="text-[9px] md:text-[14px]">
+                          {formData.datetime
+                            ? new Date(formData.datetime).toLocaleTimeString("en-US", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "No Time"}
+                        </div>
+                        <div className="text-[9px] md:text-[14px]">{subjectLocationLines.city}</div>
+                        <div className="text-[9px] md:text-[14px]">{subjectLocationLines.country}</div>
                       </div>
                     </div>
                   </div>
@@ -4739,7 +4779,7 @@ export default function AstrologyCalculator() {
                 <button
                   ref={mobileMenuButtonRef}
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className={`flex w-full h-[38px] translate-y-[5px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                  className={`flex w-full h-[36px] translate-y-[5px] items-center justify-center border px-0.5 py-0 transition-colors ${
                     menuOpen
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
@@ -4760,7 +4800,7 @@ export default function AstrologyCalculator() {
                 const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
                 const isModeButtonActive = isActiveMode || isModeHoverActive
                 const tooltipViewportClass =
-                  "fixed left-1/2 -translate-x-1/2 top-[90px] md:top-[164px] z-[60] w-[min(320px,calc(100vw-20px))]"
+                  "fixed left-1/2 -translate-x-1/2 top-[90px] md:top-[164px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
                 return (
                   <div
                     key={`top-nav-${mode}`}
@@ -4774,7 +4814,7 @@ export default function AstrologyCalculator() {
                         }}
                         onMouseEnter={() => showTopPanelHint(modeHoverKey)}
                         onFocus={() => showTopPanelHint(modeHoverKey)}
-                        className={`w-full h-[19px] md:h-auto font-mono text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                        className={`w-full h-[19px] md:h-auto font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           isModeButtonActive
                             ? "border-white bg-white/80 text-black"
                             : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
@@ -4783,7 +4823,7 @@ export default function AstrologyCalculator() {
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
                       <span
-                        className={`pointer-events-none ${tooltipViewportClass} border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                        className={`pointer-events-none ${tooltipViewportClass} whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
                           isModeHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
@@ -4816,7 +4856,7 @@ export default function AstrologyCalculator() {
                         </svg>
                       </button>
                       <span
-                        className={`pointer-events-none ${tooltipViewportClass} whitespace-normal border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 font-mono text-[7px] md:text-[16px] text-left text-white transition-opacity duration-500 ${
+                        className={`pointer-events-none ${tooltipViewportClass} whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 font-mono text-[7px] md:text-[16px] text-left text-white transition-opacity duration-500 ${
                           isDownloadHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
@@ -4838,7 +4878,7 @@ export default function AstrologyCalculator() {
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("reset:main")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                  className={`w-full h-[19px] md:h-auto font-mono text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                  className={`w-full h-[19px] md:h-auto font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                     topPanelHoverKey === "reset:main"
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
@@ -4852,7 +4892,7 @@ export default function AstrologyCalculator() {
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("reset:info")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                  className={`mt-0 md:mt-1 flex w-full h-[19px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors font-mono text-[6px] md:text-[12px] leading-none uppercase tracking-wide ${
+                  className={`mt-0 md:mt-1 flex w-full h-[19px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide ${
                     topPanelHoverKey === "reset:info"
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
@@ -4900,12 +4940,11 @@ export default function AstrologyCalculator() {
               >
                 {">"}
               </button>
-              <p
-                className="flex-1 font-mono text-[10px] md:text-[24px] leading-[1.58] text-white/88"
-                style={{ whiteSpace: "pre-line", textAlign: "left" }}
+              <div
+                className="flex-1 font-mono text-[10px] md:text-[24px] leading-[1.58] text-white/88 whitespace-pre-line text-left"
               >
-                {INFO_PARAGRAPHS[infoParagraphIndex]}
-              </p>
+                {renderInfoParagraph(infoParagraphIndex)}
+              </div>
               <div className="mt-5 flex items-center justify-center gap-2.5">
                 {INFO_PARAGRAPHS.map((_, index) => {
                   const isActive = index === infoParagraphIndex

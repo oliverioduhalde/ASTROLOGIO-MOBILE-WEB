@@ -210,9 +210,9 @@ const LOADING_INTRO_PARAGRAPHS = [
 ]
 const INFO_PARAGRAPHS = [
   "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler’s vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
-  "In Chord mode (Astral Chord), the chart is heard as a dense, simultaneous harmonic field.\n\nIn Orbit mode, listening follows a circular path that moves around the planets in continuous rotation.\n\nIn Chart mode, the experience becomes a sequential astrological reading, planet by planet.",
+  "In Chord mode (Astral Chord), the chart is heard as a dense, simultaneous harmonic field.\nIn Orbit mode, listening follows a circular path that moves around the planets in continuous rotation.\nIn Chart mode, the experience becomes a sequential astrological reading, planet by planet.",
   "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that celestial body. Its spatial placement and tuning emerge from astrological chart coordinates, and interplanetary relationships are organized through astrological criteria.",
-  "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now.\n\nFor a fully immersive experience, we recommend using headphones.\n\nEnjoy the spatial energies that surround us all.",
+  "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now.\nFor a fully immersive experience, we recommend using headphones.\nEnjoy the spatial energies that surround us all.",
 ]
 const NAV_MODE_INSTRUCTION_BY_MODE: Record<NavigationMode, string> = {
   astral_chord: "Astral Chord: dense, simultaneous harmonic field.",

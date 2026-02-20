@@ -2818,9 +2818,7 @@ export default function AstrologyCalculator() {
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className={`w-[26px] h-[26px] md:w-14 md:h-14 flex items-center justify-center font-mono text-[8px] md:text-[22px] leading-none uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors ${
-                themeUiPulseEnabled ? "play-idle-pulse" : ""
-              }`}
+              className="hidden md:flex md:w-14 md:h-14 items-center justify-center font-mono text-[22px] leading-none uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors"
             >
               {menuOpen ? "✕" : "☰"}
             </button>
@@ -4688,8 +4686,42 @@ export default function AstrologyCalculator() {
 
       <div className="fixed top-4 md:top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto w-[calc(100%-88px)] max-w-[430px] h-14 md:h-auto md:w-full md:max-w-[560px]">
-            <div className="grid grid-cols-4 gap-0.5 h-full items-center content-center -translate-y-[5px] md:translate-y-0 md:gap-1.5 md:h-auto">
+          <div className="pointer-events-auto w-full max-w-[430px] h-14 md:h-auto md:w-full md:max-w-[560px]">
+            <div className="grid grid-cols-5 md:grid-cols-4 gap-0.5 h-full items-center content-center -translate-y-[5px] md:translate-y-0 md:gap-1.5 md:h-auto">
+              <div
+                className={`relative p-0 md:hidden transition-opacity duration-150 ${
+                  hasTopPanelHover
+                    ? topPanelHoverKey === "menu:main" || topPanelHoverKey === "menu:toggle"
+                      ? "opacity-100"
+                      : "opacity-50"
+                    : "opacity-100"
+                }`}
+              >
+                <button
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  onMouseEnter={() => setTopPanelHoverKey("menu:main")}
+                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "menu:main" ? null : current))}
+                  onFocus={() => setTopPanelHoverKey("menu:main")}
+                  onBlur={() => setTopPanelHoverKey((current) => (current === "menu:main" ? null : current))}
+                  className={`w-full h-[13px] font-mono text-[4.5px] uppercase tracking-wide border px-0.5 py-0 transition-colors bg-gray-500/50 text-white border-gray-600 hover:border-white ${
+                    themeUiPulseEnabled ? "play-idle-pulse" : ""
+                  }`}
+                >
+                  MENU
+                </button>
+                <button
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  onMouseEnter={() => setTopPanelHoverKey("menu:toggle")}
+                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "menu:toggle" ? null : current))}
+                  onFocus={() => setTopPanelHoverKey("menu:toggle")}
+                  onBlur={() => setTopPanelHoverKey((current) => (current === "menu:toggle" ? null : current))}
+                  className={`mt-0 flex w-full h-[13px] items-center justify-center border px-0.5 py-0 transition-colors bg-gray-500/50 text-white border-gray-600 hover:border-white font-mono text-[4.5px] uppercase tracking-wide ${
+                    themeUiPulseEnabled ? "play-idle-pulse" : ""
+                  }`}
+                >
+                  {menuOpen ? "✕" : "☰"}
+                </button>
+              </div>
               {TOP_PANEL_MODE_ORDER.map((mode) => {
                 const isActiveMode = navigationMode === mode
                 const modeHoverKey = `mode:${mode}`
@@ -4715,8 +4747,8 @@ export default function AstrologyCalculator() {
                         onBlur={() => setTopPanelHoverKey((current) => (current === modeHoverKey ? null : current))}
                         className={`w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           isActiveMode
-                            ? "bg-white text-black border-white"
-                            : "bg-transparent text-white border-gray-600 hover:border-white"
+                            ? "bg-gray-500/50 md:bg-transparent text-white border-white"
+                            : "bg-gray-500/50 md:bg-transparent text-white border-gray-600 hover:border-white"
                         } ${hasTopPanelHover ? (isPairHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"} ${
                           themeUiPulseEnabled ? "play-idle-pulse" : ""
                         }`}
@@ -4748,8 +4780,10 @@ export default function AstrologyCalculator() {
                         disabled={!horoscopeData || isExportingMp3}
                         className={`flex w-full h-[13px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           !horoscopeData || isExportingMp3
-                            ? "border-gray-700 text-gray-500 cursor-not-allowed"
-                            : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
+                            ? "bg-gray-500/50 md:bg-transparent border-gray-700 text-gray-500 cursor-not-allowed"
+                            : isActiveMode
+                              ? "bg-gray-500/50 md:bg-transparent border-white text-white"
+                              : "bg-gray-500/50 md:bg-transparent border-gray-600 text-white hover:border-white"
                         } ${isPairHoverActive ? "opacity-100" : "opacity-50"} ${themeUiPulseEnabled ? "play-idle-pulse" : ""}`}
                       >
                         <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
@@ -4791,7 +4825,7 @@ export default function AstrologyCalculator() {
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
                   className={`w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors bg-transparent text-white border-gray-600 hover:border-white ${
                     themeUiPulseEnabled ? "play-idle-pulse" : ""
-                  }`}
+                  } bg-gray-500/50 md:bg-transparent`}
                 >
                   RESET
                 </button>
@@ -4803,7 +4837,7 @@ export default function AstrologyCalculator() {
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
                   className={`mt-0 md:mt-1 flex w-full h-[13px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide ${
                     themeUiPulseEnabled ? "play-idle-pulse" : ""
-                  }`}
+                  } bg-gray-500/50 md:bg-transparent`}
                 >
                   INFO
                 </button>

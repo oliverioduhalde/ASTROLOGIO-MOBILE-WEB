@@ -962,6 +962,9 @@ export default function AstrologyCalculator() {
         if (result?.name && result?.country) {
           return formatSuggestion(result.name, result.admin1, result.country)
         }
+        if (result?.name) {
+          return String(result.name)
+        }
       }
 
       const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=en&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`
@@ -981,6 +984,43 @@ export default function AstrologyCalculator() {
         if (cityCandidate && countryCandidate) {
           return formatSuggestion(String(cityCandidate), undefined, String(countryCandidate))
         }
+        if (cityCandidate) {
+          return String(cityCandidate)
+        }
+
+        if (nominatimPayload?.display_name) {
+          const firstChunk = String(nominatimPayload.display_name)
+            .split(",")
+            .map((part: string) => part.trim())
+            .find((part: string) => part.length > 0)
+          if (firstChunk && countryCandidate) {
+            return formatSuggestion(firstChunk, undefined, String(countryCandidate))
+          }
+          if (firstChunk) {
+            return firstChunk
+          }
+        }
+      }
+
+      const mapsCoUrl = `https://geocode.maps.co/reverse?lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`
+      const mapsCoResponse = await fetch(mapsCoUrl)
+      if (mapsCoResponse.ok) {
+        const mapsPayload = await mapsCoResponse.json()
+        const address = mapsPayload?.address || {}
+        const cityCandidate =
+          address.city ||
+          address.town ||
+          address.village ||
+          address.municipality ||
+          address.county ||
+          null
+        const countryCandidate = address.country || null
+        if (cityCandidate && countryCandidate) {
+          return formatSuggestion(String(cityCandidate), undefined, String(countryCandidate))
+        }
+        if (cityCandidate) {
+          return String(cityCandidate)
+        }
       }
 
       const fallbackUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&localityLanguage=en`
@@ -993,8 +1033,13 @@ export default function AstrologyCalculator() {
         fallbackPayload?.principalSubdivision ||
         null
       const fallbackCountry = fallbackPayload?.countryName || null
-      if (!fallbackCity || !fallbackCountry) return null
-      return formatSuggestion(String(fallbackCity), undefined, String(fallbackCountry))
+      if (fallbackCity && fallbackCountry) {
+        return formatSuggestion(String(fallbackCity), undefined, String(fallbackCountry))
+      }
+      if (fallbackCity) {
+        return String(fallbackCity)
+      }
+      return null
     } catch {
       return null
     }
@@ -2325,7 +2370,9 @@ export default function AstrologyCalculator() {
       const latitude = position.coords.latitude
       const longitude = position.coords.longitude
       const resolvedLocation = await reverseGeocodeLocation(latitude, longitude)
-      const locationLabel = sanitizeLocationLabel(resolvedLocation || "Unknown City, Unknown Country")
+      const locationLabel = sanitizeLocationLabel(
+        resolvedLocation || `City near ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`,
+      )
 
       setFormData({
         datetime: nowDateTime,
@@ -2335,7 +2382,7 @@ export default function AstrologyCalculator() {
       })
 
       if (!resolvedLocation) {
-        setError("City/country lookup was unavailable. Fallback label loaded; edit manually if needed.")
+        setError("City lookup was unavailable. Fallback label loaded; edit manually if needed.")
       }
     } catch (geoError: any) {
       const denied = geoError?.code === 1
@@ -2636,7 +2683,7 @@ export default function AstrologyCalculator() {
                 <p
                   key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
                   onClick={advanceLoadingIntroParagraph}
-                  className="cursor-pointer text-[15px] md:text-[18px] leading-[1.45]"
+                  className="cursor-pointer text-[30px] md:text-[36px] leading-[1.35]"
                   style={{
                     color: "rgba(255,255,255,0.7)",
                     fontFamily: MONOTYPE_FONT_STACK,
@@ -4511,7 +4558,7 @@ export default function AstrologyCalculator() {
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-8 w-[170px] text-center bg-black/90 border border-white/40 px-1.5 py-1 font-mono text-[8px] md:text-[9px] normal-case tracking-normal leading-tight text-white/85 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-10 w-[260px] text-center bg-black/90 border border-white/40 px-2 py-1.5 font-mono text-[12px] md:text-[14px] normal-case tracking-normal leading-tight text-white/90 opacity-0 group-hover:opacity-100 transition-opacity">
                         {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
                       </span>
                     </div>
@@ -4531,7 +4578,7 @@ export default function AstrologyCalculator() {
                           <path d="M5.8 6.8L8 9L10.2 6.8" />
                         </svg>
                       </button>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-6 whitespace-nowrap bg-black/90 border border-white/40 px-1.5 py-1 font-mono text-[8px] md:text-[10px] text-white/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-8 whitespace-nowrap bg-black/90 border border-white/40 px-2 py-1.5 font-mono text-[11px] md:text-[13px] text-white/85 opacity-0 group-hover:opacity-100 transition-opacity">
                         {DOWNLOAD_TOOLTIP_TEXT}
                       </span>
                     </div>
@@ -4597,9 +4644,9 @@ export default function AstrologyCalculator() {
           </button>
 
           <div className="h-full flex items-center justify-center px-10 md:px-20">
-            <div className="w-full max-w-[900px] border border-white/40 bg-black/80 px-5 py-7 md:px-8 md:py-10">
+            <div className="w-full max-w-[900px] px-3 py-4 md:px-4 md:py-5">
               <p
-                className="text-[13px] md:text-[17px] leading-[1.55] text-white/85"
+                className="text-[13px] md:text-[17px] leading-[1.55] text-white/88"
                 style={{ fontFamily: MONOTYPE_FONT_STACK, whiteSpace: "pre-line", textAlign: "left" }}
               >
                 {INFO_PARAGRAPHS[infoParagraphIndex]}

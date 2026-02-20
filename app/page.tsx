@@ -2863,7 +2863,7 @@ export default function AstrologyCalculator() {
             {menuOpen && (
               <div
                 ref={menuPanelRef}
-                className="absolute top-full left-0 mt-2 bg-black border border-white p-3 z-10 min-w-[200px] max-h-[85vh] overflow-y-auto md:scale-[2.3] md:origin-top-left"
+                className="fixed top-[52px] right-4 w-[calc(100vw-2rem)] max-w-[430px] mt-0 bg-black border border-white p-3 z-50 max-h-[85vh] overflow-y-auto md:absolute md:top-full md:left-0 md:right-auto md:mt-2 md:w-auto md:max-w-none md:z-10 md:scale-[2.3] md:origin-top-left"
               >
                 <div className="mb-2 flex items-center justify-between font-mono text-[7px] uppercase tracking-wide text-white/80">
                   <span>Menu</span>

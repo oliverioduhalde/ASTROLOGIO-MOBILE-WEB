@@ -113,6 +113,7 @@ const CHORD_POINTER_RADIUS = 16
 const CHORD_ASPECTS_FADE_IN_MS = 14000
 const CHORD_ASPECTS_HOLD_MS = 5000
 const CHORD_ASPECTS_FADE_OUT_MS = 10000
+const TOP_PANEL_HINT_MS = 4000
 
 const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
   astral_chord: "CHORD",
@@ -526,6 +527,9 @@ export default function AstrologyCalculator() {
   const mobileDownloadArmedModeRef = useRef<NavigationMode | null>(null)
   const mobileDownloadArmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const topPanelHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const menuPanelRef = useRef<HTMLDivElement | null>(null)
+  const desktopMenuButtonRef = useRef<HTMLButtonElement | null>(null)
+  const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<SubjectPreset>("manual")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
@@ -848,6 +852,24 @@ export default function AstrologyCalculator() {
     window.addEventListener("keydown", handleGlobalKeyDown)
     return () => window.removeEventListener("keydown", handleGlobalKeyDown)
   }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const handlePointerDownOutsideMenu = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (!target) return
+      if (menuPanelRef.current?.contains(target)) return
+      if (desktopMenuButtonRef.current?.contains(target)) return
+      if (mobileMenuButtonRef.current?.contains(target)) return
+      setMenuOpen(false)
+    }
+
+    window.addEventListener("pointerdown", handlePointerDownOutsideMenu)
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDownOutsideMenu)
+    }
+  }, [menuOpen])
 
   const clearAspectTimers = useCallback(() => {
     Object.values(aspectClickTimersRef.current).forEach((timers) => {
@@ -2281,7 +2303,7 @@ export default function AstrologyCalculator() {
     topPanelHintTimeoutRef.current = setTimeout(() => {
       setTopPanelHoverKey((current) => (current === key ? null : current))
       topPanelHintTimeoutRef.current = null
-    }, 10000)
+    }, TOP_PANEL_HINT_MS)
   }, [])
 
   const handleDownloadButtonPress = useCallback(
@@ -2308,7 +2330,7 @@ export default function AstrologyCalculator() {
         mobileDownloadArmTimeoutRef.current = setTimeout(() => {
           mobileDownloadArmedModeRef.current = null
           mobileDownloadArmTimeoutRef.current = null
-        }, 10000)
+        }, TOP_PANEL_HINT_MS)
         return
       }
 
@@ -2831,6 +2853,7 @@ export default function AstrologyCalculator() {
         <div className="relative mb-2 pb-0 md:mb-6 md:pb-3 md:border-b border-white flex items-center justify-between min-h-[52px] md:min-h-[84px] md:pr-[620px]">
           <div className="relative">
             <button
+              ref={desktopMenuButtonRef}
               onClick={() => setMenuOpen(!menuOpen)}
               className="hidden md:flex md:w-14 md:h-14 items-center justify-center font-mono text-[22px] leading-none uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors"
             >
@@ -2838,7 +2861,10 @@ export default function AstrologyCalculator() {
             </button>
 
             {menuOpen && (
-              <div className="absolute top-full left-0 mt-2 bg-black border border-white p-3 z-10 min-w-[200px] max-h-[85vh] overflow-y-auto md:scale-[2.3] md:origin-top-left">
+              <div
+                ref={menuPanelRef}
+                className="absolute top-full left-0 mt-2 bg-black border border-white p-3 z-10 min-w-[200px] max-h-[85vh] overflow-y-auto md:scale-[2.3] md:origin-top-left"
+              >
                 <div className="mb-2 flex items-center justify-between font-mono text-[7px] uppercase tracking-wide text-white/80">
                   <span>Menu</span>
                   <span>Advanced {advancedMenuEnabled ? "ON" : "OFF"} [O]</span>
@@ -4701,7 +4727,7 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
-      <div className="fixed top-[48px] inset-x-0 z-[35] pointer-events-none md:hidden">
+      <div className="fixed top-[50px] inset-x-0 z-[35] pointer-events-none md:hidden">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] px-4">
           <div className="border-b border-white/90" />
         </div>
@@ -4713,8 +4739,9 @@ export default function AstrologyCalculator() {
             <div className="grid grid-cols-5 md:grid-cols-4 gap-0.5 h-full items-stretch content-stretch md:gap-1.5 md:h-auto">
               <div className="relative p-0 md:hidden">
                 <button
+                  ref={mobileMenuButtonRef}
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className={`flex w-full h-full items-center justify-center border px-0.5 py-0 transition-colors ${
+                  className={`flex w-full h-[36px] mt-[1px] items-center justify-center border px-0.5 py-0 transition-colors ${
                     menuOpen
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
@@ -4757,14 +4784,14 @@ export default function AstrologyCalculator() {
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
                       <span
-                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+40px)] md:top-[calc(100%+140px)] w-[150px] max-w-[calc(100vw-32px)] md:w-[320px] md:max-w-none border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+40px)] md:top-[calc(100%+140px)] w-[150px] max-w-[calc(100vw-32px)] md:w-[320px] md:max-w-none border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
                           isModeHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
                         {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
                       </span>
                       <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-500 ${
                           isModeHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       />
@@ -4790,14 +4817,14 @@ export default function AstrologyCalculator() {
                         </svg>
                       </button>
                       <span
-                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+40px)] md:top-[calc(100%+140px)] w-[150px] max-w-[calc(100vw-32px)] md:w-auto whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 font-mono text-[7px] md:text-[16px] text-left text-white transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+40px)] md:top-[calc(100%+140px)] w-[150px] max-w-[calc(100vw-32px)] md:w-auto whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 font-mono text-[7px] md:text-[16px] text-left text-white transition-opacity duration-500 ${
                           isDownloadHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
                         {DOWNLOAD_TOOLTIP_TEXT}
                       </span>
                       <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-500 ${
                           isDownloadHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       />

@@ -309,6 +309,63 @@ function sanitizeLocationLabel(rawLocation: string): string {
   return trimmed
 }
 
+function titleCaseLocationToken(value: string): string {
+  return value
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b([a-z])/g, (match) => match.toUpperCase())
+}
+
+function getCountryFromLocale(): string | null {
+  if (typeof navigator === "undefined") return null
+  const language = (navigator.language || "").replace("_", "-")
+  const region = language.split("-")[1]?.toUpperCase()
+  if (!region) return null
+  const countryByRegion: Record<string, string> = {
+    AR: "Argentina",
+    UY: "Uruguay",
+    PY: "Paraguay",
+    BO: "Bolivia",
+    BR: "Brazil",
+    CL: "Chile",
+    PE: "Peru",
+    EC: "Ecuador",
+    CO: "Colombia",
+    VE: "Venezuela",
+    MX: "Mexico",
+    US: "United States",
+    CA: "Canada",
+    ES: "Spain",
+    PT: "Portugal",
+    FR: "France",
+    DE: "Germany",
+    IT: "Italy",
+    GB: "United Kingdom",
+    AU: "Australia",
+    NZ: "New Zealand",
+  }
+  return countryByRegion[region] || null
+}
+
+function buildLocationFromTimeZone(): string | null {
+  if (typeof Intl === "undefined") return null
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""
+  const segments = timeZone.split("/").filter(Boolean)
+  if (segments.length < 2) return null
+
+  const city = titleCaseLocationToken(segments[segments.length - 1])
+  let country: string | null = null
+
+  if (segments.length >= 3) {
+    country = titleCaseLocationToken(segments[segments.length - 2])
+  } else {
+    country = getCountryFromLocale()
+  }
+
+  if (!city) return country
+  return country ? `${city}, ${country}` : city
+}
+
 function normalizeSignLabel(label: string): string {
   return label
     .toLowerCase()
@@ -461,6 +518,7 @@ export default function AstrologyCalculator() {
   const [showModeInfo, setShowModeInfo] = useState(false)
   const [advancedMenuEnabled, setAdvancedMenuEnabled] = useState(false)
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
+  const [hoveredNavigationModeHint, setHoveredNavigationModeHint] = useState<NavigationMode | null>(null)
   const [isExportingMp3, setIsExportingMp3] = useState(false)
   const [pendingMp3Download, setPendingMp3Download] = useState<{ url: string; fileName: string } | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
@@ -954,90 +1012,50 @@ export default function AstrologyCalculator() {
 
   const reverseGeocodeLocation = useCallback(async (latitude: number, longitude: number): Promise<string | null> => {
     try {
-      const url = `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&count=1&language=en&format=json`
-      const response = await fetch(url)
-      if (response.ok) {
-        const payload = await response.json()
-        const result = Array.isArray(payload?.results) ? payload.results[0] : null
-        if (result?.name && result?.country) {
-          return formatSuggestion(result.name, result.admin1, result.country)
-        }
-        if (result?.name) {
-          return String(result.name)
-        }
-      }
-
-      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=en&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`
-      const nominatimResponse = await fetch(nominatimUrl)
-      if (nominatimResponse.ok) {
-        const nominatimPayload = await nominatimResponse.json()
-        const address = nominatimPayload?.address || {}
-        const cityCandidate =
-          address.city ||
-          address.town ||
-          address.village ||
-          address.municipality ||
-          address.county ||
-          address.state ||
-          null
-        const countryCandidate = address.country || null
-        if (cityCandidate && countryCandidate) {
-          return formatSuggestion(String(cityCandidate), undefined, String(countryCandidate))
-        }
-        if (cityCandidate) {
-          return String(cityCandidate)
-        }
-
-        if (nominatimPayload?.display_name) {
-          const firstChunk = String(nominatimPayload.display_name)
-            .split(",")
-            .map((part: string) => part.trim())
-            .find((part: string) => part.length > 0)
-          if (firstChunk && countryCandidate) {
-            return formatSuggestion(firstChunk, undefined, String(countryCandidate))
-          }
-          if (firstChunk) {
-            return firstChunk
-          }
-        }
-      }
-
-      const mapsCoUrl = `https://geocode.maps.co/reverse?lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`
-      const mapsCoResponse = await fetch(mapsCoUrl)
-      if (mapsCoResponse.ok) {
-        const mapsPayload = await mapsCoResponse.json()
-        const address = mapsPayload?.address || {}
-        const cityCandidate =
-          address.city ||
-          address.town ||
-          address.village ||
-          address.municipality ||
-          address.county ||
-          null
-        const countryCandidate = address.country || null
-        if (cityCandidate && countryCandidate) {
-          return formatSuggestion(String(cityCandidate), undefined, String(countryCandidate))
-        }
-        if (cityCandidate) {
-          return String(cityCandidate)
-        }
-      }
-
       const fallbackUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&localityLanguage=en`
       const fallbackResponse = await fetch(fallbackUrl)
-      if (!fallbackResponse.ok) return null
-      const fallbackPayload = await fallbackResponse.json()
-      const fallbackCity =
-        fallbackPayload?.city ||
-        fallbackPayload?.locality ||
-        fallbackPayload?.principalSubdivision ||
-        null
-      const fallbackCountry = fallbackPayload?.countryName || null
-      if (fallbackCity && fallbackCountry) {
-        return formatSuggestion(String(fallbackCity), undefined, String(fallbackCountry))
+      if (fallbackResponse.ok) {
+        const fallbackPayload = await fallbackResponse.json()
+        const fallbackCity =
+          fallbackPayload?.city ||
+          fallbackPayload?.locality ||
+          fallbackPayload?.principalSubdivision ||
+          null
+        const fallbackCountry = fallbackPayload?.countryName || null
+        if (fallbackCity && fallbackCountry) {
+          return formatSuggestion(String(fallbackCity), undefined, String(fallbackCountry))
+        }
+        if (fallbackCity) {
+          return String(fallbackCity)
+        }
       }
-      if (fallbackCity) {
-        return String(fallbackCity)
+    } catch {
+      // Continue with secondary provider.
+    }
+
+    try {
+      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=en&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`
+      const nominatimResponse = await fetch(nominatimUrl)
+      if (!nominatimResponse.ok) return null
+      const nominatimPayload = await nominatimResponse.json()
+      const address = nominatimPayload?.address || {}
+      const cityCandidate =
+        address.city ||
+        address.town ||
+        address.village ||
+        address.municipality ||
+        address.county ||
+        address.state ||
+        null
+      const countryCandidate = address.country || null
+      if (cityCandidate && countryCandidate) {
+        return formatSuggestion(String(cityCandidate), undefined, String(countryCandidate))
+      }
+      if (cityCandidate) {
+        return String(cityCandidate)
+      }
+      if (countryCandidate) {
+        return String(countryCandidate)
       }
       return null
     } catch {
@@ -2370,8 +2388,9 @@ export default function AstrologyCalculator() {
       const latitude = position.coords.latitude
       const longitude = position.coords.longitude
       const resolvedLocation = await reverseGeocodeLocation(latitude, longitude)
+      const timezoneFallbackLocation = buildLocationFromTimeZone()
       const locationLabel = sanitizeLocationLabel(
-        resolvedLocation || `City near ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`,
+        resolvedLocation || timezoneFallbackLocation || `Current location ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`,
       )
 
       setFormData({
@@ -2382,7 +2401,7 @@ export default function AstrologyCalculator() {
       })
 
       if (!resolvedLocation) {
-        setError("City lookup was unavailable. Fallback label loaded; edit manually if needed.")
+        setError("City lookup was unavailable. A local fallback label was loaded; edit manually if needed.")
       }
     } catch (geoError: any) {
       const denied = geoError?.code === 1
@@ -2658,10 +2677,7 @@ export default function AstrologyCalculator() {
         <div className="w-full max-w-3xl">
           <div className="mb-8 min-h-[420px]">
             <div className="w-full text-center pt-1">
-              <h1
-                className="text-3xl md:text-4xl uppercase tracking-widest text-center"
-                style={{ fontFamily: MONOTYPE_FONT_STACK }}
-              >
+              <h1 className="font-mono text-3xl md:text-4xl uppercase tracking-widest text-center">
                 ASTRO.LOG.IO
               </h1>
               <div className="mt-2 h-[3px] w-full bg-white/20">
@@ -2678,15 +2694,14 @@ export default function AstrologyCalculator() {
               <span>{Math.round(loadingDisplayProgress)}%</span>
             </div>
 
-            <div className="mt-5 relative h-[360px] overflow-hidden">
-              <div className="absolute left-0 right-0 top-14 mx-auto max-w-[760px] px-2 flex flex-col items-start gap-5">
+            <div className="mt-5 relative min-h-[500px] md:min-h-[560px] overflow-visible">
+              <div className="mx-auto max-w-[980px] px-2 pt-10 pb-8 flex flex-col items-start gap-7">
                 <p
                   key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
                   onClick={advanceLoadingIntroParagraph}
-                  className="cursor-pointer text-[30px] md:text-[36px] leading-[1.35]"
+                  className="font-mono cursor-pointer text-[30px] md:text-[36px] leading-[1.36]"
                   style={{
                     color: "rgba(255,255,255,0.7)",
-                    fontFamily: MONOTYPE_FONT_STACK,
                     textAlign: "left",
                     whiteSpace: "pre-line",
                   }}
@@ -2702,14 +2717,12 @@ export default function AstrologyCalculator() {
                         ? "text-white/30 cursor-not-allowed"
                         : "text-white/50 hover:text-white"
                     }`}
-                    style={{ fontFamily: MONOTYPE_FONT_STACK }}
                   >
                     {"<"}
                   </button>
                   <button
                     onClick={advanceLoadingIntroParagraph}
                     className="play-idle-pulse font-mono text-[20px] md:text-[24px] leading-none text-white/50 hover:text-white transition-colors px-2 py-1"
-                    style={{ fontFamily: MONOTYPE_FONT_STACK }}
                   >
                     {isLastIntroParagraph ? ">" : ">"}
                   </button>
@@ -3437,7 +3450,7 @@ export default function AstrologyCalculator() {
             <div className="flex flex-wrap gap-1.5 mb-2">
               <button
                 onClick={setManualMode}
-                className={`px-3.5 py-1.5 text-[14px] font-mono border transition-colors ${
+                className={`px-5 py-2 text-[18px] font-mono border transition-colors ${
                   selectedPreset === "manual"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -3449,7 +3462,7 @@ export default function AstrologyCalculator() {
                 onClick={() => {
                   void applyHereAndNow()
                 }}
-                className={`px-3.5 py-1.5 text-[14px] font-mono border transition-colors ${
+                className={`px-5 py-2 text-[18px] font-mono border transition-colors ${
                   selectedPreset === "here_now"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -3541,7 +3554,7 @@ export default function AstrologyCalculator() {
             <button
               onClick={handleCalculate}
               disabled={loading}
-              className={`block w-full mx-auto bg-white text-black py-2 text-[18px] font-mono text-center hover:bg-gray-200 transition-colors disabled:opacity-50 ${
+              className={`mt-[10px] block w-full mx-auto bg-white text-black py-2 text-[18px] font-mono text-center hover:bg-gray-200 transition-colors disabled:opacity-50 ${
                 isManualSubjectReady ? "send-minimal-ready" : ""
               }`}
             >
@@ -4547,9 +4560,17 @@ export default function AstrologyCalculator() {
                       isActiveMode ? "border-white/95 bg-white/8" : "border-gray-600/85 bg-black/35"
                     }`}
                   >
-                    <div className="relative group">
+                    <div>
                       <button
                         onClick={() => setNavigationModeFromMenu(mode)}
+                        onMouseEnter={() => setHoveredNavigationModeHint(mode)}
+                        onFocus={() => setHoveredNavigationModeHint(mode)}
+                        onMouseLeave={() =>
+                          setHoveredNavigationModeHint((current) => (current === mode ? null : current))
+                        }
+                        onBlur={() =>
+                          setHoveredNavigationModeHint((current) => (current === mode ? null : current))
+                        }
                         className={`w-full font-mono text-[10px] md:text-[12px] uppercase tracking-wide border px-1.5 py-1 transition-colors ${
                           isActiveMode
                             ? "bg-white text-black border-white"
@@ -4558,9 +4579,6 @@ export default function AstrologyCalculator() {
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-10 w-[260px] text-center bg-black/90 border border-white/40 px-2 py-1.5 font-mono text-[12px] md:text-[14px] normal-case tracking-normal leading-tight text-white/90 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
-                      </span>
                     </div>
                     <div className="relative group mt-1">
                       <button
@@ -4618,6 +4636,14 @@ export default function AstrologyCalculator() {
         </div>
       </div>
 
+      {hoveredNavigationModeHint && !showInfoOverlay && (
+        <div className="fixed inset-0 z-[45] pointer-events-none flex items-center justify-center px-6">
+          <div className="max-w-[860px] font-mono text-[18px] md:text-[26px] leading-[1.3] text-center text-white/92">
+            {NAV_MODE_INSTRUCTION_BY_MODE[hoveredNavigationModeHint]}
+          </div>
+        </div>
+      )}
+
       {showInfoOverlay && (
         <div className="fixed inset-0 z-50 bg-black/92">
           <button
@@ -4646,8 +4672,8 @@ export default function AstrologyCalculator() {
           <div className="h-full flex items-center justify-center px-10 md:px-20">
             <div className="w-full max-w-[900px] px-3 py-4 md:px-4 md:py-5">
               <p
-                className="text-[13px] md:text-[17px] leading-[1.55] text-white/88"
-                style={{ fontFamily: MONOTYPE_FONT_STACK, whiteSpace: "pre-line", textAlign: "left" }}
+                className="font-mono text-[18px] md:text-[24px] leading-[1.58] text-white/88"
+                style={{ whiteSpace: "pre-line", textAlign: "left" }}
               >
                 {INFO_PARAGRAPHS[infoParagraphIndex]}
               </p>

@@ -2742,6 +2742,8 @@ export default function AstrologyCalculator() {
     )
   }
 
+  const hasTopPanelHover = topPanelHoverKey !== null
+
   return (
     <main className="min-h-screen bg-black text-white p-4 md:p-8" style={{ filter: interfaceThemeFilter }}>
       <div className="max-w-[1400px] mx-auto">
@@ -4567,13 +4569,12 @@ export default function AstrologyCalculator() {
                 const isModeHoverActive = topPanelHoverKey === modeHoverKey
                 const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
                 const isCardHoverActive = isModeHoverActive || isDownloadHoverActive
-                const hasTopHover = topPanelHoverKey !== null
                 return (
                   <div
                     key={`top-nav-${mode}`}
                     className={`relative border px-1 py-1 transition-opacity duration-150 ${
                       isActiveMode ? "border-white/95 bg-white/8" : "border-gray-600/85 bg-black/35"
-                    } ${hasTopHover ? (isCardHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
+                    } ${hasTopPanelHover ? (isCardHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
                   >
                     <div className="relative">
                       <button
@@ -4586,7 +4587,7 @@ export default function AstrologyCalculator() {
                           isActiveMode
                             ? "bg-white text-black border-white"
                             : "bg-transparent text-white border-gray-600 hover:border-white"
-                        } ${hasTopHover ? (isModeHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
+                        } ${hasTopPanelHover ? (isModeHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
@@ -4617,7 +4618,7 @@ export default function AstrologyCalculator() {
                           !horoscopeData || isExportingMp3
                             ? "border-gray-700 text-gray-500 cursor-not-allowed"
                             : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
-                        } ${hasTopHover ? (isDownloadHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
+                        } ${hasTopPanelHover ? (isDownloadHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
                       >
                         <svg width="19" height="19" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
                           <path d="M3 8.5V12.5H13V8.5" />
@@ -4644,13 +4645,17 @@ export default function AstrologyCalculator() {
               <div className="flex flex-col gap-1.5">
                 <button
                   onClick={resetToInitialState}
-                  className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 brightness-50 hover:brightness-100 hover:bg-white hover:text-black transition-colors"
+                  className={`font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors ${
+                    hasTopPanelHover ? "opacity-50" : "opacity-100"
+                  }`}
                 >
                   RESET
                 </button>
                 <button
                   onClick={openInfoOverlay}
-                  className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 brightness-50 hover:brightness-100 hover:bg-white hover:text-black transition-colors"
+                  className={`font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors ${
+                    hasTopPanelHover ? "opacity-50" : "opacity-100"
+                  }`}
                 >
                   INFO
                 </button>
@@ -4665,7 +4670,9 @@ export default function AstrologyCalculator() {
               <a
                 href={pendingMp3Download.url}
                 download={pendingMp3Download.fileName}
-                className="mt-1.5 block w-full text-center font-mono text-[9px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 brightness-50 hover:brightness-100 hover:bg-white hover:text-black transition-colors"
+                className={`mt-1.5 block w-full text-center font-mono text-[9px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors ${
+                  hasTopPanelHover ? "opacity-50" : "opacity-100"
+                }`}
               >
                 SAVE MP3
               </a>
@@ -4677,7 +4684,7 @@ export default function AstrologyCalculator() {
       {showInfoOverlay && (
         <div className="fixed inset-0 z-50 bg-black/92">
           <div className="h-full flex items-center justify-center px-10 md:px-20">
-            <div className="relative w-full max-w-[900px] px-3 py-4 md:px-4 md:py-5">
+            <div className="relative w-full max-w-[900px] min-h-[420px] md:min-h-[520px] px-3 py-4 md:px-4 md:py-5 flex flex-col">
               <button
                 onClick={retreatInfoParagraph}
                 className="absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
@@ -4695,7 +4702,7 @@ export default function AstrologyCalculator() {
                 {">"}
               </button>
               <p
-                className="font-mono text-[18px] md:text-[24px] leading-[1.58] text-white/88"
+                className="flex-1 font-mono text-[18px] md:text-[24px] leading-[1.58] text-white/88"
                 style={{ whiteSpace: "pre-line", textAlign: "left" }}
               >
                 {INFO_PARAGRAPHS[infoParagraphIndex]}

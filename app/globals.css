@@ -244,6 +244,43 @@
   will-change: transform, opacity, filter;
 }
 
+@keyframes subtle-star-glitch {
+  0%,
+  15%,
+  32%,
+  48%,
+  64%,
+  82%,
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  8% {
+    opacity: 0.9;
+    filter: brightness(0.92);
+  }
+  25% {
+    opacity: 0.95;
+    filter: brightness(1.08);
+  }
+  41% {
+    opacity: 0.88;
+    filter: brightness(0.9);
+  }
+  57% {
+    opacity: 0.96;
+    filter: brightness(1.1);
+  }
+  74% {
+    opacity: 0.92;
+    filter: brightness(0.94);
+  }
+  90% {
+    opacity: 0.97;
+    filter: brightness(1.06);
+  }
+}
+
 /* Aspect line smooth transition styles */
 .aspect-line {
   transition: opacity 0.1s linear;

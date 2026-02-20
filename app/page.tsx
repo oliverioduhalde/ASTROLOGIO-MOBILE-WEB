@@ -212,7 +212,7 @@ const LOADING_INTRO_PARAGRAPHS = [
 ]
 const INFO_PARAGRAPHS = [
   "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler’s vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
-  "CHORD MODE: the chart is heard as a dense, simultaneous harmonic field.\nCHART MODE: the experience becomes a sequential astrological reading, planet by planet.\nORBIT MODE: listening follows a circular path that moves around the planets in continuous rotation.",
+  "CHORD MODE: the chart is heard as a dense, simultaneous harmonic field.\nCHART MODE: the experience becomes a sequential astrological reading, planet by planet.\nORBITAL MODE: listening follows a circular path that moves around the planets in continuous rotation.",
   "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that celestial body. Its spatial placement and tuning emerge from astrological chart coordinates, and interplanetary relationships are organized through astrological criteria.",
   "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now.\nFor a fully immersive experience, we recommend using headphones.\nEnjoy the spatial energies that surround us all.",
 ]
@@ -241,7 +241,7 @@ function renderInfoParagraph(index: number) {
         planet by planet.
       </span>
       <span className="block">
-        <span className="font-bold uppercase">ORBIT MODE</span>: listening follows a circular path that moves around the
+        <span className="font-bold uppercase">ORBITAL MODE</span>: listening follows a circular path that moves around the
         planets in continuous rotation.
       </span>
     </>
@@ -403,6 +403,19 @@ function getGlyphGlowTiming(glyphName: string) {
   }
   const durationSec = 5 + (hash % 5000) / 1000 // 5s..10s
   const delaySec = -((Math.floor(hash / 7) % 10000) / 1000) // desync start phase
+  return {
+    durationSec: durationSec.toFixed(3),
+    delaySec: delaySec.toFixed(3),
+  }
+}
+
+function getThemeTwinkleTiming(keyName: string) {
+  let hash = 0
+  for (let i = 0; i < keyName.length; i += 1) {
+    hash = (hash * 37 + keyName.charCodeAt(i)) % 100000
+  }
+  const durationSec = 2.6 + (hash % 2600) / 1000 // 2.6s..5.2s
+  const delaySec = -((Math.floor(hash / 9) % 9000) / 1000) // desync phase start
   return {
     durationSec: durationSec.toFixed(3),
     delaySec: delaySec.toFixed(3),
@@ -646,6 +659,7 @@ export default function AstrologyCalculator() {
 
   const effectiveMasterVolume = navigationMode === "astral_chord" ? masterVolume * 0.6 : masterVolume
   const themePulseEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
+  const earthCenterTwinkleTiming = useMemo(() => getThemeTwinkleTiming("earth-center"), [])
 
   // Added hook for planet audio
   const {
@@ -3870,9 +3884,10 @@ export default function AstrologyCalculator() {
                         planet.name === "sun" ? 0.945 : planet.name === "mars" ? 0.69 : planet.name === "venus" ? 0.88 : 1
                       const glyphSize = 20 * baseGlyphScale
                       const glyphGlowTiming = getGlyphGlowTiming(planet.name)
+                      const glyphTwinkleTiming = getThemeTwinkleTiming(`planet-${planet.name}`)
                       const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
                       const themeGlyphPulseAnimation = themePulseEnabled
-                        ? "play-idle-pulse 5s ease-in-out infinite"
+                        ? `play-idle-pulse 5s ease-in-out infinite, subtle-star-glitch ${glyphTwinkleTiming.durationSec}s steps(2, end) ${glyphTwinkleTiming.delaySec}s infinite`
                         : undefined
                       const glyphCoreFilter = "drop-shadow(0 0 1.6px rgba(255,255,255,0.58))"
                       const glyphHaloBaseFilter =
@@ -4148,7 +4163,13 @@ export default function AstrologyCalculator() {
                     {showPointer && (
                       <>
                         {/* Earth center control (single mode trigger) */}
-                        <g>
+                        <g
+                          style={{
+                            animation: themePulseEnabled
+                              ? `play-idle-pulse 5s ease-in-out infinite, subtle-star-glitch ${earthCenterTwinkleTiming.durationSec}s steps(2, end) ${earthCenterTwinkleTiming.delaySec}s infinite`
+                              : undefined,
+                          }}
+                        >
                           <circle
                             cx={EARTH_CENTER_X}
                             cy={EARTH_CENTER_Y}
@@ -4324,9 +4345,23 @@ export default function AstrologyCalculator() {
                             ? "scale-[1] md:scale-100 border-white bg-white text-black"
                             : "scale-[0.66] md:scale-100 border-white/70 bg-black/75 text-white/80"
                         }`}
+                        style={{
+                          touchAction: "manipulation",
+                          userSelect: "none",
+                          WebkitUserSelect: "none",
+                          WebkitTapHighlightColor: "transparent",
+                        }}
+                        onPointerDown={(event) => {
+                          if (event.pointerType === "touch") {
+                            event.preventDefault()
+                            event.stopPropagation()
+                          }
+                        }}
                         onPointerEnter={() => setIsSubjectBoxHovered(true)}
                         onPointerLeave={() => setIsSubjectBoxHovered(false)}
-                        onTouchStart={() => {
+                        onTouchStart={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
                           if (subjectHoverTouchTimeoutRef.current) {
                             clearTimeout(subjectHoverTouchTimeoutRef.current)
                             subjectHoverTouchTimeoutRef.current = null
@@ -4337,10 +4372,14 @@ export default function AstrologyCalculator() {
                             subjectHoverTouchTimeoutRef.current = null
                           }, TOP_PANEL_HINT_MS)
                         }}
-                        onTouchEnd={() => {
+                        onTouchEnd={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
                           // Keep subject hover visible for a short readable window on touch devices.
                         }}
-                        onTouchCancel={() => {
+                        onTouchCancel={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
                           if (subjectHoverTouchTimeoutRef.current) {
                             clearTimeout(subjectHoverTouchTimeoutRef.current)
                             subjectHoverTouchTimeoutRef.current = null

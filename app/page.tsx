@@ -2817,7 +2817,7 @@ export default function AstrologyCalculator() {
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="w-14 h-14 flex items-center justify-center font-mono text-[11px] md:text-[22px] leading-none uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors"
+              className="w-9 h-9 md:w-14 md:h-14 flex items-center justify-center font-mono text-[8px] md:text-[22px] leading-none uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors"
             >
               {menuOpen ? "✕" : "☰"}
             </button>
@@ -4254,10 +4254,10 @@ export default function AstrologyCalculator() {
                   <div className="fixed bottom-0 pb-[calc(env(safe-area-inset-bottom)*0.4)] translate-y-[100px] md:translate-y-0 md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
                     <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
                       <div
-                        className={`pointer-events-auto origin-bottom-right scale-[0.66] md:scale-100 border px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight transition-colors ${
+                        className={`pointer-events-auto origin-bottom-right border px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight transition-all duration-200 ${
                           isSubjectBoxHovered
-                            ? "border-white bg-white text-black"
-                            : "border-white/70 bg-black/75 text-white/80"
+                            ? "scale-[1] md:scale-100 border-white bg-white text-black"
+                            : "scale-[0.66] md:scale-100 border-white/70 bg-black/75 text-white/80"
                         }`}
                         onPointerEnter={() => setIsSubjectBoxHovered(true)}
                         onPointerLeave={() => setIsSubjectBoxHovered(false)}
@@ -4771,18 +4771,30 @@ export default function AstrologyCalculator() {
               })}
               <div
                 className={`relative border p-0 md:p-0.5 md:px-1 md:py-1 transition-opacity duration-150 border-gray-600/85 bg-black/35 ${
-                  hasTopPanelHover ? "opacity-50" : "opacity-100"
+                  hasTopPanelHover
+                    ? topPanelHoverKey === "reset:main" || topPanelHoverKey === "reset:info"
+                      ? "opacity-100"
+                      : "opacity-50"
+                    : "opacity-100"
                 }`}
               >
                 <button
                   onClick={resetToInitialState}
-                  className="w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border border-gray-600 bg-transparent text-white px-0.5 py-0 md:px-1.5 md:py-1 hover:border-white hover:bg-white hover:text-black transition-colors"
+                  onMouseEnter={() => setTopPanelHoverKey("reset:main")}
+                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
+                  onFocus={() => setTopPanelHoverKey("reset:main")}
+                  onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
+                  className="w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors bg-transparent text-white border-gray-600 hover:border-white"
                 >
                   RESET
                 </button>
                 <button
                   onClick={openInfoOverlay}
-                  className="mt-0 md:mt-1 w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border border-gray-600 bg-transparent text-white px-0.5 py-0 md:px-1.5 md:py-1 hover:border-white hover:bg-white hover:text-black transition-colors"
+                  onMouseEnter={() => setTopPanelHoverKey("reset:info")}
+                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
+                  onFocus={() => setTopPanelHoverKey("reset:info")}
+                  onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
+                  className="mt-0 md:mt-1 flex w-full h-[13px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide"
                 >
                   INFO
                 </button>

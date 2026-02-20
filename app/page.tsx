@@ -387,20 +387,6 @@ function getGlyphGlowTiming(glyphName: string) {
   }
 }
 
-function getTwinkleTiming(token: string) {
-  let hash = 0
-  for (let i = 0; i < token.length; i += 1) {
-    hash = (hash * 33 + token.charCodeAt(i)) % 100000
-  }
-  const frequencyHz = 0.25 + ((hash % 1000) / 1000) * 0.25 // 0.25..0.5 Hz
-  const durationSec = 1 / frequencyHz // 2..4s
-  const delaySec = -((Math.floor(hash / 11) % 6000) / 1000) // desync phase start
-  return {
-    durationSec: durationSec.toFixed(3),
-    delaySec: delaySec.toFixed(3),
-  }
-}
-
 function adjustPlanetPositions(planets: { name: string; degrees: number }[], minSeparation = 12) {
   const sorted = [...planets].sort((a, b) => a.degrees - b.degrees)
   const adjusted: { name: string; adjustedDegrees: number }[] = []
@@ -633,8 +619,7 @@ export default function AstrologyCalculator() {
   }, [formData.location])
 
   const effectiveMasterVolume = navigationMode === "astral_chord" ? masterVolume * 0.6 : masterVolume
-  const themeTwinkleEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
-  const chartInfoTwinkleTiming = useMemo(() => getTwinkleTiming("chart-info"), [])
+  const themePulseEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
 
   // Added hook for planet audio
   const {
@@ -3824,10 +3809,6 @@ export default function AstrologyCalculator() {
                       const glyphSize = 20 * baseGlyphScale
                       const glyphGlowTiming = getGlyphGlowTiming(planet.name)
                       const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
-                      const glyphTwinkleTiming = getTwinkleTiming(`glyph-${planet.name}`)
-                      const glyphTwinkleAnimation = themeTwinkleEnabled
-                        ? `theme-twinkle ${glyphTwinkleTiming.durationSec}s ease-in-out ${glyphTwinkleTiming.delaySec}s infinite alternate`
-                        : undefined
                       const glyphCoreFilter = "drop-shadow(0 0 1.6px rgba(255,255,255,0.58))"
                       const glyphHaloBaseFilter =
                         "url(#glyph-halo-only) drop-shadow(0 0 6.4px rgba(255,255,255,0.98)) drop-shadow(0 0 16px rgba(255,255,255,0.88))"
@@ -3838,11 +3819,11 @@ export default function AstrologyCalculator() {
                       return (
                         <g
                           key={planet.name}
+                          className={themePulseEnabled ? "play-idle-pulse" : undefined}
                           style={{
                             cursor: "pointer",
                             transformBox: "fill-box",
                             transformOrigin: "center",
-                            animation: glyphTwinkleAnimation,
                           }}
                           onPointerDown={(event) => {
                             event.preventDefault()
@@ -4278,13 +4259,6 @@ export default function AstrologyCalculator() {
                             ? "scale-[1] md:scale-100 border-white bg-white text-black"
                             : "scale-[0.66] md:scale-100 border-white/70 bg-black/75 text-white/80"
                         }`}
-                        style={
-                          themeTwinkleEnabled
-                            ? {
-                                animation: `theme-twinkle ${chartInfoTwinkleTiming.durationSec}s ease-in-out ${chartInfoTwinkleTiming.delaySec}s infinite alternate`,
-                              }
-                            : undefined
-                        }
                         onPointerEnter={() => setIsSubjectBoxHovered(true)}
                         onPointerLeave={() => setIsSubjectBoxHovered(false)}
                         onTouchStart={() => {
@@ -4728,10 +4702,10 @@ export default function AstrologyCalculator() {
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "menu:button" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("menu:button")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "menu:button" ? null : current))}
-                  className={`flex w-full h-[34px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                  className={`mt-[1px] flex w-full h-[34px] items-center justify-center border px-0.5 py-0 transition-colors ${
                     menuOpen
                       ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
+                      : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
                   }`}
                 >
                   <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
@@ -4768,7 +4742,7 @@ export default function AstrologyCalculator() {
                         className={`w-full h-[17px] md:h-auto font-mono text-[6px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           isModeButtonActive
                             ? "border-white bg-white/80 text-black"
-                            : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
+                            : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
                         } ${hasTopPanelHover ? (isPairHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
@@ -4798,10 +4772,10 @@ export default function AstrologyCalculator() {
                         disabled={!horoscopeData || isExportingMp3}
                         className={`flex w-full h-[17px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           !horoscopeData || isExportingMp3
-                            ? "border-white/25 bg-transparent text-white/35 cursor-not-allowed"
+                            ? "border-white/25 bg-transparent text-white/25 cursor-not-allowed"
                             : isDownloadHoverActive
                               ? "border-white bg-white/80 text-black"
-                              : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
+                              : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
                         } ${isPairHoverActive ? "opacity-100" : "opacity-50"}`}
                       >
                         <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
@@ -4844,7 +4818,7 @@ export default function AstrologyCalculator() {
                   className={`w-full h-[17px] md:h-auto font-mono text-[6px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                     topPanelHoverKey === "reset:main"
                       ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
+                      : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
                   }`}
                 >
                   RESET
@@ -4858,7 +4832,7 @@ export default function AstrologyCalculator() {
                   className={`mt-0 md:mt-1 flex w-full h-[17px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors font-mono text-[6px] md:text-[12px] uppercase tracking-wide ${
                     topPanelHoverKey === "reset:info"
                       ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
+                      : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
                   }`}
                 >
                   INFO

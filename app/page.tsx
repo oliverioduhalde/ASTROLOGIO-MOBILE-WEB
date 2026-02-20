@@ -518,6 +518,7 @@ export default function AstrologyCalculator() {
   const [showModeInfo, setShowModeInfo] = useState(false)
   const [advancedMenuEnabled, setAdvancedMenuEnabled] = useState(false)
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
+  const [topPanelHoverKey, setTopPanelHoverKey] = useState<string | null>(null)
   const [isExportingMp3, setIsExportingMp3] = useState(false)
   const [pendingMp3Download, setPendingMp3Download] = useState<{ url: string; fileName: string } | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
@@ -4561,38 +4562,61 @@ export default function AstrologyCalculator() {
             <div className="grid grid-cols-4 gap-1.5">
               {NAVIGATION_MODES.map((mode) => {
                 const isActiveMode = navigationMode === mode
+                const modeHoverKey = `mode:${mode}`
+                const downloadHoverKey = `download:${mode}`
+                const isModeHoverActive = topPanelHoverKey === modeHoverKey
+                const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
+                const isCardHoverActive = isModeHoverActive || isDownloadHoverActive
                 return (
                   <div
                     key={`top-nav-${mode}`}
-                    className={`relative border px-1 py-1 brightness-50 transition-[filter] duration-200 hover:brightness-100 focus-within:brightness-100 ${
+                    className={`relative border px-1 py-1 transition-opacity duration-150 ${
                       isActiveMode ? "border-white/95 bg-white/8" : "border-gray-600/85 bg-black/35"
-                    }`}
+                    } ${isCardHoverActive ? "opacity-100" : "opacity-50"}`}
                   >
-                    <div className="relative group/mode">
+                    <div className="relative">
                       <button
                         onClick={() => setNavigationModeFromMenu(mode)}
+                        onMouseEnter={() => setTopPanelHoverKey(modeHoverKey)}
+                        onMouseLeave={() => setTopPanelHoverKey((current) => (current === modeHoverKey ? null : current))}
+                        onFocus={() => setTopPanelHoverKey(modeHoverKey)}
+                        onBlur={() => setTopPanelHoverKey((current) => (current === modeHoverKey ? null : current))}
                         className={`w-full font-mono text-[10px] md:text-[12px] uppercase tracking-wide border px-1.5 py-1 transition-colors ${
                           isActiveMode
                             ? "bg-white text-black border-white"
                             : "bg-transparent text-white border-gray-600 hover:border-white"
-                        }`}
+                        } ${isModeHoverActive ? "opacity-100" : "opacity-50"}`}
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-[60%] top-[calc(100%+110px)] w-[280px] border border-white/75 bg-black/88 px-2.5 py-2 text-center font-mono text-[13px] md:text-[15px] normal-case leading-tight text-white opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100">
+                      <span
+                        className={`pointer-events-none absolute left-1/2 -translate-x-[55%] top-[calc(100%+150px)] w-[280px] border border-white/75 bg-black/88 px-2.5 py-2 text-left font-mono text-[13px] md:text-[15px] normal-case leading-tight text-white transition-opacity duration-150 ${
+                          isModeHoverActive ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
                         {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
                       </span>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[98px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100" />
+                      <span
+                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[138px] w-px bg-white/75 transition-opacity duration-150 ${
+                          isModeHoverActive ? "opacity-100" : "opacity-0"
+                        }`}
+                      />
                     </div>
-                    <div className="relative group/download mt-1">
+                    <div className="relative mt-1">
                       <button
                         onClick={() => downloadNavigationModeMp3(mode)}
+                        onMouseEnter={() => setTopPanelHoverKey(downloadHoverKey)}
+                        onMouseLeave={() =>
+                          setTopPanelHoverKey((current) => (current === downloadHoverKey ? null : current))
+                        }
+                        onFocus={() => setTopPanelHoverKey(downloadHoverKey)}
+                        onBlur={() => setTopPanelHoverKey((current) => (current === downloadHoverKey ? null : current))}
                         disabled={!horoscopeData || isExportingMp3}
-                        className={`flex w-full items-center justify-center border px-1.5 py-1 brightness-50 hover:brightness-100 focus:brightness-100 transition-colors ${
+                        className={`flex w-full items-center justify-center border px-1.5 py-1 transition-colors ${
                           !horoscopeData || isExportingMp3
                             ? "border-gray-700 text-gray-500 cursor-not-allowed"
                             : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
-                        }`}
+                        } ${isDownloadHoverActive ? "opacity-100" : "opacity-50"}`}
                       >
                         <svg width="19" height="19" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
                           <path d="M3 8.5V12.5H13V8.5" />
@@ -4600,10 +4624,18 @@ export default function AstrologyCalculator() {
                           <path d="M5.8 6.8L8 9L10.2 6.8" />
                         </svg>
                       </button>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-[60%] top-[calc(100%+110px)] whitespace-nowrap border border-white/75 bg-black/88 px-2.5 py-2 font-mono text-[13px] md:text-[15px] text-white opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100">
+                      <span
+                        className={`pointer-events-none absolute left-1/2 -translate-x-[55%] top-[calc(100%+150px)] whitespace-nowrap border border-white/75 bg-black/88 px-2.5 py-2 font-mono text-[13px] md:text-[15px] text-left text-white transition-opacity duration-150 ${
+                          isDownloadHoverActive ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
                         {DOWNLOAD_TOOLTIP_TEXT}
                       </span>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[98px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100" />
+                      <span
+                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[138px] w-px bg-white/75 transition-opacity duration-150 ${
+                          isDownloadHoverActive ? "opacity-100" : "opacity-0"
+                        }`}
+                      />
                     </div>
                   </div>
                 )
@@ -4643,31 +4675,24 @@ export default function AstrologyCalculator() {
 
       {showInfoOverlay && (
         <div className="fixed inset-0 z-50 bg-black/92">
-          <button
-            onClick={closeInfoOverlay}
-            className="absolute top-6 right-8 md:right-12 border border-white/70 px-2 py-1 font-mono text-[10px] md:text-[12px] uppercase tracking-wide text-white/85 hover:bg-white hover:text-black transition-colors"
-          >
-            CLOSE
-          </button>
-          <button
-            onClick={retreatInfoParagraph}
-            className="absolute left-8 md:left-14 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
-            style={{ fontFamily: MONOTYPE_FONT_STACK }}
-            aria-label="Previous info page"
-          >
-            {"<"}
-          </button>
-          <button
-            onClick={advanceInfoParagraph}
-            className="absolute right-8 md:right-14 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
-            style={{ fontFamily: MONOTYPE_FONT_STACK }}
-            aria-label="Next info page"
-          >
-            {">"}
-          </button>
-
           <div className="h-full flex items-center justify-center px-10 md:px-20">
-            <div className="w-full max-w-[900px] px-3 py-4 md:px-4 md:py-5">
+            <div className="relative w-full max-w-[900px] px-3 py-4 md:px-4 md:py-5">
+              <button
+                onClick={retreatInfoParagraph}
+                className="absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
+                style={{ fontFamily: MONOTYPE_FONT_STACK }}
+                aria-label="Previous info page"
+              >
+                {"<"}
+              </button>
+              <button
+                onClick={advanceInfoParagraph}
+                className="absolute -right-3 md:-right-5 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
+                style={{ fontFamily: MONOTYPE_FONT_STACK }}
+                aria-label="Next info page"
+              >
+                {">"}
+              </button>
               <p
                 className="font-mono text-[18px] md:text-[24px] leading-[1.58] text-white/88"
                 style={{ whiteSpace: "pre-line", textAlign: "left" }}
@@ -4678,14 +4703,29 @@ export default function AstrologyCalculator() {
                 {INFO_PARAGRAPHS.map((_, index) => {
                   const isActive = index === infoParagraphIndex
                   return (
-                    <span
+                    <button
                       key={`info-dot-${index}`}
-                      className={`block h-2.5 w-2.5 rounded-full border border-white/80 transition-opacity duration-200 ${
-                        isActive ? "bg-white opacity-100" : "bg-white/15 opacity-45"
-                      }`}
-                    />
+                      type="button"
+                      onClick={() => setInfoParagraphIndex(index)}
+                      className="group/dot p-0.5"
+                      aria-label={`Go to paragraph ${index + 1}`}
+                    >
+                      <span
+                        className={`block h-2.5 w-2.5 rounded-full border border-white/80 transition-opacity duration-200 group-hover/dot:opacity-100 ${
+                          isActive ? "bg-white opacity-100" : "bg-white/15 opacity-45"
+                        }`}
+                      />
+                    </button>
                   )
                 })}
+              </div>
+              <div className="mt-5 flex justify-end">
+                <button
+                  onClick={closeInfoOverlay}
+                  className="border border-white/70 px-2 py-1 font-mono text-[10px] md:text-[12px] uppercase tracking-wide text-white/85 hover:bg-white hover:text-black transition-colors"
+                >
+                  CLOSE
+                </button>
               </div>
             </div>
           </div>

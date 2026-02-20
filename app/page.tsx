@@ -206,28 +206,21 @@ const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
 const LOADING_SUBTITLE_STEP_MS = 25000
 const MONOTYPE_FONT_STACK = '"Roboto Mono", "Courier New", Courier, monospace'
 const LOADING_INTRO_PARAGRAPHS = [
-  "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler's vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
-  "READING MODES",
+  "ASTRO.LOG.IO is a unique immersive audio experience inspired by the Harmony of the Spheres, from ancient cosmology to Kepler’s celestial music, transforming astrological data into sound. Use headphones and explore different dates and places, including the here and now.",
+]
+const INFO_PARAGRAPHS = [
+  "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler’s vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
+  "In Chord mode (Astral Chord), the chart is heard as a dense, simultaneous harmonic field.\n\nIn Orbit mode, listening follows a circular path that moves around the planets in continuous rotation.\n\nIn Chart mode, the experience becomes a sequential astrological reading, planet by planet.",
   "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that celestial body. Its spatial placement and tuning emerge from astrological chart coordinates, and interplanetary relationships are organized through astrological criteria.",
   "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now.\n\nFor a fully immersive experience, we recommend using headphones.\n\nEnjoy the spatial energies that surround us all.",
 ]
+const NAV_MODE_INSTRUCTION_BY_MODE: Record<NavigationMode, string> = {
+  astral_chord: "Astral Chord: dense, simultaneous harmonic field.",
+  radial: "Orbital: continuous circular listening around the planets.",
+  sequential: "Chart: sequential astrological reading, planet by planet.",
+}
 
 function renderLoadingParagraph(index: number) {
-  if (index === 1) {
-    return (
-      <>
-        <strong>Chord</strong> mode (Astral Chord): the chart is heard as a dense, simultaneous harmonic field.
-        <br />
-        <br />
-        <strong>Orbit</strong> mode: listening follows a circular path that moves around the planets in continuous
-        rotation.
-        <br />
-        <br />
-        <strong>Chart</strong> mode: the experience becomes a sequential astrological reading, planet by planet.
-      </>
-    )
-  }
-
   const paragraph = LOADING_INTRO_PARAGRAPHS[index] ?? ""
   return <>{paragraph}</>
 }
@@ -456,6 +449,8 @@ export default function AstrologyCalculator() {
   const [loadingIntroProgressPct, setLoadingIntroProgressPct] = useState(0)
   const [loadingIntroIndex, setLoadingIntroIndex] = useState(0)
   const [loadingIntroTick, setLoadingIntroTick] = useState(0)
+  const [showInfoOverlay, setShowInfoOverlay] = useState(false)
+  const [infoParagraphIndex, setInfoParagraphIndex] = useState(0)
   const [peakLevelLeftPre, setPeakLevelLeftPre] = useState(0)
   const [peakLevelRightPre, setPeakLevelRightPre] = useState(0)
   const [peakLevelLeftPost, setPeakLevelLeftPost] = useState(0)
@@ -656,6 +651,23 @@ export default function AstrologyCalculator() {
     setLoadingIntroProgressPct((loadingIntroElapsedBeforeCurrentMsRef.current / totalLoadingIntroDurationMs) * 100)
   }, [totalLoadingIntroDurationMs])
 
+  const openInfoOverlay = useCallback(() => {
+    setInfoParagraphIndex(0)
+    setShowInfoOverlay(true)
+  }, [])
+
+  const closeInfoOverlay = useCallback(() => {
+    setShowInfoOverlay(false)
+  }, [])
+
+  const advanceInfoParagraph = useCallback(() => {
+    setInfoParagraphIndex((prev) => (prev + 1) % INFO_PARAGRAPHS.length)
+  }, [])
+
+  const retreatInfoParagraph = useCallback(() => {
+    setInfoParagraphIndex((prev) => (prev - 1 + INFO_PARAGRAPHS.length) % INFO_PARAGRAPHS.length)
+  }, [])
+
   useEffect(() => {
     if (!showLoadingIntroScreen) return
 
@@ -709,6 +721,32 @@ export default function AstrologyCalculator() {
       clearLoadingIntroAdvanceTimeout()
     }
   }, [advanceLoadingIntroParagraph, clearLoadingIntroAdvanceTimeout, loadingIntroCompleted, loadingIntroIndex, showLoadingIntroScreen])
+
+  useEffect(() => {
+    if (!showInfoOverlay) return
+
+    const handleInfoOverlayKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        closeInfoOverlay()
+        return
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault()
+        advanceInfoParagraph()
+        return
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault()
+        retreatInfoParagraph()
+      }
+    }
+
+    window.addEventListener("keydown", handleInfoOverlayKeyDown)
+    return () => {
+      window.removeEventListener("keydown", handleInfoOverlayKeyDown)
+    }
+  }, [advanceInfoParagraph, closeInfoOverlay, retreatInfoParagraph, showInfoOverlay])
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
@@ -2708,6 +2746,7 @@ export default function AstrologyCalculator() {
                     {NAVIGATION_MODES.map((mode) => (
                       <button
                         key={`minimal-nav-${mode}`}
+                        title={NAV_MODE_INSTRUCTION_BY_MODE[mode]}
                         onClick={() => setNavigationModeFromMenu(mode)}
                         className={`font-mono text-[8px] uppercase tracking-wide border px-1 py-1 transition-colors ${
                           navigationMode === mode
@@ -2725,6 +2764,15 @@ export default function AstrologyCalculator() {
                       Reset
                     </button>
                   </div>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false)
+                      openInfoOverlay()
+                    }}
+                    className="mt-1 w-full font-mono text-[8px] uppercase tracking-wide border border-white px-1 py-1 hover:bg-white hover:text-black transition-colors"
+                  >
+                    Info
+                  </button>
 
                   <div className="border-t border-gray-600 my-1"></div>
 
@@ -2975,6 +3023,7 @@ export default function AstrologyCalculator() {
                       {NAVIGATION_MODES.map((mode) => (
                         <button
                           key={mode}
+                          title={NAV_MODE_INSTRUCTION_BY_MODE[mode]}
                           onClick={() => setNavigationModeFromMenu(mode)}
                           className={`font-mono text-[7px] uppercase tracking-wide border px-1 py-0.5 transition-colors ${
                             navigationMode === mode
@@ -2991,6 +3040,15 @@ export default function AstrologyCalculator() {
                       className="w-full font-mono text-[7px] uppercase tracking-wide border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
                     >
                       Reset
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false)
+                        openInfoOverlay()
+                      }}
+                      className="w-full font-mono text-[7px] uppercase tracking-wide border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
+                    >
+                      Info
                     </button>
                   </div>
 
@@ -4442,16 +4500,21 @@ export default function AstrologyCalculator() {
                       isActiveMode ? "border-white/95 bg-white/8" : "border-gray-600/85 bg-black/35"
                     }`}
                   >
-                    <button
-                      onClick={() => setNavigationModeFromMenu(mode)}
-                      className={`w-full font-mono text-[10px] md:text-[12px] uppercase tracking-wide border px-1.5 py-1 transition-colors ${
-                        isActiveMode
-                          ? "bg-white text-black border-white"
-                          : "bg-transparent text-white border-gray-600 hover:border-white"
-                      }`}
-                    >
-                      {NAV_MODE_HINT_LABEL[mode]}
-                    </button>
+                    <div className="relative group">
+                      <button
+                        onClick={() => setNavigationModeFromMenu(mode)}
+                        className={`w-full font-mono text-[10px] md:text-[12px] uppercase tracking-wide border px-1.5 py-1 transition-colors ${
+                          isActiveMode
+                            ? "bg-white text-black border-white"
+                            : "bg-transparent text-white border-gray-600 hover:border-white"
+                        }`}
+                      >
+                        {NAV_MODE_HINT_LABEL[mode]}
+                      </button>
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -top-8 w-[170px] text-center bg-black/90 border border-white/40 px-1.5 py-1 font-mono text-[8px] md:text-[9px] normal-case tracking-normal leading-tight text-white/85 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
+                      </span>
+                    </div>
                     <div className="relative group mt-1">
                       <button
                         onClick={() => downloadNavigationModeMp3(mode)}
@@ -4475,12 +4538,20 @@ export default function AstrologyCalculator() {
                   </div>
                 )
               })}
-              <button
-                onClick={resetToInitialState}
-                className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors"
-              >
-                RESET
-              </button>
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={resetToInitialState}
+                  className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors"
+                >
+                  RESET
+                </button>
+                <button
+                  onClick={openInfoOverlay}
+                  className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors"
+                >
+                  INFO
+                </button>
+              </div>
             </div>
             {isExportingMp3 && (
               <div className="mt-1.5 text-center font-mono text-[9px] md:text-[11px] uppercase tracking-wide text-white/70">
@@ -4499,6 +4570,47 @@ export default function AstrologyCalculator() {
           </div>
         </div>
       </div>
+
+      {showInfoOverlay && (
+        <div className="fixed inset-0 z-50 bg-black/92">
+          <button
+            onClick={closeInfoOverlay}
+            className="absolute top-3 right-3 border border-white/70 px-2 py-1 font-mono text-[10px] md:text-[12px] uppercase tracking-wide text-white/85 hover:bg-white hover:text-black transition-colors"
+          >
+            CLOSE
+          </button>
+          <button
+            onClick={retreatInfoParagraph}
+            className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
+            style={{ fontFamily: MONOTYPE_FONT_STACK }}
+            aria-label="Previous info page"
+          >
+            {"<"}
+          </button>
+          <button
+            onClick={advanceInfoParagraph}
+            className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
+            style={{ fontFamily: MONOTYPE_FONT_STACK }}
+            aria-label="Next info page"
+          >
+            {">"}
+          </button>
+
+          <div className="h-full flex items-center justify-center px-10 md:px-20">
+            <div className="w-full max-w-[900px] border border-white/40 bg-black/80 px-5 py-7 md:px-8 md:py-10">
+              <p
+                className="text-[13px] md:text-[17px] leading-[1.55] text-white/85"
+                style={{ fontFamily: MONOTYPE_FONT_STACK, whiteSpace: "pre-line", textAlign: "left" }}
+              >
+                {INFO_PARAGRAPHS[infoParagraphIndex]}
+              </p>
+              <div className="mt-5 text-center font-mono text-[9px] md:text-[11px] uppercase tracking-[0.22em] text-white/55">
+                {infoParagraphIndex + 1} / {INFO_PARAGRAPHS.length}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

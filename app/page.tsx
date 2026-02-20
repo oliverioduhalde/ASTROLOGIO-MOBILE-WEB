@@ -620,6 +620,7 @@ export default function AstrologyCalculator() {
 
   const effectiveMasterVolume = navigationMode === "astral_chord" ? masterVolume * 0.6 : masterVolume
   const themeGlyphPulseEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
+  const themeUiPulseEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
 
   // Added hook for planet audio
   const {
@@ -2750,7 +2751,7 @@ export default function AstrologyCalculator() {
         <div className="w-full max-w-3xl">
           <div className="mb-8 min-h-[420px]">
             <div className="w-full text-center pt-1">
-              <h1 className="hidden md:block font-mono text-3xl md:text-4xl uppercase tracking-widest text-center">
+              <h1 className="font-mono text-xl md:text-4xl uppercase tracking-widest text-center">
                 ASTRO.LOG.IO
               </h1>
               <div className="mt-2 h-[3px] w-full bg-white/20">
@@ -2817,7 +2818,9 @@ export default function AstrologyCalculator() {
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="w-9 h-9 md:w-14 md:h-14 flex items-center justify-center font-mono text-[8px] md:text-[22px] leading-none uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors"
+              className={`w-[26px] h-[26px] md:w-14 md:h-14 flex items-center justify-center font-mono text-[8px] md:text-[22px] leading-none uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors ${
+                themeUiPulseEnabled ? "play-idle-pulse" : ""
+              }`}
             >
               {menuOpen ? "✕" : "☰"}
             </button>
@@ -4699,9 +4702,9 @@ export default function AstrologyCalculator() {
                 return (
                   <div
                     key={`top-nav-${mode}`}
-                    className={`relative border p-0 md:p-0.5 md:px-1 md:py-1 transition-opacity duration-150 ${
-                      isActiveMode ? "border-white/95 bg-white/8" : "border-gray-600/85 bg-black/35"
-                    } ${hasTopPanelHover ? (isCardHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
+                    className={`relative p-0 md:p-0.5 md:px-1 md:py-1 transition-opacity duration-150 ${
+                      hasTopPanelHover ? (isCardHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"
+                    }`}
                   >
                     <div className="relative">
                       <button
@@ -4714,7 +4717,9 @@ export default function AstrologyCalculator() {
                           isActiveMode
                             ? "bg-white text-black border-white"
                             : "bg-transparent text-white border-gray-600 hover:border-white"
-                        } ${hasTopPanelHover ? (isPairHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
+                        } ${hasTopPanelHover ? (isPairHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"} ${
+                          themeUiPulseEnabled ? "play-idle-pulse" : ""
+                        }`}
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
@@ -4745,7 +4750,7 @@ export default function AstrologyCalculator() {
                           !horoscopeData || isExportingMp3
                             ? "border-gray-700 text-gray-500 cursor-not-allowed"
                             : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
-                        } ${isPairHoverActive ? "opacity-100" : "opacity-50"}`}
+                        } ${isPairHoverActive ? "opacity-100" : "opacity-50"} ${themeUiPulseEnabled ? "play-idle-pulse" : ""}`}
                       >
                         <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
                           <path d="M3 8.5V12.5H13V8.5" />
@@ -4770,7 +4775,7 @@ export default function AstrologyCalculator() {
                 )
               })}
               <div
-                className={`relative border p-0 md:p-0.5 md:px-1 md:py-1 transition-opacity duration-150 border-gray-600/85 bg-black/35 ${
+                className={`relative p-0 md:p-0.5 md:px-1 md:py-1 transition-opacity duration-150 ${
                   hasTopPanelHover
                     ? topPanelHoverKey === "reset:main" || topPanelHoverKey === "reset:info"
                       ? "opacity-100"
@@ -4784,7 +4789,9 @@ export default function AstrologyCalculator() {
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("reset:main")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                  className="w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors bg-transparent text-white border-gray-600 hover:border-white"
+                  className={`w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors bg-transparent text-white border-gray-600 hover:border-white ${
+                    themeUiPulseEnabled ? "play-idle-pulse" : ""
+                  }`}
                 >
                   RESET
                 </button>
@@ -4794,7 +4801,9 @@ export default function AstrologyCalculator() {
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("reset:info")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                  className="mt-0 md:mt-1 flex w-full h-[13px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide"
+                  className={`mt-0 md:mt-1 flex w-full h-[13px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide ${
+                    themeUiPulseEnabled ? "play-idle-pulse" : ""
+                  }`}
                 >
                   INFO
                 </button>

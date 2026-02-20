@@ -518,7 +518,6 @@ export default function AstrologyCalculator() {
   const [showModeInfo, setShowModeInfo] = useState(false)
   const [advancedMenuEnabled, setAdvancedMenuEnabled] = useState(false)
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
-  const [hoveredNavigationModeHint, setHoveredNavigationModeHint] = useState<NavigationMode | null>(null)
   const [isExportingMp3, setIsExportingMp3] = useState(false)
   const [pendingMp3Download, setPendingMp3Download] = useState<{ url: string; fileName: string } | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
@@ -2699,7 +2698,7 @@ export default function AstrologyCalculator() {
                 <p
                   key={`loading-current-${loadingIntroTick}-${loadingIntroIndex}`}
                   onClick={advanceLoadingIntroParagraph}
-                  className="font-mono cursor-pointer text-[30px] md:text-[36px] leading-[1.36]"
+                  className="font-mono cursor-pointer text-[24px] md:text-[29px] leading-[1.36]"
                   style={{
                     color: "rgba(255,255,255,0.7)",
                     textAlign: "left",
@@ -4168,25 +4167,29 @@ export default function AstrologyCalculator() {
                       <div>{sanitizeLocationLabel(formData.location) || "No Location"}</div>
                     </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={handlePlaybackTogglePress}
-                    className={`fixed right-4 md:right-8 bottom-[66px] z-30 flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors ${
-                      !isPlaybackActive ? "play-idle-pulse" : ""
-                    }`}
-                    title={isPlaybackActive ? "Stop" : "Play"}
-                    style={{ width: 56, height: 56 }}
-                  >
-                    {isPlaybackActive ? (
-                      <svg width="28" height="28" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <rect x="5" y="5" width="10" height="10" />
-                      </svg>
-                    ) : (
-                      <svg width="28" height="28" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path d="M6 4 L16 10 L6 16 Z" />
-                      </svg>
-                    )}
-                  </button>
+                  <div className="fixed bottom-[86px] inset-x-0 z-30 pointer-events-none">
+                    <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-start">
+                      <button
+                        type="button"
+                        onClick={handlePlaybackTogglePress}
+                        className={`pointer-events-auto flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors ${
+                          !isPlaybackActive ? "play-idle-pulse" : ""
+                        }`}
+                        title={isPlaybackActive ? "Stop" : "Play"}
+                        style={{ width: 56, height: 56 }}
+                      >
+                        {isPlaybackActive ? (
+                          <svg width="28" height="28" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <rect x="5" y="5" width="10" height="10" />
+                          </svg>
+                        ) : (
+                          <svg width="28" height="28" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path d="M6 4 L16 10 L6 16 Z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -4556,21 +4559,13 @@ export default function AstrologyCalculator() {
                 return (
                   <div
                     key={`top-nav-${mode}`}
-                    className={`relative border px-1 py-1 ${
+                    className={`relative border px-1 py-1 brightness-50 transition-[filter] duration-200 hover:brightness-100 focus-within:brightness-100 ${
                       isActiveMode ? "border-white/95 bg-white/8" : "border-gray-600/85 bg-black/35"
                     }`}
                   >
-                    <div>
+                    <div className="relative group/mode">
                       <button
                         onClick={() => setNavigationModeFromMenu(mode)}
-                        onMouseEnter={() => setHoveredNavigationModeHint(mode)}
-                        onFocus={() => setHoveredNavigationModeHint(mode)}
-                        onMouseLeave={() =>
-                          setHoveredNavigationModeHint((current) => (current === mode ? null : current))
-                        }
-                        onBlur={() =>
-                          setHoveredNavigationModeHint((current) => (current === mode ? null : current))
-                        }
                         className={`w-full font-mono text-[10px] md:text-[12px] uppercase tracking-wide border px-1.5 py-1 transition-colors ${
                           isActiveMode
                             ? "bg-white text-black border-white"
@@ -4579,8 +4574,12 @@ export default function AstrologyCalculator() {
                       >
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+70px)] w-[280px] border border-white/75 bg-black/88 px-2.5 py-2 text-center font-mono text-[13px] md:text-[15px] normal-case leading-tight text-white opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100">
+                        {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
+                      </span>
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+12px)] h-[58px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/mode:opacity-100 group-focus-within/mode:opacity-100" />
                     </div>
-                    <div className="relative group mt-1">
+                    <div className="relative group/download mt-1">
                       <button
                         onClick={() => downloadNavigationModeMp3(mode)}
                         disabled={!horoscopeData || isExportingMp3}
@@ -4596,9 +4595,10 @@ export default function AstrologyCalculator() {
                           <path d="M5.8 6.8L8 9L10.2 6.8" />
                         </svg>
                       </button>
-                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 -bottom-8 whitespace-nowrap bg-black/90 border border-white/40 px-2 py-1.5 font-mono text-[11px] md:text-[13px] text-white/85 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+70px)] whitespace-nowrap border border-white/75 bg-black/88 px-2.5 py-2 font-mono text-[13px] md:text-[15px] text-white opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100">
                         {DOWNLOAD_TOOLTIP_TEXT}
                       </span>
+                      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+12px)] h-[58px] w-px bg-white/75 opacity-0 transition-opacity duration-150 group-hover/download:opacity-100 group-focus-within/download:opacity-100" />
                     </div>
                   </div>
                 )
@@ -4606,13 +4606,13 @@ export default function AstrologyCalculator() {
               <div className="flex flex-col gap-1.5">
                 <button
                   onClick={resetToInitialState}
-                  className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors"
+                  className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 brightness-50 hover:brightness-100 hover:bg-white hover:text-black transition-colors"
                 >
                   RESET
                 </button>
                 <button
                   onClick={openInfoOverlay}
-                  className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 hover:bg-white hover:text-black transition-colors"
+                  className="font-mono text-[10px] md:text-[12px] uppercase tracking-wide border border-white px-1.5 py-1 brightness-50 hover:brightness-100 hover:bg-white hover:text-black transition-colors"
                 >
                   INFO
                 </button>
@@ -4635,14 +4635,6 @@ export default function AstrologyCalculator() {
           </div>
         </div>
       </div>
-
-      {hoveredNavigationModeHint && !showInfoOverlay && (
-        <div className="fixed inset-0 z-[45] pointer-events-none flex items-center justify-center px-6">
-          <div className="max-w-[860px] font-mono text-[18px] md:text-[26px] leading-[1.3] text-center text-white/92">
-            {NAV_MODE_INSTRUCTION_BY_MODE[hoveredNavigationModeHint]}
-          </div>
-        </div>
-      )}
 
       {showInfoOverlay && (
         <div className="fixed inset-0 z-50 bg-black/92">

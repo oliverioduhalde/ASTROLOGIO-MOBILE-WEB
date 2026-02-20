@@ -4178,7 +4178,7 @@ export default function AstrologyCalculator() {
                         }),
                       )}
                   </svg>
-                  <div className="fixed bottom-[86px] inset-x-0 z-30 pointer-events-none">
+                  <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+4px)] md:bottom-[86px] inset-x-0 z-30 pointer-events-none">
                     <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
                       <div className="border border-white/70 bg-black/75 px-2.5 py-2 text-right font-mono text-[11px] md:text-[13px] uppercase tracking-wide text-white/80">
                         <div>
@@ -4196,7 +4196,7 @@ export default function AstrologyCalculator() {
                       </div>
                     </div>
                   </div>
-                  <div className="fixed bottom-[86px] inset-x-0 z-30 pointer-events-none">
+                  <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+4px)] md:bottom-[86px] inset-x-0 z-30 pointer-events-none">
                     <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-start">
                       <button
                         type="button"
@@ -4581,7 +4581,7 @@ export default function AstrologyCalculator() {
 
       <div className="fixed top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-1.5 py-1.5 md:px-2 md:py-2 w-full max-w-[560px]">
+          <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-1.5 py-1.5 md:px-2 md:py-2 w-[calc(100%-88px)] max-w-[430px] md:w-full md:max-w-[560px]">
             <div className="grid grid-cols-4 gap-1.5">
               {NAVIGATION_MODES.map((mode) => {
                 const isActiveMode = navigationMode === mode

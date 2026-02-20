@@ -336,6 +336,43 @@
   }
 }
 
+@keyframes subtle-star-glitch-30 {
+  0%,
+  15%,
+  32%,
+  48%,
+  64%,
+  82%,
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  8% {
+    opacity: 0.97;
+    filter: brightness(0.976);
+  }
+  25% {
+    opacity: 0.985;
+    filter: brightness(1.024);
+  }
+  41% {
+    opacity: 0.964;
+    filter: brightness(0.97);
+  }
+  57% {
+    opacity: 0.988;
+    filter: brightness(1.03);
+  }
+  74% {
+    opacity: 0.976;
+    filter: brightness(0.982);
+  }
+  90% {
+    opacity: 0.991;
+    filter: brightness(1.018);
+  }
+}
+
 /* Aspect line smooth transition styles */
 .aspect-line {
   transition: opacity 0.1s linear;

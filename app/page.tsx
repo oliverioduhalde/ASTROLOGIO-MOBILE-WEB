@@ -3887,7 +3887,7 @@ export default function AstrologyCalculator() {
                       const glyphTwinkleTiming = getThemeTwinkleTiming(`planet-${planet.name}`)
                       const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
                       const themeGlyphPulseAnimation = themePulseEnabled
-                        ? `theme-star-pulse-subtle 5s ease-in-out infinite, subtle-star-glitch-soft ${glyphTwinkleTiming.durationSec}s steps(2, end) ${glyphTwinkleTiming.delaySec}s infinite`
+                        ? `theme-star-pulse-subtle 5s ease-in-out infinite, subtle-star-glitch-30 ${glyphTwinkleTiming.durationSec}s steps(2, end) ${glyphTwinkleTiming.delaySec}s infinite`
                         : undefined
                       const glyphCoreFilter = "drop-shadow(0 0 1.6px rgba(255,255,255,0.58))"
                       const glyphHaloBaseFilter =

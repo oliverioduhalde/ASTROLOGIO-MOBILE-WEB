@@ -3880,12 +3880,12 @@ export default function AstrologyCalculator() {
 
                             const mcInnerPos = mcTheta !== null ? polarToCartesian(200, 200, 50, mcTheta) : null
                             const mcOuterPos = mcTheta !== null ? polarToCartesian(200, 200, 190, mcTheta) : null
-                            const mcLabelPos = mcTheta !== null ? polarToCartesian(200, 200, 175, mcTheta) : null
+                            const mcLabelPos = mcTheta !== null ? polarToCartesian(200, 200, 194, mcTheta) : null
 
                             const horizonPosA = ascTheta !== null ? polarToCartesian(200, 200, 188, ascTheta) : null
                             const horizonPosB =
                               ascTheta !== null ? polarToCartesian(200, 200, 188, norm360(ascTheta + 180)) : null
-                            const horizonLabelPos = ascTheta !== null ? polarToCartesian(200, 200, 166, ascTheta) : null
+                            const horizonLabelPos = ascTheta !== null ? polarToCartesian(200, 200, 194, ascTheta) : null
 
                             return (
                               <g>
@@ -3898,7 +3898,7 @@ export default function AstrologyCalculator() {
                                       y2={horizonPosB.y}
                                       stroke="white"
                                       strokeWidth="1.05"
-                                      opacity="0.78"
+                                      opacity="0.3"
                                     />
                                     {horizonLabelPos && (
                                       <text
@@ -3908,7 +3908,7 @@ export default function AstrologyCalculator() {
                                         dominantBaseline="middle"
                                         fill="white"
                                         fontSize="8"
-                                        style={{ fontFamily: MONOTYPE_FONT_STACK }}
+                                        style={{ fontFamily: MONOTYPE_FONT_STACK, opacity: 0.3 }}
                                       >
                                         HZ
                                       </text>
@@ -3923,7 +3923,8 @@ export default function AstrologyCalculator() {
                                       x2={mcOuterPos.x}
                                       y2={mcOuterPos.y}
                                       stroke="white"
-                                      strokeWidth="1.4"
+                                      strokeWidth="1.05"
+                                      opacity="0.3"
                                     />
                                     <text
                                       x={mcLabelPos.x}
@@ -3931,8 +3932,8 @@ export default function AstrologyCalculator() {
                                       textAnchor="middle"
                                       dominantBaseline="middle"
                                       fill="white"
-                                      fontSize="11"
-                                      style={{ fontFamily: MONOTYPE_FONT_STACK }}
+                                      fontSize="9"
+                                      style={{ fontFamily: MONOTYPE_FONT_STACK, opacity: 0.3 }}
                                     >
                                       MC
                                     </text>

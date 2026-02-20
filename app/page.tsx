@@ -2847,17 +2847,20 @@ export default function AstrologyCalculator() {
 
                   <div className="flex items-center gap-1">
                     <label className="font-mono text-[10px] uppercase tracking-wide w-16 flex-shrink-0">Engine</label>
-                    <select
-                      value={audioEngineMode}
-                      onChange={(e) => setAudioEngineMode(e.target.value as AudioEngineMode)}
-                      className="bg-black border border-white text-white text-[10px] px-1.5 py-1 flex-1 font-mono"
-                    >
-                      {ENGINE_OPTIONS.map((option) => (
-                        <option key={`minimal-engine-${option.value}`} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative flex-1">
+                      <select
+                        value={audioEngineMode}
+                        onChange={(e) => setAudioEngineMode(e.target.value as AudioEngineMode)}
+                        className="w-full appearance-none bg-black border border-white text-white text-[10px] px-1.5 pr-6 py-1 font-mono uppercase tracking-wide focus:outline-none focus:border-white"
+                      >
+                        {ENGINE_OPTIONS.map((option) => (
+                          <option key={`minimal-engine-${option.value}`} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/80 text-[9px]">▾</span>
+                    </div>
                   </div>
 
                   <div className="border-t border-gray-600 my-1"></div>
@@ -3148,17 +3151,20 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[9px] uppercase tracking-wide w-16 flex-shrink-0">Engine</label>
-                      <select
-                        value={audioEngineMode}
-                        onChange={(e) => setAudioEngineMode(e.target.value as AudioEngineMode)}
-                        className="bg-black border border-white text-white text-[9px] px-1.5 py-1 w-36 font-mono"
-                      >
-                        {ENGINE_OPTIONS.map((option) => (
-                          <option key={`advanced-engine-${option.value}`} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative w-36">
+                        <select
+                          value={audioEngineMode}
+                          onChange={(e) => setAudioEngineMode(e.target.value as AudioEngineMode)}
+                          className="w-full appearance-none bg-black border border-white text-white text-[9px] px-1.5 pr-6 py-1 font-mono uppercase tracking-wide focus:outline-none focus:border-white"
+                        >
+                          {ENGINE_OPTIONS.map((option) => (
+                            <option key={`advanced-engine-${option.value}`} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/80 text-[8px]">▾</span>
+                      </div>
                       <span className="font-mono text-[8px] w-8 text-right uppercase">Mode</span>
                     </div>
 

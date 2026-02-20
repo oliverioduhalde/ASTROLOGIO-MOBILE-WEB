@@ -4311,15 +4311,13 @@ export default function AstrologyCalculator() {
                             subjectHoverTouchTimeoutRef.current = null
                           }
                           setIsSubjectBoxHovered(true)
-                        }}
-                        onTouchEnd={() => {
-                          if (subjectHoverTouchTimeoutRef.current) {
-                            clearTimeout(subjectHoverTouchTimeoutRef.current)
-                          }
                           subjectHoverTouchTimeoutRef.current = setTimeout(() => {
                             setIsSubjectBoxHovered(false)
                             subjectHoverTouchTimeoutRef.current = null
-                          }, 220)
+                          }, TOP_PANEL_HINT_MS)
+                        }}
+                        onTouchEnd={() => {
+                          // Keep subject hover visible for a short readable window on touch devices.
                         }}
                         onTouchCancel={() => {
                           if (subjectHoverTouchTimeoutRef.current) {
@@ -4741,7 +4739,7 @@ export default function AstrologyCalculator() {
                 <button
                   ref={mobileMenuButtonRef}
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className={`flex w-full h-[38px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                  className={`flex w-full h-[38px] translate-y-[5px] items-center justify-center border px-0.5 py-0 transition-colors ${
                     menuOpen
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
@@ -4761,7 +4759,8 @@ export default function AstrologyCalculator() {
                 const isModeHoverActive = topPanelHoverKey === modeHoverKey
                 const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
                 const isModeButtonActive = isActiveMode || isModeHoverActive
-                const tooltipAnchorClassMobile = "right-0 left-auto translate-x-0"
+                const tooltipViewportClass =
+                  "fixed left-1/2 -translate-x-1/2 top-[90px] md:top-[164px] z-[60] w-[min(320px,calc(100vw-20px))]"
                 return (
                   <div
                     key={`top-nav-${mode}`}
@@ -4784,7 +4783,7 @@ export default function AstrologyCalculator() {
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
                       <span
-                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+40px)] md:top-[calc(100%+140px)] w-[150px] max-w-[calc(100vw-32px)] md:w-[320px] md:max-w-none border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                        className={`pointer-events-none ${tooltipViewportClass} border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
                           isModeHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
@@ -4817,7 +4816,7 @@ export default function AstrologyCalculator() {
                         </svg>
                       </button>
                       <span
-                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+40px)] md:top-[calc(100%+140px)] w-[150px] max-w-[calc(100vw-32px)] md:w-auto whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 font-mono text-[7px] md:text-[16px] text-left text-white transition-opacity duration-500 ${
+                        className={`pointer-events-none ${tooltipViewportClass} whitespace-normal border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 font-mono text-[7px] md:text-[16px] text-left text-white transition-opacity duration-500 ${
                           isDownloadHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >

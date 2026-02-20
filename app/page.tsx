@@ -525,6 +525,7 @@ export default function AstrologyCalculator() {
   const [pendingMp3Download, setPendingMp3Download] = useState<{ url: string; fileName: string } | null>(null)
   const mobileDownloadArmedModeRef = useRef<NavigationMode | null>(null)
   const mobileDownloadArmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const topPanelHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<SubjectPreset>("manual")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
@@ -1427,6 +1428,10 @@ export default function AstrologyCalculator() {
         clearTimeout(subjectHoverTouchTimeoutRef.current)
         subjectHoverTouchTimeoutRef.current = null
       }
+      if (topPanelHintTimeoutRef.current) {
+        clearTimeout(topPanelHintTimeoutRef.current)
+        topPanelHintTimeoutRef.current = null
+      }
       if (mobileDownloadArmTimeoutRef.current) {
         clearTimeout(mobileDownloadArmTimeoutRef.current)
         mobileDownloadArmTimeoutRef.current = null
@@ -2268,6 +2273,17 @@ export default function AstrologyCalculator() {
     mobileDownloadArmedModeRef.current = null
   }, [])
 
+  const showTopPanelHint = useCallback((key: string) => {
+    setTopPanelHoverKey(key)
+    if (topPanelHintTimeoutRef.current) {
+      clearTimeout(topPanelHintTimeoutRef.current)
+    }
+    topPanelHintTimeoutRef.current = setTimeout(() => {
+      setTopPanelHoverKey((current) => (current === key ? null : current))
+      topPanelHintTimeoutRef.current = null
+    }, 10000)
+  }, [])
+
   const handleDownloadButtonPress = useCallback(
     (mode: NavigationMode) => {
       if (!horoscopeData || isExportingMp3) return
@@ -2278,27 +2294,28 @@ export default function AstrologyCalculator() {
           window.matchMedia("(hover: none), (pointer: coarse)").matches)
 
       if (!isTouchLikeDevice) {
+        showTopPanelHint(`download:${mode}`)
         void downloadNavigationModeMp3(mode)
         return
       }
 
       if (mobileDownloadArmedModeRef.current !== mode) {
         mobileDownloadArmedModeRef.current = mode
-        setTopPanelHoverKey(`download:${mode}`)
+        showTopPanelHint(`download:${mode}`)
         if (mobileDownloadArmTimeoutRef.current) {
           clearTimeout(mobileDownloadArmTimeoutRef.current)
         }
         mobileDownloadArmTimeoutRef.current = setTimeout(() => {
           mobileDownloadArmedModeRef.current = null
           mobileDownloadArmTimeoutRef.current = null
-        }, 2400)
+        }, 10000)
         return
       }
 
       clearMobileDownloadArm()
       void downloadNavigationModeMp3(mode)
     },
-    [clearMobileDownloadArm, downloadNavigationModeMp3, horoscopeData, isExportingMp3],
+    [clearMobileDownloadArm, downloadNavigationModeMp3, horoscopeData, isExportingMp3, showTopPanelHint],
   )
 
   const handleEarthCenterPress = () => {
@@ -2813,7 +2830,7 @@ export default function AstrologyCalculator() {
   return (
     <main className="min-h-screen bg-black text-white p-4 md:p-8" style={{ filter: interfaceThemeFilter }}>
       <div className="max-w-[1400px] mx-auto">
-        <div className="relative mb-6 pb-3 border-b border-white flex items-center justify-between min-h-[66px] md:min-h-[84px] md:pr-[620px]">
+        <div className="relative mb-2 pb-0 md:mb-6 md:pb-3 md:border-b border-white flex items-center justify-between min-h-[52px] md:min-h-[84px] md:pr-[620px]">
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
@@ -4683,6 +4700,12 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
+      <div className="fixed top-[52px] inset-x-0 z-[35] pointer-events-none md:hidden">
+        <div className="mx-auto w-full max-w-[calc(1400px+2rem)] px-4">
+          <div className="border-b border-white/90" />
+        </div>
+      </div>
+
       <div className="fixed top-[5px] md:top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
           <div className="pointer-events-auto w-full max-w-[430px] h-[42px] md:h-auto md:w-full md:max-w-[560px]">
@@ -4702,7 +4725,7 @@ export default function AstrologyCalculator() {
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "menu:button" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("menu:button")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "menu:button" ? null : current))}
-                  className={`mt-[1px] flex w-full h-[34px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                  className={`flex w-full h-[34px] items-center justify-center border px-0.5 py-0 transition-colors ${
                     menuOpen
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
@@ -4734,11 +4757,12 @@ export default function AstrologyCalculator() {
                   >
                     <div className="relative">
                       <button
-                        onClick={() => setNavigationModeFromMenu(mode)}
-                        onMouseEnter={() => setTopPanelHoverKey(modeHoverKey)}
-                        onMouseLeave={() => setTopPanelHoverKey((current) => (current === modeHoverKey ? null : current))}
-                        onFocus={() => setTopPanelHoverKey(modeHoverKey)}
-                        onBlur={() => setTopPanelHoverKey((current) => (current === modeHoverKey ? null : current))}
+                        onClick={() => {
+                          showTopPanelHint(modeHoverKey)
+                          setNavigationModeFromMenu(mode)
+                        }}
+                        onMouseEnter={() => showTopPanelHint(modeHoverKey)}
+                        onFocus={() => showTopPanelHint(modeHoverKey)}
                         className={`w-full h-[17px] md:h-auto font-mono text-[6px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           isModeButtonActive
                             ? "border-white bg-white/80 text-black"
@@ -4763,12 +4787,8 @@ export default function AstrologyCalculator() {
                     <div className="relative mt-0 md:mt-1">
                       <button
                         onClick={() => handleDownloadButtonPress(mode)}
-                        onMouseEnter={() => setTopPanelHoverKey(downloadHoverKey)}
-                        onMouseLeave={() =>
-                          setTopPanelHoverKey((current) => (current === downloadHoverKey ? null : current))
-                        }
-                        onFocus={() => setTopPanelHoverKey(downloadHoverKey)}
-                        onBlur={() => setTopPanelHoverKey((current) => (current === downloadHoverKey ? null : current))}
+                        onMouseEnter={() => showTopPanelHint(downloadHoverKey)}
+                        onFocus={() => showTopPanelHint(downloadHoverKey)}
                         disabled={!horoscopeData || isExportingMp3}
                         className={`flex w-full h-[17px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           !horoscopeData || isExportingMp3
@@ -4776,9 +4796,9 @@ export default function AstrologyCalculator() {
                             : isDownloadHoverActive
                               ? "border-white bg-white/80 text-black"
                               : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
-                        } ${isPairHoverActive ? "opacity-100" : "opacity-50"}`}
+                        } ${hasTopPanelHover ? (isPairHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
                       >
-                        <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
+                        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
                           <path d="M3 8.5V12.5H13V8.5" />
                           <path d="M8 2.5V9" />
                           <path d="M5.8 6.8L8 9L10.2 6.8" />

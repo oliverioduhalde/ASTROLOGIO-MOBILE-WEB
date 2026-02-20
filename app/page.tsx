@@ -125,7 +125,7 @@ const EXPORT_MODE_SUFFIX: Record<NavigationMode, string> = {
   radial: "ORBITAL",
   sequential: "CHART",
 }
-const DOWNLOAD_TOOLTIP_TEXT = "download audio file"
+const DOWNLOAD_TOOLTIP_TEXT = "download audio file (tap twice on mobile)"
 const ENGINE_OPTIONS: Array<{ value: AudioEngineMode; label: string }> = [
   { value: "samples", label: "ASTROLOG SOUNDS" },
   { value: "tibetan_samples", label: "TIBETAN BOWLS" },
@@ -521,6 +521,8 @@ export default function AstrologyCalculator() {
   const [topPanelHoverKey, setTopPanelHoverKey] = useState<string | null>(null)
   const [isExportingMp3, setIsExportingMp3] = useState(false)
   const [pendingMp3Download, setPendingMp3Download] = useState<{ url: string; fileName: string } | null>(null)
+  const mobileDownloadArmedModeRef = useRef<NavigationMode | null>(null)
+  const mobileDownloadArmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<SubjectPreset>("manual")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
@@ -601,6 +603,17 @@ export default function AstrologyCalculator() {
 
   const currentModeLabel =
     modalSunSignIndex !== null ? MODE_NAME_BY_SIGN_INDEX[modalSunSignIndex] || "Modal" : "Modal"
+  const subjectLocationLines = useMemo(() => {
+    const sanitized = sanitizeLocationLabel(formData.location)
+    const parts = sanitized
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+    return {
+      city: parts[0] || "No City",
+      country: parts.length > 1 ? parts[parts.length - 1] : "No Country",
+    }
+  }, [formData.location])
 
   const effectiveMasterVolume = navigationMode === "astral_chord" ? masterVolume * 0.6 : masterVolume
 
@@ -1406,6 +1419,10 @@ export default function AstrologyCalculator() {
 
   useEffect(() => {
     return () => {
+      if (mobileDownloadArmTimeoutRef.current) {
+        clearTimeout(mobileDownloadArmTimeoutRef.current)
+        mobileDownloadArmTimeoutRef.current = null
+      }
       if (pendingMp3Download?.url) {
         URL.revokeObjectURL(pendingMp3Download.url)
       }
@@ -2234,6 +2251,47 @@ export default function AstrologyCalculator() {
     if (!isLoopRunning && !isPaused) return
     startNavigationMode(mode)
   }
+
+  const clearMobileDownloadArm = useCallback(() => {
+    if (mobileDownloadArmTimeoutRef.current) {
+      clearTimeout(mobileDownloadArmTimeoutRef.current)
+      mobileDownloadArmTimeoutRef.current = null
+    }
+    mobileDownloadArmedModeRef.current = null
+  }, [])
+
+  const handleDownloadButtonPress = useCallback(
+    (mode: NavigationMode) => {
+      if (!horoscopeData || isExportingMp3) return
+
+      const isTouchLikeDevice =
+        typeof window !== "undefined" &&
+        ((typeof navigator !== "undefined" && navigator.maxTouchPoints > 0) ||
+          window.matchMedia("(hover: none), (pointer: coarse)").matches)
+
+      if (!isTouchLikeDevice) {
+        void downloadNavigationModeMp3(mode)
+        return
+      }
+
+      if (mobileDownloadArmedModeRef.current !== mode) {
+        mobileDownloadArmedModeRef.current = mode
+        setTopPanelHoverKey(`download:${mode}`)
+        if (mobileDownloadArmTimeoutRef.current) {
+          clearTimeout(mobileDownloadArmTimeoutRef.current)
+        }
+        mobileDownloadArmTimeoutRef.current = setTimeout(() => {
+          mobileDownloadArmedModeRef.current = null
+          mobileDownloadArmTimeoutRef.current = null
+        }, 2400)
+        return
+      }
+
+      clearMobileDownloadArm()
+      void downloadNavigationModeMp3(mode)
+    },
+    [clearMobileDownloadArm, downloadNavigationModeMp3, horoscopeData, isExportingMp3],
+  )
 
   const handleEarthCenterPress = () => {
     const mode = navigationMode
@@ -4180,9 +4238,9 @@ export default function AstrologyCalculator() {
                         }),
                       )}
                   </svg>
-                  <div className="fixed bottom-0 pb-[env(safe-area-inset-bottom)] md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
+                  <div className="fixed bottom-0 pb-[calc(env(safe-area-inset-bottom)*0.4)] md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
                     <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-                      <div className="border border-white/70 bg-black/75 px-2.5 py-2 text-right font-mono text-[10px] md:text-[13px] uppercase tracking-wide text-white/80">
+                      <div className="border border-white/70 bg-black/75 px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight text-white/80">
                         <div>
                           {formData.datetime ? new Date(formData.datetime).toLocaleDateString("en-US") : "No Date"}
                         </div>
@@ -4194,27 +4252,27 @@ export default function AstrologyCalculator() {
                               })
                             : "No Time"}
                         </div>
-                        <div>{sanitizeLocationLabel(formData.location) || "No Location"}</div>
+                        <div>{subjectLocationLines.city}</div>
+                        <div>{subjectLocationLines.country}</div>
                       </div>
                     </div>
                   </div>
-                  <div className="fixed bottom-0 pb-[env(safe-area-inset-bottom)] md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
+                  <div className="fixed bottom-0 pb-[calc(env(safe-area-inset-bottom)*0.4)] md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
                     <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-start">
                       <button
                         type="button"
                         onClick={handlePlaybackTogglePress}
                         className={`pointer-events-auto flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors ${
                           !isPlaybackActive ? "play-idle-pulse" : ""
-                        }`}
+                        } w-12 h-12 md:w-14 md:h-14`}
                         title={isPlaybackActive ? "Stop" : "Play"}
-                        style={{ width: 56, height: 56 }}
                       >
                         {isPlaybackActive ? (
-                          <svg width="28" height="28" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <rect x="5" y="5" width="10" height="10" />
                           </svg>
                         ) : (
-                          <svg width="28" height="28" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path d="M6 4 L16 10 L6 16 Z" />
                           </svg>
                         )}
@@ -4622,21 +4680,21 @@ export default function AstrologyCalculator() {
                         {NAV_MODE_HINT_LABEL[mode]}
                       </button>
                       <span
-                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+170px)] w-[180px] max-w-[calc(100vw-24px)] md:w-[320px] md:max-w-none border border-white/75 bg-black/88 px-2 md:px-3 py-2 text-left font-mono text-[8px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+140px)] w-[180px] max-w-[calc(100vw-24px)] md:w-[320px] md:max-w-none border border-white/75 bg-black/88 px-2 md:px-3 py-2 text-left font-mono text-[8px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-150 ${
                           isModeHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
                         {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
                       </span>
                       <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[158px] w-px bg-white/75 transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[128px] w-px bg-white/75 transition-opacity duration-150 ${
                           isModeHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       />
                     </div>
                     <div className="relative mt-1">
                       <button
-                        onClick={() => downloadNavigationModeMp3(mode)}
+                        onClick={() => handleDownloadButtonPress(mode)}
                         onMouseEnter={() => setTopPanelHoverKey(downloadHoverKey)}
                         onMouseLeave={() =>
                           setTopPanelHoverKey((current) => (current === downloadHoverKey ? null : current))
@@ -4657,14 +4715,14 @@ export default function AstrologyCalculator() {
                         </svg>
                       </button>
                       <span
-                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+170px)] whitespace-nowrap border border-white/75 bg-black/88 px-2 md:px-3 py-2 font-mono text-[8px] md:text-[16px] text-left text-white transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute ${tooltipAnchorClassMobile} md:left-1/2 md:-translate-x-[55%] md:right-auto top-[calc(100%+140px)] whitespace-nowrap border border-white/75 bg-black/88 px-2 md:px-3 py-2 font-mono text-[8px] md:text-[16px] text-left text-white transition-opacity duration-150 ${
                           isDownloadHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
                         {DOWNLOAD_TOOLTIP_TEXT}
                       </span>
                       <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[158px] w-px bg-white/75 transition-opacity duration-150 ${
+                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[128px] w-px bg-white/75 transition-opacity duration-150 ${
                           isDownloadHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       />

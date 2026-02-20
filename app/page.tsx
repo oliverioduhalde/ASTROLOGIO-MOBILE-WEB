@@ -2809,7 +2809,7 @@ export default function AstrologyCalculator() {
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="w-14 h-14 flex items-center justify-center font-mono text-[22px] uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors"
+              className="w-14 h-14 flex items-center justify-center font-mono text-[11px] md:text-[22px] leading-none uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors"
             >
               {menuOpen ? "✕" : "☰"}
             </button>
@@ -4240,7 +4240,7 @@ export default function AstrologyCalculator() {
                   </svg>
                   <div className="fixed bottom-0 pb-[calc(env(safe-area-inset-bottom)*0.4)] translate-y-[100px] md:translate-y-0 md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
                     <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-                      <div className="origin-bottom-right scale-[0.51] md:scale-100 border border-white/70 bg-black/75 px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight text-white/80">
+                      <div className="origin-bottom-right scale-[0.66] md:scale-100 border border-white/70 bg-black/75 px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight text-white/80">
                         <div>
                           {formData.datetime ? new Date(formData.datetime).toLocaleDateString("en-US") : "No Date"}
                         </div>
@@ -4264,7 +4264,7 @@ export default function AstrologyCalculator() {
                         onClick={handlePlaybackTogglePress}
                         className={`pointer-events-auto flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors ${
                           !isPlaybackActive ? "play-idle-pulse" : ""
-                        } origin-bottom-left scale-[0.51] md:scale-100 w-12 h-12 md:w-14 md:h-14`}
+                        } origin-bottom-left scale-[0.66] md:scale-100 w-12 h-12 md:w-14 md:h-14`}
                         title={isPlaybackActive ? "Stop" : "Play"}
                       >
                         {isPlaybackActive ? (
@@ -4642,7 +4642,7 @@ export default function AstrologyCalculator() {
       <div className="fixed top-4 md:top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
           <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-1 py-1 md:px-2 md:py-2 w-[calc(100%-88px)] max-w-[430px] h-14 md:h-auto md:w-full md:max-w-[560px]">
-            <div className="grid grid-cols-4 gap-0.5 h-full md:gap-1.5 md:h-auto">
+            <div className="grid grid-cols-4 gap-0.5 h-full items-center content-center -translate-y-[5px] md:translate-y-0 md:gap-1.5 md:h-auto">
               {NAVIGATION_MODES.map((mode) => {
                 const isActiveMode = navigationMode === mode
                 const modeHoverKey = `mode:${mode}`
@@ -4655,7 +4655,7 @@ export default function AstrologyCalculator() {
                 return (
                   <div
                     key={`top-nav-${mode}`}
-                    className={`relative border p-0.5 md:px-1 md:py-1 transition-opacity duration-150 ${
+                    className={`relative border p-0 md:p-0.5 md:px-1 md:py-1 transition-opacity duration-150 ${
                       isActiveMode ? "border-white/95 bg-white/8" : "border-gray-600/85 bg-black/35"
                     } ${hasTopPanelHover ? (isCardHoverActive ? "opacity-100" : "opacity-50") : "opacity-100"}`}
                   >
@@ -4666,7 +4666,7 @@ export default function AstrologyCalculator() {
                         onMouseLeave={() => setTopPanelHoverKey((current) => (current === modeHoverKey ? null : current))}
                         onFocus={() => setTopPanelHoverKey(modeHoverKey)}
                         onBlur={() => setTopPanelHoverKey((current) => (current === modeHoverKey ? null : current))}
-                        className={`w-full h-4 md:h-auto font-mono text-[5px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                        className={`w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           isActiveMode
                             ? "bg-white text-black border-white"
                             : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -4687,7 +4687,7 @@ export default function AstrologyCalculator() {
                         }`}
                       />
                     </div>
-                    <div className="relative mt-0.5 md:mt-1">
+                    <div className="relative mt-0 md:mt-1">
                       <button
                         onClick={() => handleDownloadButtonPress(mode)}
                         onMouseEnter={() => setTopPanelHoverKey(downloadHoverKey)}
@@ -4697,13 +4697,13 @@ export default function AstrologyCalculator() {
                         onFocus={() => setTopPanelHoverKey(downloadHoverKey)}
                         onBlur={() => setTopPanelHoverKey((current) => (current === downloadHoverKey ? null : current))}
                         disabled={!horoscopeData || isExportingMp3}
-                        className={`flex w-full h-4 md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                        className={`flex w-full h-[13px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                           !horoscopeData || isExportingMp3
                             ? "border-gray-700 text-gray-500 cursor-not-allowed"
                             : "border-white/70 text-white/85 hover:bg-white hover:text-black hover:border-white"
                         } ${isPairHoverActive ? "opacity-100" : "opacity-50"}`}
                       >
-                        <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
+                        <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.25">
                           <path d="M3 8.5V12.5H13V8.5" />
                           <path d="M8 2.5V9" />
                           <path d="M5.8 6.8L8 9L10.2 6.8" />
@@ -4725,16 +4725,16 @@ export default function AstrologyCalculator() {
                   </div>
                 )
               })}
-              <div className={`relative border p-0.5 md:px-1 md:py-1 transition-opacity duration-150 ${hasTopPanelHover ? "opacity-50" : "opacity-100"}`}>
+              <div className={`relative border p-0 md:p-0.5 md:px-1 md:py-1 transition-opacity duration-150 ${hasTopPanelHover ? "opacity-50" : "opacity-100"}`}>
                 <button
                   onClick={resetToInitialState}
-                  className="w-full h-4 md:h-auto font-mono text-[5px] md:text-[12px] uppercase tracking-wide border border-white px-0.5 py-0 md:px-1.5 md:py-1 hover:bg-white hover:text-black transition-colors"
+                  className="w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border border-white px-0.5 py-0 md:px-1.5 md:py-1 hover:bg-white hover:text-black transition-colors"
                 >
                   RESET
                 </button>
                 <button
                   onClick={openInfoOverlay}
-                  className="mt-0.5 md:mt-1 w-full h-4 md:h-auto font-mono text-[5px] md:text-[12px] uppercase tracking-wide border border-white px-0.5 py-0 md:px-1.5 md:py-1 hover:bg-white hover:text-black transition-colors"
+                  className="mt-0 md:mt-1 w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border border-white px-0.5 py-0 md:px-1.5 md:py-1 hover:bg-white hover:text-black transition-colors"
                 >
                   INFO
                 </button>

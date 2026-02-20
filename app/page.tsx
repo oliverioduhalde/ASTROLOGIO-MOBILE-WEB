@@ -4171,9 +4171,23 @@ export default function AstrologyCalculator() {
                         }),
                       )}
                   </svg>
-                  <div className="pointer-events-none absolute right-2 bottom-8 text-right font-mono text-[12px] md:text-[14px] uppercase tracking-wide text-white/70">
-                    <div>{formData.datetime ? new Date(formData.datetime).toLocaleString("en-US") : "No Date"}</div>
-                    <div>{sanitizeLocationLabel(formData.location) || "No Location"}</div>
+                  <div className="fixed bottom-[86px] inset-x-0 z-30 pointer-events-none">
+                    <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
+                      <div className="border border-white/70 bg-black/75 px-2.5 py-2 text-right font-mono text-[11px] md:text-[13px] uppercase tracking-wide text-white/80">
+                        <div>
+                          {formData.datetime ? new Date(formData.datetime).toLocaleDateString("en-US") : "No Date"}
+                        </div>
+                        <div>
+                          {formData.datetime
+                            ? new Date(formData.datetime).toLocaleTimeString("en-US", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "No Time"}
+                        </div>
+                        <div>{sanitizeLocationLabel(formData.location) || "No Location"}</div>
+                      </div>
+                    </div>
                   </div>
                   <div className="fixed bottom-[86px] inset-x-0 z-30 pointer-events-none">
                     <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-start">

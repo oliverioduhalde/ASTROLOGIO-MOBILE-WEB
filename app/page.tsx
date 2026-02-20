@@ -120,6 +120,7 @@ const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
   sequential: "CHART",
 }
 const NAVIGATION_MODES: NavigationMode[] = ["astral_chord", "radial", "sequential"]
+const TOP_PANEL_MODE_ORDER: NavigationMode[] = ["astral_chord", "sequential", "radial"]
 const EXPORT_MODE_SUFFIX: Record<NavigationMode, string> = {
   astral_chord: "CHORD",
   radial: "ORBITAL",
@@ -4684,9 +4685,9 @@ export default function AstrologyCalculator() {
 
       <div className="fixed top-4 md:top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto border border-white/70 bg-black/75 backdrop-blur-sm px-1 py-1 md:px-2 md:py-2 w-[calc(100%-88px)] max-w-[430px] h-14 md:h-auto md:w-full md:max-w-[560px]">
+          <div className="pointer-events-auto w-[calc(100%-88px)] max-w-[430px] h-14 md:h-auto md:w-full md:max-w-[560px]">
             <div className="grid grid-cols-4 gap-0.5 h-full items-center content-center -translate-y-[5px] md:translate-y-0 md:gap-1.5 md:h-auto">
-              {NAVIGATION_MODES.map((mode) => {
+              {TOP_PANEL_MODE_ORDER.map((mode) => {
                 const isActiveMode = navigationMode === mode
                 const modeHoverKey = `mode:${mode}`
                 const downloadHoverKey = `download:${mode}`
@@ -4768,16 +4769,20 @@ export default function AstrologyCalculator() {
                   </div>
                 )
               })}
-              <div className={`relative border p-0 md:p-0.5 md:px-1 md:py-1 transition-opacity duration-150 ${hasTopPanelHover ? "opacity-50" : "opacity-100"}`}>
+              <div
+                className={`relative border p-0 md:p-0.5 md:px-1 md:py-1 transition-opacity duration-150 border-gray-600/85 bg-black/35 ${
+                  hasTopPanelHover ? "opacity-50" : "opacity-100"
+                }`}
+              >
                 <button
                   onClick={resetToInitialState}
-                  className="w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border border-white px-0.5 py-0 md:px-1.5 md:py-1 hover:bg-white hover:text-black transition-colors"
+                  className="w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border border-gray-600 bg-transparent text-white px-0.5 py-0 md:px-1.5 md:py-1 hover:border-white hover:bg-white hover:text-black transition-colors"
                 >
                   RESET
                 </button>
                 <button
                   onClick={openInfoOverlay}
-                  className="mt-0 md:mt-1 w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border border-white px-0.5 py-0 md:px-1.5 md:py-1 hover:bg-white hover:text-black transition-colors"
+                  className="mt-0 md:mt-1 w-full h-[13px] md:h-auto font-mono text-[4.5px] md:text-[12px] uppercase tracking-wide border border-gray-600 bg-transparent text-white px-0.5 py-0 md:px-1.5 md:py-1 hover:border-white hover:bg-white hover:text-black transition-colors"
                 >
                   INFO
                 </button>

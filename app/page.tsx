@@ -145,7 +145,9 @@ const NAV_MODE_HINT_LABEL_BY_LANGUAGE: Record<Language, Record<NavigationMode, s
   },
 }
 const NAVIGATION_MODES: NavigationMode[] = ["astral_chord", "radial", "sequential"]
-const TOP_PANEL_MODE_ORDER: NavigationMode[] = ["astral_chord", "sequential", "radial"]
+const TOP_PANEL_MODE_ORDER: NavigationMode[] = ["radial", "sequential", "astral_chord"]
+const TOP_PANEL_PLAY_TOOLTIP_TEXT = "PLAY"
+const TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT = "DOWNLOAD"
 const EXPORT_MODE_SUFFIX: Record<NavigationMode, string> = {
   astral_chord: "CHORD",
   radial: "ORBITAL",
@@ -5386,8 +5388,8 @@ export default function AstrologyCalculator() {
 
       <div className="fixed top-[5px] md:top-2 inset-x-0 z-40 pointer-events-none">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto w-full max-w-[430px] h-[38px] md:h-auto md:w-full md:max-w-[560px]">
-            <div className="grid grid-cols-5 md:grid-cols-4 gap-0.5 h-full items-stretch content-stretch md:gap-1.5 md:h-auto">
+          <div className="pointer-events-auto w-full max-w-[430px] md:w-full md:max-w-[980px]">
+            <div className="grid grid-cols-[38px_repeat(5,minmax(0,1fr))] md:grid-cols-5 gap-0.5 items-stretch content-stretch md:gap-1.5">
               <div className="relative p-0 md:hidden">
                 <button
                   ref={mobileMenuButtonRef}
@@ -5408,18 +5410,53 @@ export default function AstrologyCalculator() {
               {TOP_PANEL_MODE_ORDER.map((mode) => {
                 const isActiveMode = navigationMode === mode
                 const modeHoverKey = `mode:${mode}`
+                const playHoverKey = `play:${mode}`
                 const downloadHoverKey = `download:${mode}`
                 const isModeHoverActive = topPanelHoverKey === modeHoverKey
+                const isPlayHoverActive = topPanelHoverKey === playHoverKey
                 const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
-                const isModeButtonActive = isActiveMode || isModeHoverActive
+                const isModeButtonActive = isActiveMode || isModeHoverActive || isPlayHoverActive || isDownloadHoverActive
                 const tooltipViewportClass =
                   "fixed left-1/2 -translate-x-1/2 top-[90px] md:top-[164px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
+                const tooltipText = isPlayHoverActive
+                  ? TOP_PANEL_PLAY_TOOLTIP_TEXT
+                  : isDownloadHoverActive
+                    ? TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT
+                    : isModeHoverActive
+                      ? navModeInstructionByMode[mode]
+                      : null
                 return (
-                  <div
-                    key={`top-nav-${mode}`}
-                    className="relative p-0 md:p-0.5 md:px-1 md:py-1"
-                  >
-                    <div className="relative">
+                  <div key={`top-nav-${mode}`} className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                    <div
+                      className={`relative flex h-[36px] md:h-[42px] overflow-hidden border transition-colors ${
+                        isModeButtonActive
+                          ? "border-white bg-white/80 text-black"
+                          : "border-white/50 bg-transparent text-white/50"
+                      }`}
+                    >
+                      <button
+                        onClick={() => {
+                          showTopPanelHint(playHoverKey)
+                          if (horoscopeData) {
+                            startNavigationMode(mode)
+                          } else {
+                            setNavigationMode(mode)
+                          }
+                        }}
+                        onMouseEnter={() => showTopPanelHint(playHoverKey)}
+                        onFocus={() => showTopPanelHint(playHoverKey)}
+                        className={`flex h-full w-[24%] min-w-[22px] items-center justify-center border-r transition-colors ${
+                          isModeButtonActive ? "border-black/25" : "border-white/30 hover:bg-white/12 hover:text-white"
+                        }`}
+                        title={TOP_PANEL_PLAY_TOOLTIP_TEXT}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+                          <path d="M3.2 8.3A4.8 4.8 0 0 1 8 3.5a4.8 4.8 0 0 1 4.8 4.8" />
+                          <rect x="2.4" y="8" width="1.8" height="4.1" rx="0.6" fill="currentColor" stroke="none" />
+                          <rect x="11.8" y="8" width="1.8" height="4.1" rx="0.6" fill="currentColor" stroke="none" />
+                          <path d="M6.2 6.2v3.6l3-1.8-3-1.8Z" fill="currentColor" stroke="none" />
+                        </svg>
+                      </button>
                       <button
                         onClick={() => {
                           showTopPanelHint(modeHoverKey)
@@ -5427,57 +5464,42 @@ export default function AstrologyCalculator() {
                         }}
                         onMouseEnter={() => showTopPanelHint(modeHoverKey)}
                         onFocus={() => showTopPanelHint(modeHoverKey)}
-                        className={`w-full h-[19px] md:h-auto font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
-                          isModeButtonActive
-                            ? "border-white bg-white/80 text-black"
-                            : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
+                        className={`flex-1 px-1 font-mono font-bold text-[5.5px] md:text-[12px] leading-none uppercase tracking-[0.12em] transition-colors ${
+                          isModeButtonActive ? "text-black" : "hover:bg-white/12 hover:text-white"
                         }`}
                       >
                         {navModeHintLabel[mode]}
                       </button>
-                      <span
-                        className={`pointer-events-none ${tooltipViewportClass} whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
-                          isModeHoverActive ? "opacity-100" : "opacity-0"
-                        }`}
-                      >
-                        {navModeInstructionByMode[mode]}
-                      </span>
-                      <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-500 ${
-                          isModeHoverActive ? "opacity-100" : "opacity-0"
-                        }`}
-                      />
-                    </div>
-                    <div className="relative mt-0 md:mt-1">
                       <button
                         onClick={() => handleDownloadButtonPress(mode)}
                         onMouseEnter={() => showTopPanelHint(downloadHoverKey)}
                         onFocus={() => showTopPanelHint(downloadHoverKey)}
                         disabled={!horoscopeData || isExportingMp3}
-                        className={`flex w-full h-[19px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                        className={`flex h-full w-[24%] min-w-[22px] items-center justify-center border-l transition-colors ${
                           !horoscopeData || isExportingMp3
-                            ? "border-white/25 bg-transparent text-white/25 cursor-not-allowed"
-                            : isDownloadHoverActive
-                              ? "border-white bg-white/80 text-black"
-                              : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
+                            ? "border-white/20 text-white/20 cursor-not-allowed"
+                            : isModeButtonActive
+                              ? "border-black/25 text-black"
+                              : "border-white/30 hover:bg-white/12 hover:text-white"
                         }`}
+                        title={TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT}
                       >
-                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.55">
-                          <path d="M3 8.5V12.5H13V8.5" />
-                          <path d="M8 2.5V9" />
-                          <path d="M5.8 6.8L8 9L10.2 6.8" />
+                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.45" aria-hidden="true">
+                          <path d="M3 8.8V12.4H13V8.8" />
+                          <path d="M8 2.8V9.1" />
+                          <path d="M5.9 7L8 9.1L10.1 7" />
                         </svg>
                       </button>
                       <span
-                        className={`pointer-events-none ${tooltipViewportClass} whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 font-mono text-[7px] md:text-[16px] text-left text-white transition-opacity duration-500 ${
-                          isDownloadHoverActive ? "opacity-100" : "opacity-0"
+                        className={`pointer-events-none ${tooltipViewportClass} whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                          tooltipText ? "opacity-100" : "opacity-0"
                         }`}
                       >
-                        {downloadTooltipText}
+                        {tooltipText || ""}
                       </span>
                       <span
                         className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-500 ${
-                          isDownloadHoverActive ? "opacity-100" : "opacity-0"
+                          tooltipText ? "opacity-100" : "opacity-0"
                         }`}
                       />
                     </div>
@@ -5486,32 +5508,34 @@ export default function AstrologyCalculator() {
               })}
               <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
                 <button
-                  onClick={resetToInitialState}
-                  onMouseEnter={() => setTopPanelHoverKey("reset:main")}
-                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                  onFocus={() => setTopPanelHoverKey("reset:main")}
-                  onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                  className={`w-full h-[19px] md:h-auto font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
-                    topPanelHoverKey === "reset:main"
-                      ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
-                  }`}
-                >
-                  {ui.reset}
-                </button>
-                <button
                   onClick={openInfoOverlay}
                   onMouseEnter={() => setTopPanelHoverKey("reset:info")}
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("reset:info")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                  className={`mt-0 md:mt-1 flex w-full h-[19px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide ${
+                  className={`w-full h-[36px] md:h-[42px] font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                     topPanelHoverKey === "reset:info"
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
                   }`}
                 >
                   {ui.info}
+                </button>
+              </div>
+              <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                <button
+                  onClick={resetToInitialState}
+                  onMouseEnter={() => setTopPanelHoverKey("reset:main")}
+                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
+                  onFocus={() => setTopPanelHoverKey("reset:main")}
+                  onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
+                  className={`w-full h-[36px] md:h-[42px] font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                    topPanelHoverKey === "reset:main"
+                      ? "border-white bg-white/80 text-black"
+                      : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
+                  }`}
+                >
+                  {ui.reset}
                 </button>
               </div>
             </div>

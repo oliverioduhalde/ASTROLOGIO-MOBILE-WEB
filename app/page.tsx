@@ -761,6 +761,8 @@ export default function AstrologyCalculator() {
   const [loadingIntroProgressPct, setLoadingIntroProgressPct] = useState(0)
   const [loadingIntroIndex, setLoadingIntroIndex] = useState(0)
   const [loadingIntroTick, setLoadingIntroTick] = useState(0)
+  const [loadingLanguageHint, setLoadingLanguageHint] = useState<Language | null>(null)
+  const [loadingLanguageHintFading, setLoadingLanguageHintFading] = useState(false)
   const [showInfoOverlay, setShowInfoOverlay] = useState(false)
   const [infoParagraphIndex, setInfoParagraphIndex] = useState(0)
   const [peakLevelLeftPre, setPeakLevelLeftPre] = useState(0)
@@ -852,6 +854,8 @@ export default function AstrologyCalculator() {
   const loadingIntroElapsedBeforeCurrentMsRef = useRef(0)
   const loadingIntroParagraphStartTimeRef = useRef(0)
   const loadingIntroAdvanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loadingLanguageHintFadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loadingLanguageHintClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [locationSuggestions, setLocationSuggestions] = useState<GeoSuggestion[]>([])
   const [isResolvingLocation, setIsResolvingLocation] = useState(false)
   const chartAspectsKeyRef = useRef("__chart__")
@@ -1137,6 +1141,31 @@ export default function AstrologyCalculator() {
     }
   }, [])
 
+  const showLoadingLanguageHint = useCallback((nextLanguage: Language) => {
+    if (loadingLanguageHintFadeTimeoutRef.current) {
+      clearTimeout(loadingLanguageHintFadeTimeoutRef.current)
+      loadingLanguageHintFadeTimeoutRef.current = null
+    }
+    if (loadingLanguageHintClearTimeoutRef.current) {
+      clearTimeout(loadingLanguageHintClearTimeoutRef.current)
+      loadingLanguageHintClearTimeoutRef.current = null
+    }
+
+    setLoadingLanguageHint(nextLanguage)
+    setLoadingLanguageHintFading(false)
+
+    loadingLanguageHintFadeTimeoutRef.current = setTimeout(() => {
+      setLoadingLanguageHintFading(true)
+      loadingLanguageHintFadeTimeoutRef.current = null
+    }, 5000)
+
+    loadingLanguageHintClearTimeoutRef.current = setTimeout(() => {
+      setLoadingLanguageHint(null)
+      setLoadingLanguageHintFading(false)
+      loadingLanguageHintClearTimeoutRef.current = null
+    }, 8000)
+  }, [])
+
   const advanceLoadingIntroParagraph = useCallback(() => {
     const lastParagraphIndex = loadingIntroParagraphs.length - 1
     if (loadingIntroIndexRef.current >= lastParagraphIndex) {
@@ -1397,6 +1426,14 @@ export default function AstrologyCalculator() {
       if (loadingIntroAdvanceTimeoutRef.current) {
         clearTimeout(loadingIntroAdvanceTimeoutRef.current)
         loadingIntroAdvanceTimeoutRef.current = null
+      }
+      if (loadingLanguageHintFadeTimeoutRef.current) {
+        clearTimeout(loadingLanguageHintFadeTimeoutRef.current)
+        loadingLanguageHintFadeTimeoutRef.current = null
+      }
+      if (loadingLanguageHintClearTimeoutRef.current) {
+        clearTimeout(loadingLanguageHintClearTimeoutRef.current)
+        loadingLanguageHintClearTimeoutRef.current = null
       }
     }
   }, [clearAspectTimers])
@@ -3282,32 +3319,6 @@ export default function AstrologyCalculator() {
               <h1 className="font-mono text-xl md:text-4xl uppercase tracking-widest text-center">
                 ASTRO.LOG.IO
               </h1>
-              <div className="mt-2 flex items-center justify-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setLanguage("es")}
-                  className={`font-mono text-[11px] md:text-[14px] border px-1.5 py-0.5 transition-colors ${
-                    language === "es"
-                      ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
-                  }`}
-                  aria-label={language === "es" ? "Cambiar a espanol" : "Switch to Spanish"}
-                >
-                  🇪🇸
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLanguage("en")}
-                  className={`font-mono text-[11px] md:text-[14px] border px-1.5 py-0.5 transition-colors ${
-                    language === "en"
-                      ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
-                  }`}
-                  aria-label={language === "es" ? "Cambiar a ingles" : "Switch to English"}
-                >
-                  🇬🇧
-                </button>
-              </div>
               <div className="mt-2 h-[3px] w-full bg-white/20">
                 <div
                   className="h-full bg-white"
@@ -3353,6 +3364,64 @@ export default function AstrologyCalculator() {
                     className="play-idle-pulse font-mono text-[14px] md:text-[24px] leading-none text-white/50 hover:text-white transition-colors px-2 py-1"
                   >
                     {isLastIntroParagraph ? ">" : ">"}
+                  </button>
+                </div>
+              </div>
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+                <div
+                  className={`pointer-events-none min-h-[14px] font-mono text-[8px] md:text-[11px] uppercase tracking-[0.35em] text-white transition-opacity ${
+                    loadingLanguageHint ? "opacity-100" : "opacity-0"
+                  }`}
+                  style={{
+                    opacity: loadingLanguageHint ? (loadingLanguageHintFading ? 0 : 1) : 0,
+                    transitionDuration: loadingLanguageHintFading ? "3000ms" : "180ms",
+                  }}
+                >
+                  {loadingLanguageHint === "en" ? "ENG" : loadingLanguageHint === "es" ? "SPA" : ""}
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLanguage("es")
+                      showLoadingLanguageHint("es")
+                    }}
+                    onMouseEnter={() => showLoadingLanguageHint("es")}
+                    onFocus={() => showLoadingLanguageHint("es")}
+                    className={`flex h-7 w-7 md:h-8 md:w-8 items-center justify-center border transition-colors ${
+                      language === "es"
+                        ? "border-white bg-white/80 text-black"
+                        : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/12 hover:text-white"
+                    }`}
+                    aria-label={language === "es" ? "Cambiar a espanol" : "Switch to Spanish"}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <rect x="1.5" y="1.5" width="13" height="13" stroke="currentColor" strokeWidth="1" />
+                      <rect x="3" y="4" width="10" height="2" fill="currentColor" />
+                      <rect x="3" y="7" width="10" height="3" fill="currentColor" opacity="0.72" />
+                      <rect x="3" y="11" width="10" height="2" fill="currentColor" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLanguage("en")
+                      showLoadingLanguageHint("en")
+                    }}
+                    onMouseEnter={() => showLoadingLanguageHint("en")}
+                    onFocus={() => showLoadingLanguageHint("en")}
+                    className={`flex h-7 w-7 md:h-8 md:w-8 items-center justify-center border transition-colors ${
+                      language === "en"
+                        ? "border-white bg-white/80 text-black"
+                        : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/12 hover:text-white"
+                    }`}
+                    aria-label={language === "es" ? "Cambiar a ingles" : "Switch to English"}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <rect x="1.5" y="1.5" width="13" height="13" stroke="currentColor" strokeWidth="1" />
+                      <path d="M8 3V13" stroke="currentColor" strokeWidth="2" />
+                      <path d="M3 8H13" stroke="currentColor" strokeWidth="2" />
+                    </svg>
                   </button>
                 </div>
               </div>

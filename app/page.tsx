@@ -337,10 +337,14 @@ const LOADING_SUBTITLE_STEP_MS = 25000
 const MONOTYPE_FONT_STACK = '"Roboto Mono", "Courier New", Courier, monospace'
 const LOADING_INTRO_PARAGRAPHS_BY_LANGUAGE: Record<Language, string[]> = {
   en: [
-    "ASTRO.LOG.IO is a unique immersive audio experience inspired by the Harmony of the Spheres, from ancient cosmology to Kepler’s celestial music, transforming astrological data into sound. Use headphones and explore different dates and places, including the here and now.",
+    "ASTRO.LOG.IO is inspired by Kepler’s Harmony of the Spheres.",
+    "This vision of celestial music translates accurate astral data into music.",
+    "By introrducing place and time you may listen and download sonic astrological charts.",
   ],
   es: [
-    "ASTRO.LOG.IO es una experiencia inmersiva de audio unica inspirada en la Armonia de las Esferas, desde la cosmologia antigua hasta la musica celestial de Kepler, transformando datos astrologicos en sonido. Usa auriculares y explora diferentes fechas y lugares, incluyendo el aqui y ahora.",
+    "ASTRO.LOG.IO está inspirado en la música de las Esferas de Keppler.",
+    "Esta visión de la música celestial traduce datos astrales precisos en música.",
+    "Introduciendo ubicación y hora podrás escuchar y descargar cartas astrales sonoras.",
   ],
 }
 const INFO_PARAGRAPHS_BY_LANGUAGE: Record<Language, string[]> = {

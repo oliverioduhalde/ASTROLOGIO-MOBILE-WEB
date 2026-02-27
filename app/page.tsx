@@ -67,19 +67,35 @@ const EMPTY_SUBJECT_FORM: SubjectFormData = {
   longitude: "",
 }
 
-const MODE_NAME_BY_SIGN_INDEX: Record<number, string> = {
-  0: "Phrygian Dominant",
-  1: "Dorian",
-  2: "Lydian",
-  3: "Aeolian",
-  4: "Ionian",
-  5: "Aeolian",
-  6: "Ionian",
-  7: "Phrygian",
-  8: "Mixolydian",
-  9: "Harmonic Minor",
-  10: "Lydian Dominant",
-  11: "Locrian",
+const MODE_NAME_BY_SIGN_INDEX_BY_LANGUAGE: Record<Language, Record<number, string>> = {
+  en: {
+    0: "Phrygian Dominant",
+    1: "Dorian",
+    2: "Lydian",
+    3: "Aeolian",
+    4: "Ionian",
+    5: "Aeolian",
+    6: "Ionian",
+    7: "Phrygian",
+    8: "Mixolydian",
+    9: "Harmonic Minor",
+    10: "Lydian Dominant",
+    11: "Locrian",
+  },
+  es: {
+    0: "Frigio Dominante",
+    1: "Dorico",
+    2: "Lidio",
+    3: "Eolico",
+    4: "Jonico",
+    5: "Eolico",
+    6: "Jonico",
+    7: "Frigio",
+    8: "Mixolidio",
+    9: "Menor Armonico",
+    10: "Lidio Dominante",
+    11: "Locrio",
+  },
 }
 
 type AudioEngineMode = "samples" | "fm_pad" | "tibetan_samples"
@@ -87,6 +103,7 @@ type InterfaceTheme = "white" | "neon_blue" | "phosphor_green"
 type NavigationMode = "astral_chord" | "radial" | "sequential"
 type SubjectPreset = "manual" | "here_now" | "ba" | "cairo" | "ba77"
 type MajorAspectKey = "conjunction" | "opposition" | "trine" | "square" | "sextile"
+type Language = "en" | "es"
 
 const SEQUENTIAL_PLANET_ORDER = [
   "sun",
@@ -115,10 +132,17 @@ const CHORD_ASPECTS_HOLD_MS = 5000
 const CHORD_ASPECTS_FADE_OUT_MS = 10000
 const TOP_PANEL_HINT_MS = 4000
 
-const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
-  astral_chord: "CHORD",
-  radial: "ORBITAL",
-  sequential: "CHART",
+const NAV_MODE_HINT_LABEL_BY_LANGUAGE: Record<Language, Record<NavigationMode, string>> = {
+  en: {
+    astral_chord: "CHORD",
+    radial: "ORBITAL",
+    sequential: "CHART",
+  },
+  es: {
+    astral_chord: "ACORDE",
+    radial: "ORBITAL",
+    sequential: "CARTA",
+  },
 }
 const NAVIGATION_MODES: NavigationMode[] = ["astral_chord", "radial", "sequential"]
 const TOP_PANEL_MODE_ORDER: NavigationMode[] = ["astral_chord", "sequential", "radial"]
@@ -127,17 +151,34 @@ const EXPORT_MODE_SUFFIX: Record<NavigationMode, string> = {
   radial: "ORBITAL",
   sequential: "CHART",
 }
-const DOWNLOAD_TOOLTIP_TEXT = "download audio file (tap twice on mobile)"
-const ENGINE_OPTIONS: Array<{ value: AudioEngineMode; label: string }> = [
-  { value: "samples", label: "ASTROLOG SOUNDS" },
-  { value: "tibetan_samples", label: "TIBETAN BOWLS" },
-  { value: "fm_pad", label: "SYNTH" },
-]
-const INTERFACE_THEME_OPTIONS: Array<{ value: InterfaceTheme; label: string }> = [
-  { value: "white", label: "White" },
-  { value: "neon_blue", label: "Neon Blue" },
-  { value: "phosphor_green", label: "Phosphor Green" },
-]
+const DOWNLOAD_TOOLTIP_TEXT_BY_LANGUAGE: Record<Language, string> = {
+  en: "download audio file (tap twice on mobile)",
+  es: "descargar archivo de audio (doble toque en movil)",
+}
+const ENGINE_OPTIONS_BY_LANGUAGE: Record<Language, Array<{ value: AudioEngineMode; label: string }>> = {
+  en: [
+    { value: "samples", label: "ASTROLOG SOUNDS" },
+    { value: "tibetan_samples", label: "TIBETAN BOWLS" },
+    { value: "fm_pad", label: "SYNTH" },
+  ],
+  es: [
+    { value: "samples", label: "SONIDOS ASTROLOG" },
+    { value: "tibetan_samples", label: "CUENCOS TIBETANOS" },
+    { value: "fm_pad", label: "SINTETIZADOR" },
+  ],
+}
+const INTERFACE_THEME_OPTIONS_BY_LANGUAGE: Record<Language, Array<{ value: InterfaceTheme; label: string }>> = {
+  en: [
+    { value: "white", label: "White" },
+    { value: "neon_blue", label: "Neon Blue" },
+    { value: "phosphor_green", label: "Phosphor Green" },
+  ],
+  es: [
+    { value: "white", label: "Blanco" },
+    { value: "neon_blue", label: "Azul Neon" },
+    { value: "phosphor_green", label: "Verde Fosforo" },
+  ],
+}
 // Zodiac SVG set sourced from Tabler Icons (MIT).
 const ZODIAC_GLYPH_SVGS: Record<string, string> = {
   aries: "/zodiac-glyphs/aries.svg",
@@ -188,6 +229,93 @@ const ZODIAC_SIGN_KEY_BY_LABEL: Record<string, string> = {
   piscis: "pisces",
   pisces: "pisces",
 }
+const PLANET_LABEL_BY_KEY_BY_LANGUAGE: Record<Language, Record<string, string>> = {
+  en: {
+    sun: "Sun",
+    moon: "Moon",
+    mercury: "Mercury",
+    venus: "Venus",
+    mars: "Mars",
+    jupiter: "Jupiter",
+    saturn: "Saturn",
+    uranus: "Uranus",
+    neptune: "Neptune",
+    pluto: "Pluto",
+    asc: "Ascendant",
+    mc: "Midheaven",
+  },
+  es: {
+    sun: "Sol",
+    moon: "Luna",
+    mercury: "Mercurio",
+    venus: "Venus",
+    mars: "Marte",
+    jupiter: "Jupiter",
+    saturn: "Saturno",
+    uranus: "Urano",
+    neptune: "Neptuno",
+    pluto: "Pluton",
+    asc: "Ascendente",
+    mc: "Medio Cielo",
+  },
+}
+const PLANET_KEY_BY_LABEL: Record<string, string> = {
+  sun: "sun",
+  sol: "sun",
+  moon: "moon",
+  luna: "moon",
+  mercury: "mercury",
+  mercurio: "mercury",
+  venus: "venus",
+  mars: "mars",
+  marte: "mars",
+  jupiter: "jupiter",
+  saturn: "saturn",
+  saturno: "saturn",
+  uranus: "uranus",
+  urano: "uranus",
+  neptune: "neptune",
+  neptuno: "neptune",
+  pluto: "pluto",
+  pluton: "pluto",
+  asc: "asc",
+  ascendant: "asc",
+  ascendente: "asc",
+  mc: "mc",
+  midheaven: "mc",
+  mediocielo: "mc",
+  "medio cielo": "mc",
+}
+const SIGN_LABEL_BY_KEY_BY_LANGUAGE: Record<Language, Record<string, string>> = {
+  en: {
+    aries: "Aries",
+    taurus: "Taurus",
+    gemini: "Gemini",
+    cancer: "Cancer",
+    leo: "Leo",
+    virgo: "Virgo",
+    libra: "Libra",
+    scorpio: "Scorpio",
+    sagittarius: "Sagittarius",
+    capricorn: "Capricorn",
+    aquarius: "Aquarius",
+    pisces: "Pisces",
+  },
+  es: {
+    aries: "Aries",
+    taurus: "Tauro",
+    gemini: "Geminis",
+    cancer: "Cancer",
+    leo: "Leo",
+    virgo: "Virgo",
+    libra: "Libra",
+    scorpio: "Escorpio",
+    sagittarius: "Sagitario",
+    capricorn: "Capricornio",
+    aquarius: "Acuario",
+    pisces: "Piscis",
+  },
+}
 
 const EARTH_CENTER_X = 200
 const EARTH_CENTER_Y = 200
@@ -207,29 +335,63 @@ const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
 const LOADING_SUBTITLE_STEP_MS = 25000
 const MONOTYPE_FONT_STACK = '"Roboto Mono", "Courier New", Courier, monospace'
-const LOADING_INTRO_PARAGRAPHS = [
-  "ASTRO.LOG.IO is a unique immersive audio experience inspired by the Harmony of the Spheres, from ancient cosmology to Kepler’s celestial music, transforming astrological data into sound. Use headphones and explore different dates and places, including the here and now.",
-]
-const INFO_PARAGRAPHS = [
-  "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler’s vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
-  "CHORD MODE: the chart is heard as a dense, simultaneous harmonic field.\nCHART MODE: the experience becomes a sequential astrological reading, planet by planet.\nORBITAL MODE: listening follows a circular path that moves around the planets in continuous rotation.",
-  "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that celestial body. Its spatial placement and tuning emerge from astrological chart coordinates, and interplanetary relationships are organized through astrological criteria.",
-  "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now.\nFor a fully immersive experience, we recommend using headphones.\nEnjoy the spatial energies that surround us all.",
-]
-const NAV_MODE_INSTRUCTION_BY_MODE: Record<NavigationMode, string> = {
-  astral_chord: "Astral Chord: dense, simultaneous harmonic field.",
-  radial: "Orbital: continuous circular listening around the planets.",
-  sequential: "Chart: sequential astrological reading, planet by planet.",
+const LOADING_INTRO_PARAGRAPHS_BY_LANGUAGE: Record<Language, string[]> = {
+  en: [
+    "ASTRO.LOG.IO is a unique immersive audio experience inspired by the Harmony of the Spheres, from ancient cosmology to Kepler’s celestial music, transforming astrological data into sound. Use headphones and explore different dates and places, including the here and now.",
+  ],
+  es: [
+    "ASTRO.LOG.IO es una experiencia inmersiva de audio unica inspirada en la Armonia de las Esferas, desde la cosmologia antigua hasta la musica celestial de Kepler, transformando datos astrologicos en sonido. Usa auriculares y explora diferentes fechas y lugares, incluyendo el aqui y ahora.",
+  ],
+}
+const INFO_PARAGRAPHS_BY_LANGUAGE: Record<Language, string[]> = {
+  en: [
+    "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler’s vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
+    "CHORD MODE: the chart is heard as a dense, simultaneous harmonic field.\nCHART MODE: the experience becomes a sequential astrological reading, planet by planet.\nORBITAL MODE: listening follows a circular path that moves around the planets in continuous rotation.",
+    "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that celestial body. Its spatial placement and tuning emerge from astrological chart coordinates, and interplanetary relationships are organized through astrological criteria.",
+    "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now.\nFor a fully immersive experience, we recommend using headphones.\nEnjoy the spatial energies that surround us all.",
+  ],
+  es: [
+    "ASTRO.LOG.IO se inspira en la idea historica de la Armonia de las Esferas, desde la cosmologia antigua hasta la vision de Kepler sobre la musica celeste. Traduce una carta astrologica astronomicamente precisa en un sistema sonoro vivo e inmersivo donde el movimiento planetario se vuelve forma audible.",
+    "MODO CHORD: la carta se escucha como un campo armonico denso y simultaneo.\nMODO CHART: la experiencia se vuelve una lectura astrologica secuencial, planeta por planeta.\nMODO ORBITAL: la escucha sigue una orbita circular que recorre los planetas en rotacion continua.",
+    "Cada timbre planetario fue elegido cuidadosamente para expresar el caracter distintivo asociado tradicionalmente a cada cuerpo celeste. Su ubicacion espacial y afinacion surgen de las coordenadas de la carta y de relaciones interplanetarias organizadas con criterio astrologico.",
+    "Todos los archivos de audio renderizados pueden descargarse y distribuirse libremente, asi que puedes experimentar con diferentes fechas y combinaciones, incluyendo el aqui y ahora.\nPara una experiencia totalmente inmersiva recomendamos usar auriculares.\nDisfruta las energias espaciales que nos rodean.",
+  ],
+}
+const NAV_MODE_INSTRUCTION_BY_MODE_BY_LANGUAGE: Record<Language, Record<NavigationMode, string>> = {
+  en: {
+    astral_chord: "Astral Chord: dense, simultaneous harmonic field.",
+    radial: "Orbital: continuous circular listening around the planets.",
+    sequential: "Chart: sequential astrological reading, planet by planet.",
+  },
+  es: {
+    astral_chord: "Acorde Astral: campo armonico denso y simultaneo.",
+    radial: "Orbital: escucha circular continua alrededor de los planetas.",
+    sequential: "Carta: lectura astrologica secuencial, planeta por planeta.",
+  },
 }
 
-function renderLoadingParagraph(index: number) {
-  const paragraph = LOADING_INTRO_PARAGRAPHS[index] ?? ""
-  return <>{paragraph}</>
-}
-
-function renderInfoParagraph(index: number) {
-  const paragraph = INFO_PARAGRAPHS[index] ?? ""
+function renderInfoParagraph(language: Language, infoParagraphs: string[], index: number) {
+  const paragraph = infoParagraphs[index] ?? ""
   if (index !== 1) return <>{paragraph}</>
+
+  if (language === "es") {
+    return (
+      <>
+        <span className="block">
+          <span className="font-bold uppercase">MODO CHORD</span>: la carta se escucha como un campo armonico denso y
+          simultaneo.
+        </span>
+        <span className="block">
+          <span className="font-bold uppercase">MODO CHART</span>: la experiencia se vuelve una lectura astrologica secuencial,
+          planeta por planeta.
+        </span>
+        <span className="block">
+          <span className="font-bold uppercase">MODO ORBITAL</span>: la escucha sigue una orbita circular que recorre los
+          planetas en rotacion continua.
+        </span>
+      </>
+    )
+  }
 
   return (
     <>
@@ -256,12 +418,21 @@ const ASPECT_SYMBOL_BY_KEY: Record<MajorAspectKey, string> = {
   sextile: "⚹",
 }
 
-const ASPECT_LABEL_BY_KEY_EN: Record<MajorAspectKey, string> = {
-  conjunction: "Conjunction",
-  opposition: "Opposition",
-  trine: "Trine",
-  square: "Square",
-  sextile: "Sextile",
+const ASPECT_LABEL_BY_KEY_BY_LANGUAGE: Record<Language, Record<MajorAspectKey, string>> = {
+  en: {
+    conjunction: "Conjunction",
+    opposition: "Opposition",
+    trine: "Trine",
+    square: "Square",
+    sextile: "Sextile",
+  },
+  es: {
+    conjunction: "Conjuncion",
+    opposition: "Oposicion",
+    trine: "Trigono",
+    square: "Cuadratura",
+    sextile: "Sextil",
+  },
 }
 
 function normalizeCompareText(value: string): string {
@@ -287,9 +458,9 @@ function isMajorAspectType(aspectType: string): boolean {
   return getMajorAspectKey(aspectType) !== null
 }
 
-function getMajorAspectLabel(aspectType: string): string {
+function getMajorAspectLabel(aspectType: string, language: Language): string {
   const key = getMajorAspectKey(aspectType)
-  return key ? ASPECT_LABEL_BY_KEY_EN[key] : aspectType
+  return key ? ASPECT_LABEL_BY_KEY_BY_LANGUAGE[language][key] : aspectType
 }
 
 function getMajorAspectSymbol(aspectType: string): string {
@@ -339,38 +510,75 @@ function titleCaseLocationToken(value: string): string {
     .replace(/\b([a-z])/g, (match) => match.toUpperCase())
 }
 
-function getCountryFromLocale(): string | null {
+function getCountryFromLocale(preferredLanguage: Language = "en"): string | null {
   if (typeof navigator === "undefined") return null
   const language = (navigator.language || "").replace("_", "-")
   const region = language.split("-")[1]?.toUpperCase()
   if (!region) return null
-  const countryByRegion: Record<string, string> = {
-    AR: "Argentina",
-    UY: "Uruguay",
-    PY: "Paraguay",
-    BO: "Bolivia",
-    BR: "Brazil",
-    CL: "Chile",
-    PE: "Peru",
-    EC: "Ecuador",
-    CO: "Colombia",
-    VE: "Venezuela",
-    MX: "Mexico",
-    US: "United States",
-    CA: "Canada",
-    ES: "Spain",
-    PT: "Portugal",
-    FR: "France",
-    DE: "Germany",
-    IT: "Italy",
-    GB: "United Kingdom",
-    AU: "Australia",
-    NZ: "New Zealand",
+
+  const locale = preferredLanguage === "es" ? "es-ES" : "en-GB"
+  try {
+    if (typeof Intl !== "undefined" && typeof (Intl as any).DisplayNames === "function") {
+      const displayNames = new Intl.DisplayNames([locale], { type: "region" })
+      const localizedName = displayNames.of(region)
+      if (localizedName) return localizedName
+    }
+  } catch {
+    // Fall through to manual map.
   }
-  return countryByRegion[region] || null
+
+  const fallbackCountryByRegionByLanguage: Record<Language, Record<string, string>> = {
+    en: {
+      AR: "Argentina",
+      UY: "Uruguay",
+      PY: "Paraguay",
+      BO: "Bolivia",
+      BR: "Brazil",
+      CL: "Chile",
+      PE: "Peru",
+      EC: "Ecuador",
+      CO: "Colombia",
+      VE: "Venezuela",
+      MX: "Mexico",
+      US: "United States",
+      CA: "Canada",
+      ES: "Spain",
+      PT: "Portugal",
+      FR: "France",
+      DE: "Germany",
+      IT: "Italy",
+      GB: "United Kingdom",
+      AU: "Australia",
+      NZ: "New Zealand",
+    },
+    es: {
+      AR: "Argentina",
+      UY: "Uruguay",
+      PY: "Paraguay",
+      BO: "Bolivia",
+      BR: "Brasil",
+      CL: "Chile",
+      PE: "Peru",
+      EC: "Ecuador",
+      CO: "Colombia",
+      VE: "Venezuela",
+      MX: "Mexico",
+      US: "Estados Unidos",
+      CA: "Canada",
+      ES: "Espana",
+      PT: "Portugal",
+      FR: "Francia",
+      DE: "Alemania",
+      IT: "Italia",
+      GB: "Reino Unido",
+      AU: "Australia",
+      NZ: "Nueva Zelanda",
+    },
+  }
+  return fallbackCountryByRegionByLanguage[preferredLanguage][region] || null
 }
 
-function buildLocationFromTimeZone(): string | null {
+function buildLocationFromTimeZone(preferredLanguage: Language = "en"): string | null {
   if (typeof Intl === "undefined") return null
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""
   const segments = timeZone.split("/").filter(Boolean)
@@ -382,7 +590,7 @@ function buildLocationFromTimeZone(): string | null {
   if (segments.length >= 3) {
     country = titleCaseLocationToken(segments[segments.length - 2])
   } else {
-    country = getCountryFromLocale()
+    country = getCountryFromLocale(preferredLanguage)
   }
 
   if (!city) return country
@@ -394,6 +602,17 @@ function normalizeSignLabel(label: string): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+}
+
+function getLocalizedPlanetLabel(planetNameOrLabel: string, language: Language): string {
+  const normalized = normalizeCompareText(planetNameOrLabel)
+  const planetKey = PLANET_KEY_BY_LABEL[normalized] || normalized
+  return PLANET_LABEL_BY_KEY_BY_LANGUAGE[language][planetKey] || planetNameOrLabel
+}
+
+function getLocalizedSignLabel(signLabel: string, language: Language): string {
+  const signKey = ZODIAC_SIGN_KEY_BY_LABEL[normalizeSignLabel(signLabel)] || normalizeSignLabel(signLabel)
+  return SIGN_LABEL_BY_KEY_BY_LANGUAGE[language][signKey] || signLabel
 }
 
 function getGlyphGlowTiming(glyphName: string) {
@@ -596,6 +815,7 @@ export default function AstrologyCalculator() {
   const [modalEnabled, setModalEnabled] = useState(true)
   const [audioEngineMode, setAudioEngineMode] = useState<AudioEngineMode>("samples")
   const [interfaceTheme, setInterfaceTheme] = useState<InterfaceTheme>("white")
+  const [language, setLanguage] = useState<Language>("en")
   const [synthVolume, setSynthVolume] = useState(450)
 
   const [glyphAnimationManager] = useState(() => new GlyphAnimationManager())
@@ -636,6 +856,189 @@ export default function AstrologyCalculator() {
   const [isResolvingLocation, setIsResolvingLocation] = useState(false)
   const chartAspectsKeyRef = useRef("__chart__")
   const subjectHoverTouchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loadingIntroParagraphs = useMemo(() => LOADING_INTRO_PARAGRAPHS_BY_LANGUAGE[language], [language])
+  const infoParagraphs = useMemo(() => INFO_PARAGRAPHS_BY_LANGUAGE[language], [language])
+  const navModeHintLabel = useMemo(() => NAV_MODE_HINT_LABEL_BY_LANGUAGE[language], [language])
+  const navModeInstructionByMode = useMemo(() => NAV_MODE_INSTRUCTION_BY_MODE_BY_LANGUAGE[language], [language])
+  const downloadTooltipText = useMemo(() => DOWNLOAD_TOOLTIP_TEXT_BY_LANGUAGE[language], [language])
+  const engineOptions = useMemo(() => ENGINE_OPTIONS_BY_LANGUAGE[language], [language])
+  const interfaceThemeOptions = useMemo(() => INTERFACE_THEME_OPTIONS_BY_LANGUAGE[language], [language])
+  const localeCode = language === "es" ? "es-ES" : "en-US"
+  const ui = useMemo(
+    () =>
+      language === "es"
+        ? {
+            menu: "Menu",
+            advanced: "Avanzado",
+            on: "ACTIVO",
+            off: "INACTIVO",
+            subject: "Sujeto",
+            signs: "Signos",
+            houses: "Casas",
+            reset: "Reset",
+            info: "Info",
+            engine: "Motor",
+            interface: "Interfaz",
+            minimal: "Minimo",
+            planets: "Planetas",
+            aspects: "Aspectos",
+            dynAspects: "Aspectos Dinamicos",
+            chart: "Carta",
+            matrix: "Matriz",
+            circle: "Circulo",
+            signsRing: "Anillo de Signos",
+            housesRing: "Anillo de Casas",
+            degrees: "Grados",
+            astroChart: "AstroCarta",
+            pointerInfo: "Info del Puntero",
+            aspectBox: "Caja de Aspectos",
+            modeInfo: "Info de Modo",
+            navigation: "Navegacion",
+            loop: "Vuelta",
+            audioEnvelope: "Envolvente de Audio",
+            mode: "Modo",
+            fadeIn: "Fade In",
+            fadeOut: "Fade Out",
+            bgVol: "Vol Fondo",
+            element: "Elemento",
+            aspectVol: "Vol Aspectos",
+            masterVol: "Vol Master",
+            reverb: "Reverb",
+            chordReverb: "RVB Acorde",
+            synthVol: "Vol Sint",
+            tuning: "Afinacion",
+            dynamicAspects: "Aspectos Dinamicos",
+            sustain: "Sustain",
+            vu: "VU",
+            vuMeter: "Medidor VU",
+            pre: "Pre",
+            post: "Post",
+            comp: "Comp",
+            modeLabel: "Modo",
+            modeOff: "APAGADO",
+            manual: "MANUAL",
+            hereNow: "AQUI Y AHORA",
+            dateTime: "Fecha y Hora",
+            location: "Ubicacion",
+            latitude: "Latitud",
+            longitude: "Longitud",
+            cityCountryPlaceholder: "Ciudad, Pais",
+            resolvingLocation: "Resolviendo ubicacion...",
+            send: "ENVIAR",
+            astrologicalData: "Datos Astrologicos",
+            astrologicalAspects: "Aspectos Astrologicos",
+            majorAspects: "Conjuncion, Oposicion, Trigono, Cuadratura, Sextil",
+            total: "Total",
+            planet1: "Planeta 1",
+            planet2: "Planeta 2",
+            aspect: "Aspecto",
+            angle: "Angulo (°)",
+            orb: "Orb (°)",
+            glyph: "Glifo",
+            ecliptic: "Ecliptica (°)",
+            sign: "Signo",
+            house: "Casa",
+            position: "Posicion",
+            horizon: "Horizonte (°)",
+            retrograde: "Retrogrado",
+            aspectsOf: "Aspectos de",
+            renderMp3: "RENDER MP3...",
+            saveMp3: "GUARDAR MP3",
+            close: "CERRAR",
+            noDate: "Sin Fecha",
+            noTime: "Sin Hora",
+            noCity: "Sin Ciudad",
+            noCountry: "Sin Pais",
+            play: "Reproducir",
+            stop: "Detener",
+          }
+        : {
+            menu: "Menu",
+            advanced: "Advanced",
+            on: "ON",
+            off: "OFF",
+            subject: "Subject",
+            signs: "Signs",
+            houses: "Houses",
+            reset: "Reset",
+            info: "Info",
+            engine: "Engine",
+            interface: "Interface",
+            minimal: "Minimal",
+            planets: "Planets",
+            aspects: "Aspects",
+            dynAspects: "DynAspects",
+            chart: "Chart",
+            matrix: "Matrix",
+            circle: "Circle",
+            signsRing: "Signs Ring",
+            housesRing: "Houses Ring",
+            degrees: "Degrees",
+            astroChart: "AstroChart",
+            pointerInfo: "Pointer Info",
+            aspectBox: "Aspect Box",
+            modeInfo: "Mode Info",
+            navigation: "Navigation",
+            loop: "Loop",
+            audioEnvelope: "Audio Envelope",
+            mode: "Mode",
+            fadeIn: "Fade In",
+            fadeOut: "Fade Out",
+            bgVol: "BG Vol",
+            element: "Element",
+            aspectVol: "Aspect Vol",
+            masterVol: "Master Vol",
+            reverb: "Reverb",
+            chordReverb: "Chord RVB",
+            synthVol: "Synth Vol",
+            tuning: "Tuning",
+            dynamicAspects: "Dynamic Aspects",
+            sustain: "Sustain",
+            vu: "VU",
+            vuMeter: "VU Meter",
+            pre: "Pre",
+            post: "Post",
+            comp: "Comp",
+            modeLabel: "Mode",
+            modeOff: "OFF",
+            manual: "MANUAL",
+            hereNow: "HERE & NOW",
+            dateTime: "Date & Time",
+            location: "Location",
+            latitude: "Latitude",
+            longitude: "Longitude",
+            cityCountryPlaceholder: "City, Country",
+            resolvingLocation: "Resolving location...",
+            send: "SEND",
+            astrologicalData: "Astrological Data",
+            astrologicalAspects: "Astrological Aspects",
+            majorAspects: "Conjunction, Opposition, Trine, Square, Sextile",
+            total: "Total",
+            planet1: "Planet 1",
+            planet2: "Planet 2",
+            aspect: "Aspect",
+            angle: "Angle (°)",
+            orb: "Orb (°)",
+            glyph: "Glyph",
+            ecliptic: "Ecliptic (°)",
+            sign: "Sign",
+            house: "House",
+            position: "Position",
+            horizon: "Horizon (°)",
+            retrograde: "Retrograde",
+            aspectsOf: "Aspects of",
+            renderMp3: "RENDER MP3...",
+            saveMp3: "SAVE MP3",
+            close: "CLOSE",
+            noDate: "No Date",
+            noTime: "No Time",
+            noCity: "No City",
+            noCountry: "No Country",
+            play: "Play",
+            stop: "Stop",
+          },
+    [language],
+  )
 
   const modalSunSignIndex = useMemo(() => {
     const sunDegrees = horoscopeData?.planets?.find((p) => p.name === "sun")?.ChartPosition?.Ecliptic?.DecimalDegrees
@@ -644,7 +1047,11 @@ export default function AstrologyCalculator() {
   }, [horoscopeData?.planets])
 
   const currentModeLabel =
-    modalSunSignIndex !== null ? MODE_NAME_BY_SIGN_INDEX[modalSunSignIndex] || "Modal" : "Modal"
+    modalSunSignIndex !== null
+      ? MODE_NAME_BY_SIGN_INDEX_BY_LANGUAGE[language][modalSunSignIndex] || (language === "es" ? "Modal" : "Modal")
+      : language === "es"
+        ? "Modal"
+        : "Modal"
   const subjectLocationLines = useMemo(() => {
     const sanitized = sanitizeLocationLabel(formData.location)
     const parts = sanitized
@@ -652,10 +1059,10 @@ export default function AstrologyCalculator() {
       .map((part) => part.trim())
       .filter(Boolean)
     return {
-      city: parts[0] || "No City",
-      country: parts.length > 1 ? parts[parts.length - 1] : "No Country",
+      city: parts[0] || ui.noCity,
+      country: parts.length > 1 ? parts[parts.length - 1] : ui.noCountry,
     }
-  }, [formData.location])
+  }, [formData.location, ui.noCity, ui.noCountry])
 
   const effectiveMasterVolume = navigationMode === "astral_chord" ? masterVolume * 0.6 : masterVolume
   const themePulseEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
@@ -706,7 +1113,7 @@ export default function AstrologyCalculator() {
     void prepareOrbitalStarBackground(sunSignIndex, { modalEnabled, force: true })
   }, [horoscopeData, modalEnabled, prepareOrbitalStarBackground])
   const lastPlayedPlanetRef = useRef<string | null>(null)
-  const totalLoadingIntroDurationMs = LOADING_INTRO_PARAGRAPHS.length * LOADING_SUBTITLE_STEP_MS
+  const totalLoadingIntroDurationMs = loadingIntroParagraphs.length * LOADING_SUBTITLE_STEP_MS
   const showLoadingIntroScreen = loadingProgress < 100 || !loadingIntroCompleted
   const interfaceThemeFilter = useMemo(() => {
     if (interfaceTheme === "neon_blue") {
@@ -731,7 +1138,7 @@ export default function AstrologyCalculator() {
   }, [])
 
   const advanceLoadingIntroParagraph = useCallback(() => {
-    const lastParagraphIndex = LOADING_INTRO_PARAGRAPHS.length - 1
+    const lastParagraphIndex = loadingIntroParagraphs.length - 1
     if (loadingIntroIndexRef.current >= lastParagraphIndex) {
       loadingIntroElapsedBeforeCurrentMsRef.current = totalLoadingIntroDurationMs
       loadingIntroParagraphStartTimeRef.current = performance.now()
@@ -778,17 +1185,17 @@ export default function AstrologyCalculator() {
   const advanceInfoParagraph = useCallback(() => {
     setInfoParagraphIndex((prev) => {
       const next = prev + 1
-      if (next >= INFO_PARAGRAPHS.length) {
+      if (next >= infoParagraphs.length) {
         setShowInfoOverlay(false)
         return 0
       }
       return next
     })
-  }, [])
+  }, [infoParagraphs.length])
 
   const retreatInfoParagraph = useCallback(() => {
-    setInfoParagraphIndex((prev) => (prev - 1 + INFO_PARAGRAPHS.length) % INFO_PARAGRAPHS.length)
-  }, [])
+    setInfoParagraphIndex((prev) => (prev - 1 + infoParagraphs.length) % infoParagraphs.length)
+  }, [infoParagraphs.length])
 
   useEffect(() => {
     if (!showLoadingIntroScreen) return
@@ -887,6 +1294,22 @@ export default function AstrologyCalculator() {
     window.addEventListener("keydown", handleGlobalKeyDown)
     return () => window.removeEventListener("keydown", handleGlobalKeyDown)
   }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const savedLanguage = window.localStorage.getItem("astro.log.io.language")
+    if (savedLanguage === "en" || savedLanguage === "es") {
+      setLanguage(savedLanguage)
+      return
+    }
+    const browserLanguage = window.navigator.language?.toLowerCase() || "en"
+    setLanguage(browserLanguage.startsWith("es") ? "es" : "en")
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.setItem("astro.log.io.language", language)
+  }, [language])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -1035,7 +1458,8 @@ export default function AstrologyCalculator() {
     const trimmed = query.trim()
     if (!trimmed) return []
 
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=${count}&language=en&format=json`
+    const geocodeLanguage = language === "es" ? "es" : "en"
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=${count}&language=${geocodeLanguage}&format=json`
     const response = await fetch(url)
     if (!response.ok) return []
 
@@ -1048,10 +1472,10 @@ export default function AstrologyCalculator() {
         country: item.country,
         admin1: item.admin1,
         latitude: item.latitude,
-        longitude: item.longitude,
-        display: formatSuggestion(item.name, item.admin1, item.country),
+          longitude: item.longitude,
+          display: formatSuggestion(item.name, item.admin1, item.country),
       }))
-  }, [])
+  }, [language])
 
   const resolveLocationAndUpdateCoords = useCallback(
     async (rawLocation: string) => {
@@ -1094,7 +1518,8 @@ export default function AstrologyCalculator() {
 
   const reverseGeocodeLocation = useCallback(async (latitude: number, longitude: number): Promise<string | null> => {
     try {
-      const fallbackUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&localityLanguage=en`
+      const geocodeLanguage = language === "es" ? "es" : "en"
+      const fallbackUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&localityLanguage=${geocodeLanguage}`
       const fallbackResponse = await fetch(fallbackUrl)
       if (fallbackResponse.ok) {
         const fallbackPayload = await fallbackResponse.json()
@@ -1116,7 +1541,8 @@ export default function AstrologyCalculator() {
     }
 
     try {
-      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=en&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`
+      const geocodeLanguage = language === "es" ? "es" : "en"
+      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=${geocodeLanguage}&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`
       const nominatimResponse = await fetch(nominatimUrl)
       if (!nominatimResponse.ok) return null
       const nominatimPayload = await nominatimResponse.json()
@@ -1143,7 +1569,7 @@ export default function AstrologyCalculator() {
     } catch {
       return null
     }
-  }, [])
+  }, [language])
 
   const getCurrentPosition = useCallback(() => {
     return new Promise<GeolocationPosition>((resolve, reject) => {
@@ -2194,7 +2620,7 @@ export default function AstrologyCalculator() {
       if (!horoscopeData || isExportingMp3) return
       const plan = buildOfflineMp3Plan(mode)
       if (!plan || plan.events.length === 0) {
-        setError("Could not build the MP3 export plan.")
+        setError(language === "es" ? "No se pudo crear el plan de exportacion MP3." : "Could not build the MP3 export plan.")
         return
       }
 
@@ -2219,7 +2645,7 @@ export default function AstrologyCalculator() {
           try {
             fileHandle = await showSaveFilePicker({
               suggestedName: fileName,
-              types: [{ description: "MP3 Audio", accept: { "audio/mpeg": [".mp3"] } }],
+              types: [{ description: language === "es" ? "Audio MP3" : "MP3 Audio", accept: { "audio/mpeg": [".mp3"] } }],
             })
           } catch (pickerError: any) {
             if (pickerError?.name === "AbortError") {
@@ -2246,13 +2672,13 @@ export default function AstrologyCalculator() {
           reverbMixPercent: mode === "astral_chord" ? chordReverbMixPercent : reverbMixPercent,
         })
         if (!mp3Blob) {
-          setError("Could not render the MP3 file.")
+          setError(language === "es" ? "No se pudo renderizar el archivo MP3." : "Could not render the MP3 file.")
           setIsExportingMp3(false)
           setPendingMp3Download(null)
           return
         }
         if (mp3Blob.size === 0) {
-          setError("Empty MP3: audio render produced no data.")
+          setError(language === "es" ? "MP3 vacio: el render de audio no produjo datos." : "Empty MP3: audio render produced no data.")
           setIsExportingMp3(false)
           setPendingMp3Download(null)
           return
@@ -2286,14 +2712,18 @@ export default function AstrologyCalculator() {
           document.body.appendChild(anchor)
           anchor.click()
           document.body.removeChild(anchor)
-          setError("If browser auto-download is blocked, press SAVE MP3.")
+          setError(
+            language === "es"
+              ? "Si la descarga automatica del navegador esta bloqueada, presiona GUARDAR MP3."
+              : "If browser auto-download is blocked, press SAVE MP3.",
+          )
         } else {
           setError("")
         }
         setNavigationMode(mode)
       } catch (error) {
         console.error("[v0] Offline MP3 export error:", error)
-        setError("MP3 export failed.")
+        setError(language === "es" ? "Fallo la exportacion MP3." : "MP3 export failed.")
         setPendingMp3Download(null)
       } finally {
         setIsExportingMp3(false)
@@ -2303,6 +2733,7 @@ export default function AstrologyCalculator() {
       backgroundVolume,
       buildSubjectMp3FileName,
       buildOfflineMp3Plan,
+      language,
       horoscopeData,
       isExportingMp3,
       masterVolume,
@@ -2456,7 +2887,11 @@ export default function AstrologyCalculator() {
 
       const isComplete = Object.values(trimmed).every((value) => value !== "")
       if (!isComplete) {
-        setError("Complete all fields, or leave all fields empty to load the 28/09/1977 preset.")
+        setError(
+          language === "es"
+            ? "Completa todos los campos o deja todos vacios para cargar el preset del 28/09/1977."
+            : "Complete all fields, or leave all fields empty to load the 28/09/1977 preset.",
+        )
         return
       }
       payload = trimmed
@@ -2467,7 +2902,11 @@ export default function AstrologyCalculator() {
     const longitude = Number.parseFloat(payload.longitude.replace(",", "."))
 
     if (!birthDate || !birthTime || Number.isNaN(latitude) || Number.isNaN(longitude)) {
-      setError("Invalid format. Check date/time, latitude and longitude.")
+      setError(
+        language === "es"
+          ? "Formato invalido. Revisa fecha/hora, latitud y longitud."
+          : "Invalid format. Check date/time, latitude and longitude.",
+      )
       return
     }
 
@@ -2504,7 +2943,11 @@ export default function AstrologyCalculator() {
       setShowChart(true)
       setShowSubject(false)
     } catch (err) {
-      setError("Could not calculate the astrological chart. Check the entered data.")
+      setError(
+        language === "es"
+          ? "No se pudo calcular la carta astrologica. Revisa los datos ingresados."
+          : "Could not calculate the astrological chart. Check the entered data.",
+      )
       console.error(err)
     } finally {
       setLoading(false)
@@ -2535,9 +2978,13 @@ export default function AstrologyCalculator() {
       const latitude = position.coords.latitude
       const longitude = position.coords.longitude
       const resolvedLocation = await reverseGeocodeLocation(latitude, longitude)
-      const timezoneFallbackLocation = buildLocationFromTimeZone()
+      const timezoneFallbackLocation = buildLocationFromTimeZone(language)
       const locationLabel = sanitizeLocationLabel(
-        resolvedLocation || timezoneFallbackLocation || `Current location ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`,
+        resolvedLocation ||
+          timezoneFallbackLocation ||
+          (language === "es"
+            ? `Ubicacion actual ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`
+            : `Current location ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`),
       )
 
       setFormData({
@@ -2548,7 +2995,11 @@ export default function AstrologyCalculator() {
       })
 
       if (!resolvedLocation) {
-        setError("City lookup was unavailable. A local fallback label was loaded; edit manually if needed.")
+        setError(
+          language === "es"
+            ? "La busqueda de ciudad no estuvo disponible. Se cargo una etiqueta local de respaldo; puedes editarla manualmente."
+            : "City lookup was unavailable. A local fallback label was loaded; edit manually if needed.",
+        )
       }
     } catch (geoError: any) {
       const denied = geoError?.code === 1
@@ -2561,8 +3012,12 @@ export default function AstrologyCalculator() {
       })
       setError(
         denied
-          ? "Geolocation permission was denied. Please enter location manually."
-          : "Geolocation is unavailable. Please enter location manually.",
+          ? language === "es"
+            ? "Se nego el permiso de geolocalizacion. Ingresa la ubicacion manualmente."
+            : "Geolocation permission was denied. Please enter location manually."
+          : language === "es"
+            ? "La geolocalizacion no esta disponible. Ingresa la ubicacion manualmente."
+            : "Geolocation is unavailable. Please enter location manually.",
       )
     }
   }
@@ -2814,7 +3269,7 @@ export default function AstrologyCalculator() {
 
   if (showLoadingIntroScreen) {
     const isFirstIntroParagraph = loadingIntroIndex <= 0
-    const isLastIntroParagraph = loadingIntroIndex >= LOADING_INTRO_PARAGRAPHS.length - 1
+    const isLastIntroParagraph = loadingIntroIndex >= loadingIntroParagraphs.length - 1
 
     return (
       <main
@@ -2827,6 +3282,32 @@ export default function AstrologyCalculator() {
               <h1 className="font-mono text-xl md:text-4xl uppercase tracking-widest text-center">
                 ASTRO.LOG.IO
               </h1>
+              <div className="mt-2 flex items-center justify-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setLanguage("es")}
+                  className={`font-mono text-[11px] md:text-[14px] border px-1.5 py-0.5 transition-colors ${
+                    language === "es"
+                      ? "border-white bg-white/80 text-black"
+                      : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
+                  }`}
+                  aria-label={language === "es" ? "Cambiar a espanol" : "Switch to Spanish"}
+                >
+                  🇪🇸
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage("en")}
+                  className={`font-mono text-[11px] md:text-[14px] border px-1.5 py-0.5 transition-colors ${
+                    language === "en"
+                      ? "border-white bg-white/80 text-black"
+                      : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/80 hover:text-black"
+                  }`}
+                  aria-label={language === "es" ? "Cambiar a ingles" : "Switch to English"}
+                >
+                  🇬🇧
+                </button>
+              </div>
               <div className="mt-2 h-[3px] w-full bg-white/20">
                 <div
                   className="h-full bg-white"
@@ -2853,7 +3334,7 @@ export default function AstrologyCalculator() {
                     whiteSpace: "pre-line",
                   }}
                 >
-                  {renderLoadingParagraph(loadingIntroIndex)}
+                  {loadingIntroParagraphs[loadingIntroIndex] ?? ""}
                 </p>
                 <div className="mt-8 w-full flex items-center justify-between">
                   <button
@@ -2901,8 +3382,10 @@ export default function AstrologyCalculator() {
                 className="fixed top-[52px] right-4 w-[calc(100vw-2rem)] max-w-[430px] mt-0 bg-black border border-white p-3 z-50 max-h-[85vh] overflow-y-auto md:absolute md:top-full md:left-0 md:right-auto md:mt-2 md:w-auto md:max-w-none md:z-10 md:scale-[2.3] md:origin-top-left"
               >
                 <div className="mb-2 flex items-center justify-between font-mono text-[7px] uppercase tracking-wide text-white/80">
-                  <span>Menu</span>
-                  <span>Advanced {advancedMenuEnabled ? "ON" : "OFF"} [O]</span>
+                  <span>{ui.menu}</span>
+                  <span>
+                    {ui.advanced} {advancedMenuEnabled ? ui.on : ui.off} [O]
+                  </span>
                 </div>
 
                 <div className={advancedMenuEnabled ? "hidden" : "space-y-2"}>
@@ -2920,7 +3403,7 @@ export default function AstrologyCalculator() {
                         }}
                         className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                       />
-                      Subject
+                      {ui.subject}
                     </label>
                     <label className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-wide cursor-pointer border border-white/60 px-1.5 py-1">
                       <input
@@ -2929,7 +3412,7 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setShowSignsRing(e.target.checked)}
                         className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                       />
-                      Signs
+                      {ui.signs}
                     </label>
                     <label className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-wide cursor-pointer border border-white/60 px-1.5 py-1">
                       <input
@@ -2938,7 +3421,7 @@ export default function AstrologyCalculator() {
                         onChange={(e) => setShowHousesRing(e.target.checked)}
                         className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                       />
-                      Houses
+                      {ui.houses}
                     </label>
                     <label className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-wide cursor-pointer border border-white/60 px-1.5 py-1">
                       <input
@@ -2957,7 +3440,7 @@ export default function AstrologyCalculator() {
                     {NAVIGATION_MODES.map((mode) => (
                       <button
                         key={`minimal-nav-${mode}`}
-                        title={NAV_MODE_INSTRUCTION_BY_MODE[mode]}
+                        title={navModeInstructionByMode[mode]}
                         onClick={() => setNavigationModeFromMenu(mode)}
                         className={`font-mono text-[8px] uppercase tracking-wide border px-1 py-1 transition-colors ${
                           navigationMode === mode
@@ -2965,14 +3448,14 @@ export default function AstrologyCalculator() {
                             : "bg-transparent text-white border-gray-600 hover:border-white"
                         }`}
                       >
-                        {NAV_MODE_HINT_LABEL[mode]}
+                        {navModeHintLabel[mode]}
                       </button>
                     ))}
                     <button
                       onClick={resetToInitialState}
                       className="font-mono text-[8px] uppercase tracking-wide border border-white px-1 py-1 hover:bg-white hover:text-black transition-colors"
                     >
-                      Reset
+                      {ui.reset}
                     </button>
                   </div>
                   <button
@@ -2982,20 +3465,20 @@ export default function AstrologyCalculator() {
                     }}
                     className="mt-1 w-full font-mono text-[8px] uppercase tracking-wide border border-white px-1 py-1 hover:bg-white hover:text-black transition-colors"
                   >
-                    Info
+                    {ui.info}
                   </button>
 
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="flex items-center gap-1">
-                    <label className="font-mono text-[10px] uppercase tracking-wide w-16 flex-shrink-0">Engine</label>
+                    <label className="font-mono text-[10px] uppercase tracking-wide w-16 flex-shrink-0">{ui.engine}</label>
                     <div className="relative flex-1">
                       <select
                         value={audioEngineMode}
                         onChange={(e) => setAudioEngineMode(e.target.value as AudioEngineMode)}
                         className="w-full appearance-none bg-black border border-white text-white text-[10px] px-1.5 pr-6 py-1 font-mono uppercase tracking-wide focus:outline-none focus:border-white"
                       >
-                        {ENGINE_OPTIONS.map((option) => (
+                        {engineOptions.map((option) => (
                           <option key={`minimal-engine-${option.value}`} value={option.value}>
                             {option.label}
                           </option>
@@ -3008,9 +3491,9 @@ export default function AstrologyCalculator() {
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[10px] uppercase tracking-wide">Interface</div>
+                    <div className="font-mono text-[10px] uppercase tracking-wide">{ui.interface}</div>
                     <div className="grid grid-cols-1 gap-1">
-                      {INTERFACE_THEME_OPTIONS.map((option) => (
+                      {interfaceThemeOptions.map((option) => (
                         <button
                           key={`minimal-interface-${option.value}`}
                           onClick={() => setInterfaceTheme(option.value)}
@@ -3042,7 +3525,7 @@ export default function AstrologyCalculator() {
                     }}
                     className="w-full text-left font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400 border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
                   >
-                    Minimal
+                    {ui.minimal}
                   </button>
                   <div className="border-t border-gray-600 my-1"></div>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
@@ -3058,7 +3541,7 @@ export default function AstrologyCalculator() {
                       }}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Subject
+                    {ui.subject}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3067,7 +3550,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowPlanets(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Planets
+                    {ui.planets}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3076,7 +3559,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowAspects(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Aspects
+                    {ui.aspects}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3088,7 +3571,7 @@ export default function AstrologyCalculator() {
                       }}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    DynAspects
+                    {ui.dynAspects}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3097,7 +3580,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowChart(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Chart
+                    {ui.chart}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3106,7 +3589,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowMatrix(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Matrix
+                    {ui.matrix}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3115,7 +3598,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowCircle(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Circle
+                    {ui.circle}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3124,7 +3607,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowSignsRing(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Signs Ring
+                    {ui.signsRing}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3133,7 +3616,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowHousesRing(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Houses Ring
+                    {ui.housesRing}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3142,7 +3625,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowDegrees(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Degrees
+                    {ui.degrees}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3160,7 +3643,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowAstroChart(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    AstroChart
+                    {ui.astroChart}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3169,7 +3652,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowPointerInfo(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Pointer Info
+                    {ui.pointerInfo}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[8.4px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3178,7 +3661,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowAspectIndicator(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Aspect Box
+                    {ui.aspectBox}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[8.4px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3187,7 +3670,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setModalEnabled(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Modal
+                    {ui.mode}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[8.4px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3196,7 +3679,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowVuMeter(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    VU
+                    {ui.vu}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[8.4px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3205,15 +3688,15 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowModeInfo(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Mode Info
+                    {ui.modeInfo}
                   </label>
 
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[8.4px] uppercase tracking-wide">Interface</div>
+                    <div className="font-mono text-[8.4px] uppercase tracking-wide">{ui.interface}</div>
                     <div className="grid grid-cols-1 gap-1">
-                      {INTERFACE_THEME_OPTIONS.map((option) => (
+                      {interfaceThemeOptions.map((option) => (
                         <button
                           key={`advanced-interface-${option.value}`}
                           onClick={() => setInterfaceTheme(option.value)}
@@ -3232,12 +3715,12 @@ export default function AstrologyCalculator() {
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[7.5px] uppercase tracking-wide">Navigation</div>
+                    <div className="font-mono text-[7.5px] uppercase tracking-wide">{ui.navigation}</div>
                     <div className="grid grid-cols-2 gap-1">
                       {NAVIGATION_MODES.map((mode) => (
                         <button
                           key={mode}
-                          title={NAV_MODE_INSTRUCTION_BY_MODE[mode]}
+                          title={navModeInstructionByMode[mode]}
                           onClick={() => setNavigationModeFromMenu(mode)}
                           className={`font-mono text-[7px] uppercase tracking-wide border px-1 py-0.5 transition-colors ${
                             navigationMode === mode
@@ -3245,7 +3728,7 @@ export default function AstrologyCalculator() {
                               : "bg-transparent text-white border-gray-600 hover:border-white"
                           }`}
                         >
-                          {NAV_MODE_HINT_LABEL[mode]}
+                          {navModeHintLabel[mode]}
                         </button>
                       ))}
                     </div>
@@ -3253,7 +3736,7 @@ export default function AstrologyCalculator() {
                       onClick={resetToInitialState}
                       className="w-full font-mono text-[7px] uppercase tracking-wide border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
                     >
-                      Reset
+                      {ui.reset}
                     </button>
                     <button
                       onClick={() => {
@@ -3262,7 +3745,7 @@ export default function AstrologyCalculator() {
                       }}
                       className="w-full font-mono text-[7px] uppercase tracking-wide border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
                     >
-                      Info
+                      {ui.info}
                     </button>
                   </div>
 
@@ -3270,7 +3753,7 @@ export default function AstrologyCalculator() {
 
                   {/* LOOP Duration Control */}
                   <div className="flex items-center gap-1 py-1 px-2">
-                    <div className="font-mono text-[7.5px] uppercase tracking-wide whitespace-nowrap">Loop</div>
+                    <div className="font-mono text-[7.5px] uppercase tracking-wide whitespace-nowrap">{ui.loop}</div>
                     <button
                       onClick={() => setLoopDuration(Math.max(60, loopDuration - 5))}
                       className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 text-[6.5px]"
@@ -3289,17 +3772,17 @@ export default function AstrologyCalculator() {
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[7.5px] uppercase tracking-wide">Audio Envelope</div>
+                    <div className="font-mono text-[7.5px] uppercase tracking-wide">{ui.audioEnvelope}</div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[9px] uppercase tracking-wide w-16 flex-shrink-0">Engine</label>
+                      <label className="font-mono text-[9px] uppercase tracking-wide w-16 flex-shrink-0">{ui.engine}</label>
                       <div className="relative w-36">
                         <select
                           value={audioEngineMode}
                           onChange={(e) => setAudioEngineMode(e.target.value as AudioEngineMode)}
                           className="w-full appearance-none bg-black border border-white text-white text-[9px] px-1.5 pr-6 py-1 font-mono uppercase tracking-wide focus:outline-none focus:border-white"
                         >
-                          {ENGINE_OPTIONS.map((option) => (
+                          {engineOptions.map((option) => (
                             <option key={`advanced-engine-${option.value}`} value={option.value}>
                               {option.label}
                             </option>
@@ -3307,11 +3790,11 @@ export default function AstrologyCalculator() {
                         </select>
                         <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/80 text-[8px]">▾</span>
                       </div>
-                      <span className="font-mono text-[8px] w-8 text-right uppercase">Mode</span>
+                      <span className="font-mono text-[8px] w-8 text-right uppercase">{ui.mode}</span>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">Fade In</label>
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">{ui.fadeIn}</label>
                       <input
                         type="range"
                         min="0"
@@ -3325,7 +3808,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Fade Out
+                        {ui.fadeOut}
                       </label>
                       <input
                         type="range"
@@ -3339,7 +3822,7 @@ export default function AstrologyCalculator() {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">BG Vol</label>
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">{ui.bgVol}</label>
                       <input
                         type="range"
                         min="0"
@@ -3353,7 +3836,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Element
+                        {ui.element}
                       </label>
                       <input
                         type="range"
@@ -3368,7 +3851,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Aspect Vol
+                        {ui.aspectVol}
                       </label>
                       <input
                         type="range"
@@ -3384,7 +3867,7 @@ export default function AstrologyCalculator() {
                     {/* MASTER VOLUME CONTROL */}
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Master Vol
+                        {ui.masterVol}
                       </label>
                       <input
                         type="range"
@@ -3399,7 +3882,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Reverb
+                        {ui.reverb}
                       </label>
                       <input
                         type="range"
@@ -3414,7 +3897,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Chord RVB
+                        {ui.chordReverb}
                       </label>
                       <input
                         type="range"
@@ -3429,7 +3912,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Synth Vol
+                        {ui.synthVol}
                       </label>
                       <input
                         type="range"
@@ -3444,7 +3927,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Tuning
+                        {ui.tuning}
                       </label>
                       <input
                         type="range"
@@ -3464,10 +3947,10 @@ export default function AstrologyCalculator() {
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[7.5px] uppercase tracking-wide">Dynamic Aspects</div>
+                    <div className="font-mono text-[7.5px] uppercase tracking-wide">{ui.dynamicAspects}</div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">Fade In</label>
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">{ui.fadeIn}</label>
                       <input
                         type="range"
                         min="0"
@@ -3480,7 +3963,7 @@ export default function AstrologyCalculator() {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">Sustain</label>
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">{ui.sustain}</label>
                       <input
                         type="range"
                         min="0"
@@ -3494,7 +3977,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Fade Out
+                        {ui.fadeOut}
                       </label>
                       <input
                         type="range"
@@ -3510,10 +3993,10 @@ export default function AstrologyCalculator() {
 
                   {showVuMeter && (
                     <div className="space-y-1">
-                    <div className="font-mono text-[7.5px] uppercase tracking-wide">VU Meter</div>
+                    <div className="font-mono text-[7.5px] uppercase tracking-wide">{ui.vuMeter}</div>
                     <div className="border border-white/50 bg-black p-1 space-y-1">
                       <div className="flex items-center justify-between text-[6.5px] font-mono uppercase tracking-wide">
-                        <span>Pre</span>
+                        <span>{ui.pre}</span>
                         <span>
                           L {percentToDb(peakLevelLeftPre).toFixed(1)} dB / R {percentToDb(peakLevelRightPre).toFixed(1)} dB
                         </span>
@@ -3544,7 +4027,7 @@ export default function AstrologyCalculator() {
                       </div>
 
                       <div className="flex items-center justify-between text-[6.5px] font-mono uppercase tracking-wide pt-1">
-                        <span>Post</span>
+                        <span>{ui.post}</span>
                         <span>
                           L {percentToDb(peakLevelLeftPost).toFixed(1)} dB / R {percentToDb(peakLevelRightPost).toFixed(1)} dB
                         </span>
@@ -3575,7 +4058,7 @@ export default function AstrologyCalculator() {
                       </div>
 
                       <div className="flex items-center justify-between text-[6.5px] font-mono uppercase tracking-wide pt-1">
-                        <span>Comp</span>
+                        <span>{ui.comp}</span>
                         <span>{compressionReductionDb.toFixed(1)} dB</span>
                       </div>
                       <div className="relative h-2 overflow-hidden border-t border-white/20">
@@ -3597,7 +4080,7 @@ export default function AstrologyCalculator() {
           </h1>
           {showModeInfo && (
             <div className="absolute left-14 md:left-20 top-1/2 -translate-y-1/2 font-mono text-[12px] md:text-[14px] uppercase tracking-widest text-white/85">
-              {modalEnabled ? `Mode: ${currentModeLabel}` : "Mode: OFF"}
+              {modalEnabled ? `${ui.modeLabel}: ${currentModeLabel}` : `${ui.modeLabel}: ${ui.modeOff}`}
             </div>
           )}
 
@@ -3615,7 +4098,7 @@ export default function AstrologyCalculator() {
                     : "bg-transparent text-white border-gray-600 hover:border-white"
                 }`}
               >
-                MANUAL
+                {ui.manual}
               </button>
               <button
                 onClick={() => {
@@ -3627,14 +4110,16 @@ export default function AstrologyCalculator() {
                     : "bg-transparent text-white border-gray-600 hover:border-white"
                 }`}
               >
-                HERE &amp; NOW
+                {ui.hereNow}
               </button>
             </div>
 
             {(selectedPreset === "manual" || selectedPreset === "here_now") && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Date &amp; Time</label>
+                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">
+                    {ui.dateTime}
+                  </label>
                   <input
                     type="datetime-local"
                     value={formData.datetime}
@@ -3643,7 +4128,9 @@ export default function AstrologyCalculator() {
                   />
                 </div>
                 <div className="relative">
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Location</label>
+                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">
+                    {ui.location}
+                  </label>
                   <input
                     type="text"
                     value={formData.location}
@@ -3659,10 +4146,10 @@ export default function AstrologyCalculator() {
                       }
                     }}
                     className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
-                    placeholder="City, Country"
+                    placeholder={ui.cityCountryPlaceholder}
                   />
                   {isResolvingLocation && (
-                    <div className="mt-1 text-[10px] md:text-[12px] font-mono text-white/70">Resolving location...</div>
+                    <div className="mt-1 text-[10px] md:text-[12px] font-mono text-white/70">{ui.resolvingLocation}</div>
                   )}
                   {locationSuggestions.length > 0 && (
                     <div className="absolute z-20 mt-1 w-full border border-gray-500 bg-black max-h-44 overflow-y-auto">
@@ -3688,7 +4175,9 @@ export default function AstrologyCalculator() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Latitude</label>
+                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">
+                    {ui.latitude}
+                  </label>
                   <input
                     type="number"
                     step="0.0001"
@@ -3698,7 +4187,9 @@ export default function AstrologyCalculator() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Longitude</label>
+                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">
+                    {ui.longitude}
+                  </label>
                   <input
                     type="number"
                     step="0.0001"
@@ -3717,7 +4208,7 @@ export default function AstrologyCalculator() {
                 isManualSubjectReady ? "send-minimal-ready" : ""
               }`}
             >
-              {loading ? "..." : "SEND"}
+              {loading ? "..." : ui.send}
             </button>
           </div>
         )}
@@ -3815,7 +4306,7 @@ export default function AstrologyCalculator() {
                                   className="fill-white text-[7px]"
                                   style={{ opacity: 0.3, fontFamily: MONOTYPE_FONT_STACK }}
                                 >
-                                  {sign.label.slice(0, 3).toUpperCase()}
+                                  {getLocalizedSignLabel(sign.label, language).slice(0, 3).toUpperCase()}
                                 </text>
                               )}
                             </g>
@@ -3864,7 +4355,8 @@ export default function AstrologyCalculator() {
                       const adjustedDegrees = adjustedPositions[planet.name] ?? originalDegrees
                       const position = polarToCartesian(200, 200, 180, adjustToCanvasAngle(adjustedDegrees))
                       const glyphSrc = PLANET_GLYPH_SVGS[planet.name]
-                      const glyphFallback = PLANET_GLYPH_FALLBACK_LABELS[planet.name] || planet.label
+                      const glyphFallback =
+                        PLANET_GLYPH_FALLBACK_LABELS[planet.name] || getLocalizedPlanetLabel(planet.name || planet.label, language)
                       // Added hover detection for glyphs
                       const isHovered = hoveredGlyph === planet.name
                       const isPressed = pressedGlyph === planet.name
@@ -4388,15 +4880,15 @@ export default function AstrologyCalculator() {
                         }}
                       >
                         <div>
-                          {formData.datetime ? new Date(formData.datetime).toLocaleDateString("en-US") : "No Date"}
+                          {formData.datetime ? new Date(formData.datetime).toLocaleDateString(localeCode) : ui.noDate}
                         </div>
                         <div>
                           {formData.datetime
-                            ? new Date(formData.datetime).toLocaleTimeString("en-US", {
+                            ? new Date(formData.datetime).toLocaleTimeString(localeCode, {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })
-                            : "No Time"}
+                            : ui.noTime}
                         </div>
                         <div>{subjectLocationLines.city}</div>
                         <div>{subjectLocationLines.country}</div>
@@ -4407,15 +4899,15 @@ export default function AstrologyCalculator() {
                         }`}
                       >
                         <div className="text-[9px] md:text-[14px]">
-                          {formData.datetime ? new Date(formData.datetime).toLocaleDateString("en-US") : "No Date"}
+                          {formData.datetime ? new Date(formData.datetime).toLocaleDateString(localeCode) : ui.noDate}
                         </div>
                         <div className="text-[9px] md:text-[14px]">
                           {formData.datetime
-                            ? new Date(formData.datetime).toLocaleTimeString("en-US", {
+                            ? new Date(formData.datetime).toLocaleTimeString(localeCode, {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })
-                            : "No Time"}
+                            : ui.noTime}
                         </div>
                         <div className="text-[9px] md:text-[14px]">{subjectLocationLines.city}</div>
                         <div className="text-[9px] md:text-[14px]">{subjectLocationLines.country}</div>
@@ -4430,7 +4922,7 @@ export default function AstrologyCalculator() {
                         className={`pointer-events-auto flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors ${
                           !isPlaybackActive ? "play-idle-pulse" : ""
                         } origin-bottom-left scale-[0.66] md:scale-100 w-12 h-12 md:w-14 md:h-14`}
-                        title={isPlaybackActive ? "Stop" : "Play"}
+                        title={isPlaybackActive ? ui.stop : ui.play}
                       >
                         {isPlaybackActive ? (
                           <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -4452,15 +4944,15 @@ export default function AstrologyCalculator() {
               <div className="">
                 <div className="bg-white text-black p-3 font-mono flex items-center justify-between">
                   <div>
-                    <h2 className="text-[10px] uppercase tracking-wider">Astrological Data</h2>
+                    <h2 className="text-[10px] uppercase tracking-wider">{ui.astrologicalData}</h2>
                     <p className="text-[9px] mt-1 opacity-60">
-                      ASC: {horoscopeData.ascendant.sign.label}{" "}
+                      ASC: {getLocalizedSignLabel(horoscopeData.ascendant.sign.label, language)}{" "}
                       {horoscopeData.ascendant.ChartPosition.Ecliptic.ArcDegreesFormatted30}
                     </p>
                   </div>
                   <div className="text-right text-[9px] opacity-60">
                     <div>{sanitizeLocationLabel(formData.location)}</div>
-                    <div>{new Date(formData.datetime).toLocaleString("en-US")}</div>
+                    <div>{new Date(formData.datetime).toLocaleString(localeCode)}</div>
                   </div>
                 </div>
 
@@ -4469,24 +4961,24 @@ export default function AstrologyCalculator() {
                     <thead>
                       <tr className="bg-gray-800">
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Glyph
+                          {ui.glyph}
                         </th>
                         <th className="text-right p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Ecliptic (°)
+                          {ui.ecliptic}
                         </th>
                         <th className="text-left p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Sign
+                          {ui.sign}
                         </th>
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          House
+                          {ui.house}
                         </th>
                         <th className="text-left p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Position
+                          {ui.position}
                         </th>
                         <th className="text-right p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Horizon (°)
+                          {ui.horizon}
                         </th>
-                        <th className="text-center p-2 font-normal uppercase tracking-wide">Retrograde</th>
+                        <th className="text-center p-2 font-normal uppercase tracking-wide">{ui.retrograde}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -4496,7 +4988,7 @@ export default function AstrologyCalculator() {
                             {PLANET_GLYPH_SVGS[planet.name] ? (
                               <img
                                 src={PLANET_GLYPH_SVGS[planet.name]}
-                                alt={planet.label}
+                                alt={getLocalizedPlanetLabel(planet.name || planet.label, language)}
                                 className="inline-block w-5 h-5 mx-auto align-middle select-none"
                                 draggable={false}
                               />
@@ -4507,14 +4999,14 @@ export default function AstrologyCalculator() {
                                   WebkitTextStroke: "0.3px white",
                                 }}
                               >
-                                {PLANET_GLYPH_FALLBACK_LABELS[planet.name] || planet.label}
+                                {PLANET_GLYPH_FALLBACK_LABELS[planet.name] || getLocalizedPlanetLabel(planet.name || planet.label, language)}
                               </span>
                             )}
                           </td>
                           <td className="p-2 border-r border-gray-700 text-right tabular-nums">
                             {planet.ChartPosition.Ecliptic.DecimalDegrees.toFixed(4)}
                           </td>
-                          <td className="p-2 border-r border-gray-700">{planet.Sign.label}</td>
+                          <td className="p-2 border-r border-gray-700">{getLocalizedSignLabel(planet.Sign.label, language)}</td>
                           <td className="p-2 border-r border-gray-700 text-center">{planet.House}</td>
                           <td className="p-2 border-r border-gray-700">
                             {planet.ChartPosition.Ecliptic.ArcDegreesFormatted30}
@@ -4539,7 +5031,7 @@ export default function AstrologyCalculator() {
                         <td className="p-2 border-r border-gray-700 text-right tabular-nums">
                           {horoscopeData.ascendant.ChartPosition.Ecliptic.DecimalDegrees.toFixed(4)}
                         </td>
-                        <td className="p-2 border-r border-gray-700">{horoscopeData.ascendant.sign.label}</td>
+                        <td className="p-2 border-r border-gray-700">{getLocalizedSignLabel(horoscopeData.ascendant.sign.label, language)}</td>
                         <td className="p-2 border-r border-gray-700 text-center">1</td>
                         <td className="p-2 border-r border-gray-700">
                           {horoscopeData.ascendant.ChartPosition.Ecliptic.ArcDegreesFormatted30}
@@ -4561,7 +5053,7 @@ export default function AstrologyCalculator() {
                         <td className="p-2 border-r border-gray-700 text-right tabular-nums">
                           {horoscopeData.mc.ChartPosition.Ecliptic.DecimalDegrees.toFixed(4)}
                         </td>
-                        <td className="p-2 border-r border-gray-700">{horoscopeData.mc.Sign.label}</td>
+                        <td className="p-2 border-r border-gray-700">{getLocalizedSignLabel(horoscopeData.mc.Sign.label, language)}</td>
                         <td className="p-2 border-r border-gray-700 text-center">10</td>
                         <td className="p-2 border-r border-gray-700">
                           {horoscopeData.mc.ChartPosition.Ecliptic.ArcDegreesFormatted30}
@@ -4579,12 +5071,12 @@ export default function AstrologyCalculator() {
               <div className="">
                 <div className="bg-white text-black p-3 font-mono flex items-center justify-between">
                   <div>
-                    <h2 className="text-[10px] uppercase tracking-wider">Astrological Aspects</h2>
-                    <p className="text-[9px] mt-1 opacity-60">Conjunction, Opposition, Trine, Square, Sextile</p>
+                    <h2 className="text-[10px] uppercase tracking-wider">{ui.astrologicalAspects}</h2>
+                    <p className="text-[9px] mt-1 opacity-60">{ui.majorAspects}</p>
                   </div>
                   <div className="text-right text-[9px] opacity-60">
                     <div>
-                      Total:{" "}
+                      {ui.total}:{" "}
                       {
                         horoscopeData.aspects.filter((a) => {
                           const mainPlanets = [
@@ -4613,18 +5105,18 @@ export default function AstrologyCalculator() {
                     <thead>
                       <tr className="bg-gray-800">
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Planet 1
+                          {ui.planet1}
                         </th>
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Aspect
+                          {ui.aspect}
                         </th>
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Planet 2
+                          {ui.planet2}
                         </th>
                         <th className="text-right p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Angle (°)
+                          {ui.angle}
                         </th>
-                        <th className="text-right p-2 font-normal uppercase tracking-wide">Orb (°)</th>
+                        <th className="text-right p-2 font-normal uppercase tracking-wide">{ui.orb}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -4666,7 +5158,7 @@ export default function AstrologyCalculator() {
                                 {PLANET_GLYPH_SVGS[aspect.point1.name] ? (
                                   <img
                                     src={PLANET_GLYPH_SVGS[aspect.point1.name]}
-                                    alt={aspect.point1.label}
+                                    alt={getLocalizedPlanetLabel(aspect.point1.name || aspect.point1.label, language)}
                                     className="inline-block w-5 h-5 mx-auto align-middle select-none"
                                     draggable={false}
                                   />
@@ -4678,12 +5170,13 @@ export default function AstrologyCalculator() {
                                       WebkitTextStroke: "0.3px white",
                                     }}
                                   >
-                                    {PLANET_GLYPH_FALLBACK_LABELS[aspect.point1.name] || aspect.point1.label}
+                                    {PLANET_GLYPH_FALLBACK_LABELS[aspect.point1.name] ||
+                                      getLocalizedPlanetLabel(aspect.point1.name || aspect.point1.label, language)}
                                   </span>
                                 )}
                               </td>
                               <td className="p-2 border-r border-gray-700 text-center">
-                                <span className="text-lg" title={getMajorAspectLabel(aspect.aspectType)}>
+                                <span className="text-lg" title={getMajorAspectLabel(aspect.aspectType, language)}>
                                   {aspectSymbol}
                                 </span>
                               </td>
@@ -4691,7 +5184,7 @@ export default function AstrologyCalculator() {
                                 {PLANET_GLYPH_SVGS[aspect.point2.name] ? (
                                   <img
                                     src={PLANET_GLYPH_SVGS[aspect.point2.name]}
-                                    alt={aspect.point2.label}
+                                    alt={getLocalizedPlanetLabel(aspect.point2.name || aspect.point2.label, language)}
                                     className="inline-block w-5 h-5 mx-auto align-middle select-none"
                                     draggable={false}
                                   />
@@ -4703,7 +5196,8 @@ export default function AstrologyCalculator() {
                                       WebkitTextStroke: "0.3px white",
                                     }}
                                   >
-                                    {PLANET_GLYPH_FALLBACK_LABELS[aspect.point2.name] || aspect.point2.label}
+                                    {PLANET_GLYPH_FALLBACK_LABELS[aspect.point2.name] ||
+                                      getLocalizedPlanetLabel(aspect.point2.name || aspect.point2.label, language)}
                                   </span>
                                 )}
                               </td>
@@ -4736,7 +5230,7 @@ export default function AstrologyCalculator() {
                       }}
                     >
                       <h2 className="text-[10px] uppercase tracking-wider mb-1">
-                        Aspects of {planetName.toUpperCase()}
+                        {ui.aspectsOf} {getLocalizedPlanetLabel(planetName, language).toUpperCase()}
                       </h2>
                       {aspects.map((aspect, index) => {
                         const aspectKey = getMajorAspectKey(aspect.aspectType)
@@ -4769,27 +5263,32 @@ export default function AstrologyCalculator() {
                               {PLANET_GLYPH_SVGS[aspect.point1.name] ? (
                                 <img
                                   src={PLANET_GLYPH_SVGS[aspect.point1.name]}
-                                  alt={aspect.point1.label}
+                                  alt={getLocalizedPlanetLabel(aspect.point1.name || aspect.point1.label, language)}
                                   className="w-3.5 h-3.5 select-none"
                                   draggable={false}
                                 />
                               ) : (
-                                PLANET_GLYPH_FALLBACK_LABELS[aspect.point1.name] || aspect.point1.label
+                                PLANET_GLYPH_FALLBACK_LABELS[aspect.point1.name] ||
+                                getLocalizedPlanetLabel(aspect.point1.name || aspect.point1.label, language)
                               )}
                             </span>
-                            <span className={`text-lg ${aspectColor} ${brightness}`} title={getMajorAspectLabel(aspect.aspectType)}>
+                            <span
+                              className={`text-lg ${aspectColor} ${brightness}`}
+                              title={getMajorAspectLabel(aspect.aspectType, language)}
+                            >
                               {aspectSymbol}
                             </span>
                             <span className="inline-flex items-center justify-center min-w-[14px]">
                               {PLANET_GLYPH_SVGS[aspect.point2.name] ? (
                                 <img
                                   src={PLANET_GLYPH_SVGS[aspect.point2.name]}
-                                  alt={aspect.point2.label}
+                                  alt={getLocalizedPlanetLabel(aspect.point2.name || aspect.point2.label, language)}
                                   className="w-3.5 h-3.5 select-none"
                                   draggable={false}
                                 />
                               ) : (
-                                PLANET_GLYPH_FALLBACK_LABELS[aspect.point2.name] || aspect.point2.label
+                                PLANET_GLYPH_FALLBACK_LABELS[aspect.point2.name] ||
+                                getLocalizedPlanetLabel(aspect.point2.name || aspect.point2.label, language)
                               )}
                             </span>
                             <span className="text-gray-400 text-xs">{aspect.angle.toFixed(1)}°</span>
@@ -4859,14 +5358,14 @@ export default function AstrologyCalculator() {
                             : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
                         }`}
                       >
-                        {NAV_MODE_HINT_LABEL[mode]}
+                        {navModeHintLabel[mode]}
                       </button>
                       <span
                         className={`pointer-events-none ${tooltipViewportClass} whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
                           isModeHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
-                        {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
+                        {navModeInstructionByMode[mode]}
                       </span>
                       <span
                         className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-500 ${
@@ -4899,7 +5398,7 @@ export default function AstrologyCalculator() {
                           isDownloadHoverActive ? "opacity-100" : "opacity-0"
                         }`}
                       >
-                        {DOWNLOAD_TOOLTIP_TEXT}
+                        {downloadTooltipText}
                       </span>
                       <span
                         className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-500 ${
@@ -4923,7 +5422,7 @@ export default function AstrologyCalculator() {
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
                   }`}
                 >
-                  RESET
+                  {ui.reset}
                 </button>
                 <button
                   onClick={openInfoOverlay}
@@ -4937,13 +5436,13 @@ export default function AstrologyCalculator() {
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
                   }`}
                 >
-                  INFO
+                  {ui.info}
                 </button>
               </div>
             </div>
             {isExportingMp3 && (
               <div className="mt-1.5 text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide text-white/70">
-                RENDER MP3...
+                {ui.renderMp3}
               </div>
             )}
             {pendingMp3Download && !isExportingMp3 && (
@@ -4952,7 +5451,7 @@ export default function AstrologyCalculator() {
                 download={pendingMp3Download.fileName}
                 className="mt-1.5 block w-full text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
               >
-                SAVE MP3
+                {ui.saveMp3}
               </a>
             )}
           </div>
@@ -4967,7 +5466,7 @@ export default function AstrologyCalculator() {
                 onClick={retreatInfoParagraph}
                 className="absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
                 style={{ fontFamily: MONOTYPE_FONT_STACK }}
-                aria-label="Previous info page"
+                aria-label={language === "es" ? "Parrafo anterior" : "Previous info page"}
               >
                 {"<"}
               </button>
@@ -4975,17 +5474,17 @@ export default function AstrologyCalculator() {
                 onClick={advanceInfoParagraph}
                 className="absolute -right-3 md:-right-5 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
                 style={{ fontFamily: MONOTYPE_FONT_STACK }}
-                aria-label="Next info page"
+                aria-label={language === "es" ? "Parrafo siguiente" : "Next info page"}
               >
                 {">"}
               </button>
               <div
                 className="flex-1 font-mono text-[10px] md:text-[24px] leading-[1.58] text-white/88 whitespace-pre-line text-left"
               >
-                {renderInfoParagraph(infoParagraphIndex)}
+                {renderInfoParagraph(language, infoParagraphs, infoParagraphIndex)}
               </div>
               <div className="mt-5 flex items-center justify-center gap-2.5">
-                {INFO_PARAGRAPHS.map((_, index) => {
+                {infoParagraphs.map((_, index) => {
                   const isActive = index === infoParagraphIndex
                   return (
                     <button
@@ -4993,7 +5492,7 @@ export default function AstrologyCalculator() {
                       type="button"
                       onClick={() => setInfoParagraphIndex(index)}
                       className="group/dot p-0.5"
-                      aria-label={`Go to paragraph ${index + 1}`}
+                      aria-label={language === "es" ? `Ir al parrafo ${index + 1}` : `Go to paragraph ${index + 1}`}
                     >
                       <span
                         className={`block h-2.5 w-2.5 rounded-full border border-white/80 transition-opacity duration-200 group-hover/dot:opacity-100 ${
@@ -5009,7 +5508,7 @@ export default function AstrologyCalculator() {
                   onClick={closeInfoOverlay}
                   className="border border-white/70 px-2 py-1 font-mono text-[10px] md:text-[12px] uppercase tracking-wide text-white/85 hover:bg-white hover:text-black transition-colors"
                 >
-                  CLOSE
+                  {ui.close}
                 </button>
               </div>
             </div>

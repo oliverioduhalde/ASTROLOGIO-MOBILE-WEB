@@ -3388,18 +3388,20 @@ export default function AstrologyCalculator() {
                     }}
                     onMouseEnter={() => showLoadingLanguageHint("es")}
                     onFocus={() => showLoadingLanguageHint("es")}
-                    className={`flex h-7 w-7 md:h-8 md:w-8 items-center justify-center border transition-colors ${
+                    className={`flex h-7 w-10 md:h-8 md:w-11 items-center justify-center border transition-colors ${
                       language === "es"
                         ? "border-white bg-white/80 text-black"
                         : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/12 hover:text-white"
                     }`}
                     aria-label={language === "es" ? "Cambiar a espanol" : "Switch to Spanish"}
                   >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                      <rect x="1.5" y="1.5" width="13" height="13" stroke="currentColor" strokeWidth="1" />
-                      <rect x="3" y="4" width="10" height="2" fill="currentColor" />
-                      <rect x="3" y="7" width="10" height="3" fill="currentColor" opacity="0.72" />
-                      <rect x="3" y="11" width="10" height="2" fill="currentColor" />
+                    <svg width="22" height="14" viewBox="0 0 22 14" fill="none" aria-hidden="true">
+                      <rect x="0.75" y="0.75" width="20.5" height="12.5" rx="0.8" stroke="currentColor" strokeWidth="1.1" />
+                      <rect x="2.25" y="2.1" width="17.5" height="2.1" fill="currentColor" opacity="0.95" />
+                      <rect x="2.25" y="4.95" width="17.5" height="4.1" fill="currentColor" opacity="0.62" />
+                      <rect x="2.25" y="9.8" width="17.5" height="2.1" fill="currentColor" opacity="0.95" />
+                      <rect x="5" y="5.65" width="1.2" height="2.7" fill="currentColor" opacity="0.95" />
+                      <rect x="4.2" y="6.45" width="2.8" height="1.1" fill="currentColor" opacity="0.95" />
                     </svg>
                   </button>
                   <button
@@ -3410,17 +3412,17 @@ export default function AstrologyCalculator() {
                     }}
                     onMouseEnter={() => showLoadingLanguageHint("en")}
                     onFocus={() => showLoadingLanguageHint("en")}
-                    className={`flex h-7 w-7 md:h-8 md:w-8 items-center justify-center border transition-colors ${
+                    className={`flex h-7 w-10 md:h-8 md:w-11 items-center justify-center border transition-colors ${
                       language === "en"
                         ? "border-white bg-white/80 text-black"
                         : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/12 hover:text-white"
                     }`}
                     aria-label={language === "es" ? "Cambiar a ingles" : "Switch to English"}
                   >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                      <rect x="1.5" y="1.5" width="13" height="13" stroke="currentColor" strokeWidth="1" />
-                      <path d="M8 3V13" stroke="currentColor" strokeWidth="2" />
-                      <path d="M3 8H13" stroke="currentColor" strokeWidth="2" />
+                    <svg width="22" height="14" viewBox="0 0 22 14" fill="none" aria-hidden="true">
+                      <rect x="0.75" y="0.75" width="20.5" height="12.5" rx="0.8" stroke="currentColor" strokeWidth="1.1" />
+                      <rect x="9.4" y="2" width="3.2" height="10" fill="currentColor" opacity="0.95" />
+                      <rect x="2" y="5.4" width="18" height="3.2" fill="currentColor" opacity="0.95" />
                     </svg>
                   </button>
                 </div>

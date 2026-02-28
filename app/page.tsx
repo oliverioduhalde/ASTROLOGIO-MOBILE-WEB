@@ -3394,18 +3394,24 @@ export default function AstrologyCalculator() {
                     }}
                     onMouseEnter={() => showLoadingLanguageHint("es")}
                     onFocus={() => showLoadingLanguageHint("es")}
-                    className={`flex h-8 w-12 md:h-9 md:w-[54px] items-center justify-center overflow-hidden border p-0 transition-colors ${
+                    className={`flex h-[30px] w-[60px] md:h-[34px] md:w-[68px] items-center justify-center overflow-hidden border p-0 transition-opacity ${
                       language === "es"
-                        ? "border-white bg-white/80 text-black"
-                        : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/12 hover:text-white"
+                        ? "border-white opacity-100"
+                        : "border-white/50 opacity-80 hover:border-white hover:opacity-100"
                     }`}
                     aria-label={language === "es" ? "Cambiar a espanol" : "Switch to Spanish"}
                   >
-                    <svg className="h-full w-full" viewBox="0 0 24 16" fill="none" aria-hidden="true" preserveAspectRatio="none">
-                      <rect width="24" height="16" fill="currentColor" opacity="0.92" />
-                      <rect y="3" width="24" height="10" fill="currentColor" opacity="0.38" />
-                      <rect x="4.4" y="5.2" width="1.5" height="5.2" fill="currentColor" opacity="0.92" />
-                      <rect x="3.2" y="6.8" width="3.9" height="1.5" fill="currentColor" opacity="0.92" />
+                    <svg className="h-full w-full" viewBox="0 0 28 14" fill="none" aria-hidden="true" preserveAspectRatio="none">
+                      <rect width="28" height="14" fill="#FFFFFF" />
+                      <rect width="28" height="3.5" fill="#050505" />
+                      <rect y="10.5" width="28" height="3.5" fill="#050505" />
+                      <g transform="translate(11.15 4.65)">
+                        <path d="M1.35 0.15L1.7 0.65H1L1.35 0.15ZM0.85 0.7H1.85V1.05H0.85V0.7Z" fill="#050505" />
+                        <rect x="0.55" y="1.1" width="1.6" height="2.4" rx="0.18" fill="#050505" />
+                        <path d="M1.35 1.1V3.5" stroke="#FFFFFF" strokeWidth="0.24" />
+                        <path d="M0.68 2.02H2.02" stroke="#FFFFFF" strokeWidth="0.24" />
+                      </g>
+                      <rect x="0.4" y="0.4" width="27.2" height="13.2" stroke="#8A8A8A" strokeWidth="0.25" />
                     </svg>
                   </button>
                   <button
@@ -3416,17 +3422,22 @@ export default function AstrologyCalculator() {
                     }}
                     onMouseEnter={() => showLoadingLanguageHint("en")}
                     onFocus={() => showLoadingLanguageHint("en")}
-                    className={`flex h-8 w-12 md:h-9 md:w-[54px] items-center justify-center overflow-hidden border p-0 transition-colors ${
+                    className={`flex h-[30px] w-[60px] md:h-[34px] md:w-[68px] items-center justify-center overflow-hidden border p-0 transition-opacity ${
                       language === "en"
-                        ? "border-white bg-white/80 text-black"
-                        : "border-white/50 bg-transparent text-white/70 hover:border-white hover:bg-white/12 hover:text-white"
+                        ? "border-white opacity-100"
+                        : "border-white/50 opacity-80 hover:border-white hover:opacity-100"
                     }`}
                     aria-label={language === "es" ? "Cambiar a ingles" : "Switch to English"}
                   >
-                    <svg className="h-full w-full" viewBox="0 0 24 16" fill="none" aria-hidden="true" preserveAspectRatio="none">
-                      <rect width="24" height="16" fill="currentColor" opacity="0.18" />
-                      <path d="M0 0L9.2 6.1V0H14.8V6.1L24 0V2.7L16.7 7.5H24V8.5H16.7L24 13.3V16L14.8 9.9V16H9.2V9.9L0 16V13.3L7.3 8.5H0V7.5H7.3L0 2.7V0Z" fill="currentColor" opacity="0.56" />
-                      <path d="M10.1 0H13.9V6.2H24V9.8H13.9V16H10.1V9.8H0V6.2H10.1V0Z" fill="currentColor" opacity="0.95" />
+                    <svg className="h-full w-full" viewBox="0 0 28 14" fill="none" aria-hidden="true" preserveAspectRatio="none">
+                      <rect width="28" height="14" fill="#050505" />
+                      <path d="M0 0L10.9 5.45H13.6L0 0Z" fill="#FFFFFF" />
+                      <path d="M28 0L17.1 5.45H14.4L28 0Z" fill="#FFFFFF" />
+                      <path d="M0 14L10.9 8.55H13.6L0 14Z" fill="#FFFFFF" />
+                      <path d="M28 14L17.1 8.55H14.4L28 14Z" fill="#FFFFFF" />
+                      <rect x="11.3" width="5.4" height="14" fill="#FFFFFF" />
+                      <rect y="4.3" width="28" height="5.4" fill="#FFFFFF" />
+                      <rect x="0.4" y="0.4" width="27.2" height="13.2" stroke="#8A8A8A" strokeWidth="0.25" />
                     </svg>
                   </button>
                 </div>

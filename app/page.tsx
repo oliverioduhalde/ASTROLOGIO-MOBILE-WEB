@@ -3445,14 +3445,6 @@ export default function AstrologyCalculator() {
       <div className="max-w-[1400px] mx-auto">
         <div className="relative mb-2 pb-0 md:mb-6 md:pb-3 md:border-b border-white flex items-center justify-between min-h-[52px] md:min-h-[84px] md:pr-[620px]">
           <div className="relative">
-            <button
-              ref={desktopMenuButtonRef}
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="hidden md:flex md:w-14 md:h-14 items-center justify-center font-mono text-[22px] leading-none uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors"
-            >
-              {menuOpen ? "✕" : "☰"}
-            </button>
-
             {menuOpen && (
               <div
                 ref={menuPanelRef}
@@ -4152,9 +4144,6 @@ export default function AstrologyCalculator() {
             )}
           </div>
 
-          <h1 className="hidden md:block text-[18px] md:text-[26px] font-mono fixed md:absolute top-1 md:top-auto left-1/2 transform -translate-x-1/2 z-[60] md:z-auto pointer-events-none">
-            ASTRO.LOG.IO
-          </h1>
           {showModeInfo && (
             <div className="absolute left-14 md:left-20 top-1/2 -translate-y-1/2 font-mono text-[12px] md:text-[14px] uppercase tracking-widest text-white/85">
               {modalEnabled ? `${ui.modeLabel}: ${currentModeLabel}` : `${ui.modeLabel}: ${ui.modeOff}`}
@@ -5387,14 +5376,17 @@ export default function AstrologyCalculator() {
       </div>
 
       <div className="fixed top-[5px] md:top-2 inset-x-0 z-40 pointer-events-none">
-        <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto w-full max-w-[430px] md:w-full md:max-w-[980px]">
-            <div className="grid grid-cols-[38px_repeat(5,minmax(0,1fr))] md:grid-cols-5 gap-0.5 items-stretch content-stretch md:gap-1.5">
-              <div className="relative p-0 md:hidden">
+        <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-center">
+          <div className="pointer-events-auto w-full max-w-[1004px]">
+            <div className="grid grid-cols-6 gap-0.5 items-stretch content-stretch md:gap-1.5">
+              <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
                 <button
-                  ref={mobileMenuButtonRef}
+                  ref={(node) => {
+                    mobileMenuButtonRef.current = node
+                    desktopMenuButtonRef.current = node
+                  }}
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className={`flex w-full h-[36px] translate-y-[5px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                  className={`flex w-full h-[36px] md:h-[42px] items-center justify-center border px-0.5 py-0 transition-colors ${
                     menuOpen
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
@@ -5513,13 +5505,13 @@ export default function AstrologyCalculator() {
                   onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
                   onFocus={() => setTopPanelHoverKey("reset:info")}
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                  className={`w-full h-[36px] md:h-[42px] font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                  className={`w-full h-[36px] md:h-[42px] font-mono font-bold text-[5.1px] md:text-[12px] leading-none uppercase tracking-[0.14em] border px-[6px] py-0 md:px-[10px] md:py-1 transition-colors ${
                     topPanelHoverKey === "reset:info"
                       ? "border-white bg-white/80 text-black"
                       : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
                   }`}
                 >
-                  {ui.info}
+                  ASTRO.LOG.IO
                 </button>
               </div>
               <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">

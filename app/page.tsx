@@ -144,9 +144,20 @@ const NAV_MODE_HINT_LABEL_BY_LANGUAGE: Record<Language, Record<NavigationMode, s
     sequential: "CARTA",
   },
 }
+const NAV_MODE_ACTION_LABEL_BY_LANGUAGE: Record<Language, Record<NavigationMode, string>> = {
+  en: {
+    astral_chord: "Play Chord",
+    radial: "Play Orbital",
+    sequential: "Play Chart",
+  },
+  es: {
+    astral_chord: "Repro Acorde",
+    radial: "Repro Orbital",
+    sequential: "Repro Carta",
+  },
+}
 const NAVIGATION_MODES: NavigationMode[] = ["astral_chord", "radial", "sequential"]
 const TOP_PANEL_MODE_ORDER: NavigationMode[] = ["radial", "sequential", "astral_chord"]
-const TOP_PANEL_PLAY_TOOLTIP_TEXT = "PLAY"
 const TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT = "DOWNLOAD"
 const EXPORT_MODE_SUFFIX: Record<NavigationMode, string> = {
   astral_chord: "CHORD",
@@ -792,7 +803,7 @@ export default function AstrologyCalculator() {
   const desktopMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
-  const [selectedPreset, setSelectedPreset] = useState<SubjectPreset>("manual")
+  const [selectedPreset, setSelectedPreset] = useState<SubjectPreset>("here_now")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
   const [horoscopeData, setHoroscopeData] = useState<HoroscopeData | null>(null)
   const [error, setError] = useState<string>("")
@@ -848,6 +859,7 @@ export default function AstrologyCalculator() {
   const [pressedGlyph, setPressedGlyph] = useState<string | null>(null)
   const [glyphHoverOpacity, setGlyphHoverOpacity] = useState(0)
   const [showAspectIndicator, setShowAspectIndicator] = useState(false) // Declared showAspectIndicator
+  const [playbackProgress, setPlaybackProgress] = useState(0)
   const aspectClickTimersRef = useRef<Record<string, NodeJS.Timeout[]>>({})
   const affectedScaleTimersRef = useRef<Record<string, { start: NodeJS.Timeout | null; end: NodeJS.Timeout | null }>>(
     {},
@@ -856,6 +868,8 @@ export default function AstrologyCalculator() {
   const pressedGlyphReleaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const interactivePreviewClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const skipNextAutoCalculateRef = useRef(false)
+  const pendingModeLaunchRef = useRef<NavigationMode | null>(null)
+  const playbackProgressFrameRef = useRef<number | null>(null)
   const loadingIntroIndexRef = useRef(0)
   const loadingIntroElapsedBeforeCurrentMsRef = useRef(0)
   const loadingIntroParagraphStartTimeRef = useRef(0)
@@ -869,6 +883,7 @@ export default function AstrologyCalculator() {
   const loadingIntroParagraphs = useMemo(() => LOADING_INTRO_PARAGRAPHS_BY_LANGUAGE[language], [language])
   const infoParagraphs = useMemo(() => INFO_PARAGRAPHS_BY_LANGUAGE[language], [language])
   const navModeHintLabel = useMemo(() => NAV_MODE_HINT_LABEL_BY_LANGUAGE[language], [language])
+  const navModeActionLabel = useMemo(() => NAV_MODE_ACTION_LABEL_BY_LANGUAGE[language], [language])
   const navModeInstructionByMode = useMemo(() => NAV_MODE_INSTRUCTION_BY_MODE_BY_LANGUAGE[language], [language])
   const downloadTooltipText = useMemo(() => DOWNLOAD_TOOLTIP_TEXT_BY_LANGUAGE[language], [language])
   const engineOptions = useMemo(() => ENGINE_OPTIONS_BY_LANGUAGE[language], [language])
@@ -928,6 +943,8 @@ export default function AstrologyCalculator() {
             modeOff: "APAGADO",
             manual: "MANUAL",
             hereNow: "AQUI Y AHORA",
+            dateTimePlaceInput: "FECHA-HORA-LUGAR",
+            dataInput: "INGRESO DE DATOS",
             dateTime: "Fecha y Hora",
             location: "Ubicacion",
             latitude: "Latitud",
@@ -1013,6 +1030,8 @@ export default function AstrologyCalculator() {
             modeOff: "OFF",
             manual: "MANUAL",
             hereNow: "HERE & NOW",
+            dateTimePlaceInput: "DATE-TIME-PLACE INPUT",
+            dataInput: "DATA INPUT",
             dateTime: "Date & Time",
             location: "Location",
             latitude: "Latitude",
@@ -1408,6 +1427,10 @@ export default function AstrologyCalculator() {
         cancelAnimationFrame(animationFrameIdRef.current)
         animationFrameIdRef.current = null
       }
+      if (playbackProgressFrameRef.current !== null) {
+        cancelAnimationFrame(playbackProgressFrameRef.current)
+        playbackProgressFrameRef.current = null
+      }
       if (navigationStepTimeoutRef.current) {
         clearTimeout(navigationStepTimeoutRef.current)
         navigationStepTimeoutRef.current = null
@@ -1663,6 +1686,34 @@ export default function AstrologyCalculator() {
     }
   }, [])
 
+  const cancelPlaybackProgressAnimation = useCallback(() => {
+    if (playbackProgressFrameRef.current !== null) {
+      cancelAnimationFrame(playbackProgressFrameRef.current)
+      playbackProgressFrameRef.current = null
+    }
+  }, [])
+
+  const startPlaybackProgressAnimation = useCallback(
+    (durationMs: number) => {
+      cancelPlaybackProgressAnimation()
+      setPlaybackProgress(0)
+      if (durationMs <= 0) return
+      const startMs = performance.now()
+      const tick = () => {
+        const now = performance.now()
+        const progress = Math.min(1, (now - startMs) / durationMs)
+        setPlaybackProgress(progress)
+        if (progress >= 1) {
+          playbackProgressFrameRef.current = null
+          return
+        }
+        playbackProgressFrameRef.current = requestAnimationFrame(tick)
+      }
+      playbackProgressFrameRef.current = requestAnimationFrame(tick)
+    },
+    [cancelPlaybackProgressAnimation],
+  )
+
   const detectPlanetUnderPointer = useCallback(
     (adjustedAngle: number, ascDegrees: number): string | null => {
       if (!horoscopeData?.planets) return null
@@ -1759,6 +1810,7 @@ export default function AstrologyCalculator() {
           setPointerRotation(state.pointerRotation)
           setDebugPointerAngle(Math.round(state.adjustedAngle))
           setCurrentPlanetUnderPointer(detectedPlanet)
+          setPlaybackProgress(totalDuration > 0 ? boundedElapsed / totalDuration : 0)
         }
 
         if (elapsed >= totalDuration) {
@@ -1769,6 +1821,7 @@ export default function AstrologyCalculator() {
           setPointerOpacityTransitionMs(0)
           setChartAspectsTransitionMs(0)
           setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
+          setPlaybackProgress(0)
           setIsLoopRunning(false)
           setIsPaused(false)
           setCurrentPlanetUnderPointer(null)
@@ -1972,6 +2025,7 @@ export default function AstrologyCalculator() {
     setIsExportingMp3(false)
     setPendingMp3Download(null)
     cancelAllNavigationSchedulers()
+    cancelPlaybackProgressAnimation()
     clearAspectTimers()
     loopStartTimeRef.current = 0
     loopElapsedBeforePauseMsRef.current = 0
@@ -1987,6 +2041,7 @@ export default function AstrologyCalculator() {
     setPointerOpacityTransitionMs(0)
     setChartAspectsTransitionMs(0)
     setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
+    setPlaybackProgress(0)
     setCurrentPlanetUnderPointer(null)
     setDebugPointerAngle(0)
     setStartButtonPhase("contracted")
@@ -2185,6 +2240,7 @@ export default function AstrologyCalculator() {
     const finishRoute = () => {
       setIsLoopRunning(false)
       setIsPaused(false)
+      setPlaybackProgress(0)
       setCurrentPlanetUnderPointer(null)
       setStartButtonPhase("contracted")
       loopElapsedBeforePauseMsRef.current = 0
@@ -2428,6 +2484,7 @@ export default function AstrologyCalculator() {
       if (navigationRunIdRef.current !== runId) return
       setIsLoopRunning(false)
       setIsPaused(false)
+      setPlaybackProgress(0)
       setCurrentPlanetUnderPointer(null)
       setStartButtonPhase("contracted")
       setActivePlanetAspectsMap({})
@@ -2440,6 +2497,7 @@ export default function AstrologyCalculator() {
     if (!horoscopeData) return
     setNavigationMode(mode)
     cancelAllNavigationSchedulers()
+    cancelPlaybackProgressAnimation()
     clearAspectTimers()
     stopAll()
     stopBackgroundSound()
@@ -2450,6 +2508,7 @@ export default function AstrologyCalculator() {
     setPointerOpacityTransitionMs(0)
     setChartAspectsTransitionMs(0)
     setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
+    setPlaybackProgress(0)
     setActivePlanetAspectsMap({})
     setIsLoopRunning(true)
     setIsPaused(false)
@@ -2469,11 +2528,19 @@ export default function AstrologyCalculator() {
     }
     if (mode === "astral_chord") {
       startAmbientBed({ playBackground: false, playElement: true })
+      startPlaybackProgressAnimation(
+        Math.max(
+          2000,
+          Math.max(audioFadeIn + audioFadeOut, dynAspectsFadeIn + dynAspectsSustain + dynAspectsFadeOut) * 1000 + 300,
+          CHORD_ASPECTS_FADE_IN_MS + CHORD_ASPECTS_HOLD_MS + CHORD_ASPECTS_FADE_OUT_MS + 300,
+        ),
+      )
       startAstralChordMode()
       return
     }
     if (mode === "sequential") {
       startAmbientBed({ playBackground: false, playElement: true, elementVolumeOverride: 1 })
+      startPlaybackProgressAnimation(Math.max(CHART_PLANET_HOLD_MS, buildSequentialRoute().length * CHART_PLANET_HOLD_MS))
       startNonRadialRoute(buildSequentialRoute(), {
         teleport: true,
         holdMs: CHART_PLANET_HOLD_MS,
@@ -2798,6 +2865,7 @@ export default function AstrologyCalculator() {
 
   const stopCurrentPerformance = useCallback(() => {
     cancelAllNavigationSchedulers()
+    cancelPlaybackProgressAnimation()
     clearAspectTimers()
     loopStartTimeRef.current = 0
     loopElapsedBeforePauseMsRef.current = 0
@@ -2813,6 +2881,7 @@ export default function AstrologyCalculator() {
     setPointerOpacityTransitionMs(0)
     setChartAspectsTransitionMs(0)
     setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
+    setPlaybackProgress(0)
     setCurrentPlanetUnderPointer(null)
     setDebugPointerAngle(0)
     setStartButtonPhase("contracted")
@@ -2820,7 +2889,7 @@ export default function AstrologyCalculator() {
     stopBackgroundSound()
     stopElementBackground()
     stopAll()
-  }, [cancelAllNavigationSchedulers, clearAspectTimers, stopAll, stopBackgroundSound, stopElementBackground])
+  }, [cancelAllNavigationSchedulers, cancelPlaybackProgressAnimation, clearAspectTimers, stopAll, stopBackgroundSound, stopElementBackground])
 
   const clearMobileDownloadArm = useCallback(() => {
     if (mobileDownloadArmTimeoutRef.current) {
@@ -2923,16 +2992,29 @@ export default function AstrologyCalculator() {
     startNavigationMode(mode)
   }
 
-  const handleCalculate = async () => {
-    let trimmed = {
-      datetime: formData.datetime.trim(),
-      location: formData.location.trim(),
-      latitude: formData.latitude.trim(),
-      longitude: formData.longitude.trim(),
-    }
+  const handleCalculate = async (
+    startMode?: NavigationMode,
+    overridePayload?: SubjectFormData,
+    overridePreset?: SubjectPreset,
+  ) => {
+    pendingModeLaunchRef.current = startMode ?? null
+
+    let trimmed = overridePayload
+      ? {
+          datetime: overridePayload.datetime.trim(),
+          location: overridePayload.location.trim(),
+          latitude: overridePayload.latitude.trim(),
+          longitude: overridePayload.longitude.trim(),
+        }
+      : {
+          datetime: formData.datetime.trim(),
+          location: formData.location.trim(),
+          latitude: formData.latitude.trim(),
+          longitude: formData.longitude.trim(),
+        }
 
     let payload: SubjectFormData = trimmed
-    let presetToUse: SubjectPreset = selectedPreset
+    let presetToUse: SubjectPreset = overridePreset ?? selectedPreset
 
     if (Object.values(trimmed).every((value) => value === "")) {
       payload = PRESET_BA77_FORM
@@ -2961,6 +3043,7 @@ export default function AstrologyCalculator() {
             ? "Completa todos los campos o deja todos vacios para cargar el preset del 28/09/1977."
             : "Complete all fields, or leave all fields empty to load the 28/09/1977 preset.",
         )
+        pendingModeLaunchRef.current = null
         return
       }
       payload = trimmed
@@ -2976,6 +3059,7 @@ export default function AstrologyCalculator() {
           ? "Formato invalido. Revisa fecha/hora, latitud y longitud."
           : "Invalid format. Check date/time, latitude and longitude.",
       )
+      pendingModeLaunchRef.current = null
       return
     }
 
@@ -3012,6 +3096,7 @@ export default function AstrologyCalculator() {
       setShowChart(true)
       setShowSubject(false)
     } catch (err) {
+      pendingModeLaunchRef.current = null
       setError(
         language === "es"
           ? "No se pudo calcular la carta astrologica. Revisa los datos ingresados."
@@ -3029,7 +3114,7 @@ export default function AstrologyCalculator() {
     setError("")
   }
 
-  const applyHereAndNow = async () => {
+  const applyHereAndNow = async (): Promise<SubjectFormData | null> => {
     const now = new Date()
     const nowDateTime = formatDateTimeLocalValue(now)
 
@@ -3063,6 +3148,13 @@ export default function AstrologyCalculator() {
         longitude: longitude.toFixed(4),
       })
 
+      const payload = {
+        datetime: nowDateTime,
+        location: locationLabel,
+        latitude: latitude.toFixed(4),
+        longitude: longitude.toFixed(4),
+      }
+
       if (!resolvedLocation) {
         setError(
           language === "es"
@@ -3070,6 +3162,7 @@ export default function AstrologyCalculator() {
             : "City lookup was unavailable. A local fallback label was loaded; edit manually if needed.",
         )
       }
+      return payload
     } catch (geoError: any) {
       const denied = geoError?.code === 1
       setSelectedPreset("manual")
@@ -3088,6 +3181,7 @@ export default function AstrologyCalculator() {
             ? "La geolocalizacion no esta disponible. Ingresa la ubicacion manualmente."
             : "Geolocation is unavailable. Please enter location manually.",
       )
+      return null
     }
   }
 
@@ -3097,6 +3191,31 @@ export default function AstrologyCalculator() {
     formData.location.trim() !== "" &&
     formData.latitude.trim() !== "" &&
     formData.longitude.trim() !== ""
+
+  const launchModeFromSubject = useCallback(
+    async (mode: NavigationMode) => {
+      if (selectedPreset === "here_now" && !isManualSubjectReady) {
+        const payload = await applyHereAndNow()
+        if (!payload) {
+          pendingModeLaunchRef.current = null
+          return
+        }
+        await handleCalculate(mode, payload, "here_now")
+        return
+      }
+
+      await handleCalculate(mode)
+    },
+    [applyHereAndNow, handleCalculate, isManualSubjectReady, selectedPreset],
+  )
+
+  useEffect(() => {
+    if (!horoscopeData || showSubject) return
+    const pendingMode = pendingModeLaunchRef.current
+    if (!pendingMode) return
+    pendingModeLaunchRef.current = null
+    startNavigationMode(pendingMode)
+  }, [horoscopeData, showSubject])
 
   const pointerPassFadeMs = useMemo(() => {
     // Pointer hit zone is ±5° (10° total around each glyph).
@@ -3475,13 +3594,13 @@ export default function AstrologyCalculator() {
 
   return (
     <main className="min-h-screen bg-black text-white p-4 md:p-8" style={{ filter: interfaceThemeFilter }}>
-      <div className="max-w-[1400px] mx-auto">
-        <div className="relative mb-2 pb-0 md:mb-6 md:pb-3 md:border-b border-white flex items-center justify-between min-h-[52px] md:min-h-[84px] md:pr-[620px]">
+      <div className="max-w-[1400px] mx-auto pb-[170px] md:pb-[190px]">
+        <div className="relative mb-4 pb-3 md:mb-8 md:pb-4 border-b border-white flex items-center justify-center min-h-[72px] md:min-h-[112px]">
           <div className="relative">
             {menuOpen && (
               <div
                 ref={menuPanelRef}
-                className="fixed top-[52px] right-4 w-[calc((100vw-2rem)*1.25)] max-w-[575px] mt-0 bg-black border border-white p-3.5 text-white/80 z-50 max-h-[85vh] overflow-y-auto md:absolute md:top-full md:left-0 md:right-auto md:mt-2 md:w-auto md:min-w-[300px] md:max-w-none md:z-10 md:scale-[2.4] md:origin-top-left"
+                className="fixed bottom-[122px] left-4 right-4 w-auto max-w-[575px] ml-auto bg-black border border-white p-3.5 text-white/80 z-50 max-h-[70vh] overflow-y-auto md:bottom-[132px] md:left-8 md:right-auto md:w-auto md:min-w-[300px] md:max-w-none md:z-10 md:scale-[2.4] md:origin-bottom-left"
                 style={{ zoom: 0.8 }}
               >
                 <div className="mb-2 flex items-center justify-between font-mono text-[7px] uppercase tracking-wide text-white/80">
@@ -4177,29 +4296,14 @@ export default function AstrologyCalculator() {
               </div>
             )}
           </div>
-
-          {showModeInfo && (
-            <div className="absolute left-14 md:left-20 top-1/2 -translate-y-1/2 font-mono text-[12px] md:text-[14px] uppercase tracking-widest text-white/85">
-              {modalEnabled ? `${ui.modeLabel}: ${currentModeLabel}` : `${ui.modeLabel}: ${ui.modeOff}`}
-            </div>
-          )}
-
-          {/* START button - Moved to within the chart's rendering logic */}
+          <h1 className="font-mono text-[28px] md:text-[52px] uppercase tracking-[0.24em] text-white text-center">
+            ASTRO.LOG.IO
+          </h1>
         </div>
 
         {showSubject && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex flex-wrap gap-1.5 mb-2">
-              <button
-                onClick={setManualMode}
-                className={`px-5 py-2 text-[14px] md:text-[18px] font-mono border transition-colors ${
-                  selectedPreset === "manual"
-                    ? "bg-white text-black border-white"
-                    : "bg-transparent text-white border-gray-600 hover:border-white"
-                }`}
-              >
-                {ui.manual}
-              </button>
               <button
                 onClick={() => {
                   void applyHereAndNow()
@@ -4211,6 +4315,16 @@ export default function AstrologyCalculator() {
                 }`}
               >
                 {ui.hereNow}
+              </button>
+              <button
+                onClick={setManualMode}
+                className={`px-5 py-2 text-[14px] md:text-[18px] font-mono border transition-colors ${
+                  selectedPreset === "manual"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white border-gray-600 hover:border-white"
+                }`}
+              >
+                {ui.dateTimePlaceInput}
               </button>
             </div>
 
@@ -4301,15 +4415,86 @@ export default function AstrologyCalculator() {
               </div>
             )}
 
-            <button
-              onClick={handleCalculate}
-              disabled={loading}
-              className={`mt-8 block w-full mx-auto bg-white text-black py-2 text-[15px] md:text-[18px] font-mono text-center hover:bg-gray-200 transition-colors disabled:opacity-50 ${
-                isManualSubjectReady ? "send-minimal-ready" : ""
-              }`}
-            >
-              {loading ? "..." : ui.send}
-            </button>
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-2">
+              {TOP_PANEL_MODE_ORDER.map((mode) => {
+                const modeHoverKey = `subject-mode:${mode}`
+                const playHoverKey = `subject-play:${mode}`
+                const downloadHoverKey = `subject-download:${mode}`
+                const isHovered =
+                  topPanelHoverKey === modeHoverKey ||
+                  topPanelHoverKey === playHoverKey ||
+                  topPanelHoverKey === downloadHoverKey
+                const tooltipText =
+                  topPanelHoverKey === playHoverKey
+                    ? navModeActionLabel[mode]
+                    : topPanelHoverKey === downloadHoverKey
+                      ? TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT
+                      : topPanelHoverKey === modeHoverKey
+                        ? navModeInstructionByMode[mode]
+                        : null
+
+                return (
+                  <div key={`subject-launch-${mode}`} className="relative">
+                    <div
+                      className={`relative flex h-[42px] overflow-hidden border transition-colors ${
+                        isHovered ? "border-white bg-white/20 text-white" : "border-white/50 bg-transparent text-white/60"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={() => {
+                          showTopPanelHint(playHoverKey)
+                          void launchModeFromSubject(mode)
+                        }}
+                        onMouseEnter={() => showTopPanelHint(playHoverKey)}
+                        onFocus={() => showTopPanelHint(playHoverKey)}
+                        className="flex h-full w-[24%] min-w-[28px] items-center justify-center border-r border-white/30 transition-colors hover:bg-white/12"
+                        title={navModeActionLabel[mode]}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path d="M6 4 L16 10 L6 16 Z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={() => {
+                          showTopPanelHint(modeHoverKey)
+                          void launchModeFromSubject(mode)
+                        }}
+                        onMouseEnter={() => showTopPanelHint(modeHoverKey)}
+                        onFocus={() => showTopPanelHint(modeHoverKey)}
+                        className="flex-1 px-2 font-mono font-bold text-[11px] md:text-[12px] leading-none uppercase tracking-[0.12em] transition-colors hover:bg-white/12"
+                      >
+                        {navModeHintLabel[mode]}
+                      </button>
+                      <button
+                        type="button"
+                        disabled
+                        onMouseEnter={() => showTopPanelHint(downloadHoverKey)}
+                        onFocus={() => showTopPanelHint(downloadHoverKey)}
+                        className="flex h-full w-[24%] min-w-[28px] items-center justify-center border-l border-white/20 text-white/20 cursor-not-allowed"
+                        title={TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.45" aria-hidden="true">
+                          <path d="M3 8.8V12.4H13V8.8" />
+                          <path d="M8 2.8V9.1" />
+                          <path d="M5.9 7L8 9.1L10.1 7" />
+                        </svg>
+                      </button>
+                      <span
+                        className={`pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-[160px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)] whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                          tooltipText ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        {tooltipText || ""}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
@@ -4929,113 +5114,6 @@ export default function AstrologyCalculator() {
                         }),
                       )}
                   </svg>
-                  <div className="fixed bottom-0 pb-[calc(env(safe-area-inset-bottom)*0.4)] translate-y-[100px] md:translate-y-0 md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
-                    <div className="relative mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-                      <div
-                        className={`pointer-events-auto origin-bottom-right border px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight transition-all duration-200 ${
-                          isSubjectBoxHovered
-                            ? "scale-[1] md:scale-100 border-white bg-white text-black"
-                            : "scale-[0.66] md:scale-100 border-white/70 bg-black/75 text-white/80"
-                        }`}
-                        style={{
-                          touchAction: "manipulation",
-                          userSelect: "none",
-                          WebkitUserSelect: "none",
-                          WebkitTapHighlightColor: "transparent",
-                        }}
-                        onPointerDown={(event) => {
-                          if (event.pointerType === "touch") {
-                            event.preventDefault()
-                            event.stopPropagation()
-                          }
-                        }}
-                        onPointerEnter={() => setIsSubjectBoxHovered(true)}
-                        onPointerLeave={() => setIsSubjectBoxHovered(false)}
-                        onTouchStart={(event) => {
-                          event.preventDefault()
-                          event.stopPropagation()
-                          if (subjectHoverTouchTimeoutRef.current) {
-                            clearTimeout(subjectHoverTouchTimeoutRef.current)
-                            subjectHoverTouchTimeoutRef.current = null
-                          }
-                          setIsSubjectBoxHovered(true)
-                          subjectHoverTouchTimeoutRef.current = setTimeout(() => {
-                            setIsSubjectBoxHovered(false)
-                            subjectHoverTouchTimeoutRef.current = null
-                          }, TOP_PANEL_HINT_MS)
-                        }}
-                        onTouchEnd={(event) => {
-                          event.preventDefault()
-                          event.stopPropagation()
-                          // Keep subject hover visible for a short readable window on touch devices.
-                        }}
-                        onTouchCancel={(event) => {
-                          event.preventDefault()
-                          event.stopPropagation()
-                          if (subjectHoverTouchTimeoutRef.current) {
-                            clearTimeout(subjectHoverTouchTimeoutRef.current)
-                            subjectHoverTouchTimeoutRef.current = null
-                          }
-                          setIsSubjectBoxHovered(false)
-                        }}
-                      >
-                        <div>
-                          {formData.datetime ? new Date(formData.datetime).toLocaleDateString(localeCode) : ui.noDate}
-                        </div>
-                        <div>
-                          {formData.datetime
-                            ? new Date(formData.datetime).toLocaleTimeString(localeCode, {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : ui.noTime}
-                        </div>
-                        <div>{subjectLocationLines.city}</div>
-                        <div>{subjectLocationLines.country}</div>
-                      </div>
-                      <div
-                        className={`pointer-events-none absolute right-4 md:right-8 bottom-[74px] md:bottom-[76px] origin-bottom-right border border-white/75 bg-black/88 px-2.5 py-2 md:px-3 md:py-2.5 text-right font-mono uppercase tracking-wide leading-tight transition-opacity duration-500 ${
-                          isSubjectBoxHovered ? "opacity-100" : "opacity-0"
-                        }`}
-                      >
-                        <div className="text-[9px] md:text-[14px]">
-                          {formData.datetime ? new Date(formData.datetime).toLocaleDateString(localeCode) : ui.noDate}
-                        </div>
-                        <div className="text-[9px] md:text-[14px]">
-                          {formData.datetime
-                            ? new Date(formData.datetime).toLocaleTimeString(localeCode, {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : ui.noTime}
-                        </div>
-                        <div className="text-[9px] md:text-[14px]">{subjectLocationLines.city}</div>
-                        <div className="text-[9px] md:text-[14px]">{subjectLocationLines.country}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="fixed bottom-0 pb-[calc(env(safe-area-inset-bottom)*0.4)] translate-y-[100px] md:translate-y-0 md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
-                    <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-start">
-                      <button
-                        type="button"
-                        onClick={handlePlaybackTogglePress}
-                        className={`pointer-events-auto flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors ${
-                          !isPlaybackActive ? "play-idle-pulse" : ""
-                        } origin-bottom-left scale-[0.66] md:scale-100 w-12 h-12 md:w-14 md:h-14`}
-                        title={isPlaybackActive ? ui.stop : ui.play}
-                      >
-                        {isPlaybackActive ? (
-                          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <rect x="5" y="5" width="10" height="10" />
-                          </svg>
-                        ) : (
-                          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path d="M6 4 L16 10 L6 16 Z" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}
@@ -5403,16 +5481,19 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
-      <div className="fixed top-[46px] inset-x-0 z-[35] pointer-events-none md:hidden">
-        <div className="mx-auto w-full max-w-[calc(1400px+2rem)] px-4">
-          <div className="border-b border-white/90" />
-        </div>
-      </div>
-
-      <div className="fixed top-[5px] md:top-2 inset-x-0 z-40 pointer-events-none">
-        <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-center">
-          <div className="pointer-events-auto w-full max-w-[1004px]">
-            <div className="grid grid-cols-6 gap-0.5 items-stretch content-stretch md:gap-1.5">
+      {horoscopeData && !showSubject && (
+        <div className="fixed bottom-0 inset-x-0 z-40 pointer-events-none">
+          <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8">
+            <div className="pb-[calc(env(safe-area-inset-bottom)+12px)]">
+              <div className="relative mb-[5px] border-b border-white/90">
+                <span
+                  className={`absolute bottom-[-1px] h-[10px] w-px bg-white transition-opacity duration-200 ${
+                    isPlaybackActive ? "opacity-100" : "opacity-0"
+                  }`}
+                  style={{ left: `${Math.max(0, Math.min(100, playbackProgress * 100))}%` }}
+                />
+              </div>
+              <div className="grid grid-cols-6 gap-0.5 items-stretch content-stretch md:gap-1.5 pointer-events-auto">
               <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
                 <button
                   ref={(node) => {
@@ -5422,11 +5503,11 @@ export default function AstrologyCalculator() {
                   onClick={() => setMenuOpen((prev) => !prev)}
                   className={`flex w-full h-[36px] md:h-[42px] items-center justify-center border px-0.5 py-0 transition-colors ${
                     menuOpen
-                      ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
+                      ? "border-white/80 bg-white/20 text-white"
+                      : "border-white/50 bg-transparent text-white/60 hover:border-white/80 hover:bg-white/20 hover:text-white"
                   }`}
                 >
-                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
                     <path d="M2.5 5H13.5" />
                     <path d="M2.5 8H13.5" />
                     <path d="M2.5 11H13.5" />
@@ -5442,10 +5523,10 @@ export default function AstrologyCalculator() {
                 const isModeHoverActive = topPanelHoverKey === modeHoverKey
                 const isPlayHoverActive = topPanelHoverKey === playHoverKey
                 const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
-                const isModeButtonActive = isActiveMode || isModeHoverActive || isPlayHoverActive || isDownloadHoverActive
-                const playTooltipText = isModePlaybackActive ? ui.stop : ui.play
+                const isModeHovering = isModeHoverActive || isPlayHoverActive || isDownloadHoverActive
+                const playTooltipText = isModePlaybackActive ? ui.stop : navModeActionLabel[mode]
                 const tooltipViewportClass =
-                  "fixed left-1/2 -translate-x-1/2 top-[90px] md:top-[164px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
+                  "fixed left-1/2 -translate-x-1/2 bottom-[152px] md:bottom-[176px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
                 const tooltipText = isPlayHoverActive
                   ? playTooltipText
                   : isDownloadHoverActive
@@ -5457,9 +5538,11 @@ export default function AstrologyCalculator() {
                   <div key={`top-nav-${mode}`} className="relative p-0 md:p-0.5 md:px-1 md:py-1">
                     <div
                       className={`relative flex h-[36px] md:h-[42px] overflow-hidden border transition-colors ${
-                        isModeButtonActive
+                        isModePlaybackActive
                           ? "border-white bg-white/80 text-black"
-                          : "border-white/50 bg-transparent text-white/50"
+                          : isModeHovering
+                            ? "border-white/80 bg-white/20 text-white"
+                            : "border-white/50 bg-transparent text-white/60"
                       }`}
                     >
                       <button
@@ -5478,7 +5561,7 @@ export default function AstrologyCalculator() {
                         onMouseEnter={() => showTopPanelHint(playHoverKey)}
                         onFocus={() => showTopPanelHint(playHoverKey)}
                         className={`flex h-full w-[24%] min-w-[24px] items-center justify-center border-r px-1 transition-colors ${
-                          isModeButtonActive ? "border-black/25" : "border-white/30 hover:bg-white/12 hover:text-white"
+                          isModePlaybackActive ? "border-black/25" : "border-white/30 hover:bg-white/12 hover:text-white"
                         }`}
                         title={playTooltipText}
                       >
@@ -5504,7 +5587,7 @@ export default function AstrologyCalculator() {
                         onMouseEnter={() => showTopPanelHint(modeHoverKey)}
                         onFocus={() => showTopPanelHint(modeHoverKey)}
                         className={`flex-1 px-1 font-mono font-bold text-[5.5px] md:text-[12px] leading-none uppercase tracking-[0.12em] transition-colors ${
-                          isModeButtonActive ? "text-black" : "hover:bg-white/12 hover:text-white"
+                          isModePlaybackActive ? "text-black" : "hover:bg-white/12 hover:text-white"
                         }`}
                       >
                         {navModeHintLabel[mode]}
@@ -5517,7 +5600,7 @@ export default function AstrologyCalculator() {
                         className={`flex h-full w-[24%] min-w-[22px] items-center justify-center border-l transition-colors ${
                           !horoscopeData || isExportingMp3
                             ? "border-white/20 text-white/20 cursor-not-allowed"
-                            : isModeButtonActive
+                            : isModePlaybackActive
                               ? "border-black/25 text-black"
                               : "border-white/30 hover:bg-white/12 hover:text-white"
                         }`}
@@ -5537,7 +5620,7 @@ export default function AstrologyCalculator() {
                         {tooltipText || ""}
                       </span>
                       <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-500 ${
+                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-500 ${
                           tooltipText ? "opacity-100" : "opacity-0"
                         }`}
                       />
@@ -5554,11 +5637,11 @@ export default function AstrologyCalculator() {
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
                   className={`w-full h-[36px] md:h-[42px] font-mono font-bold text-[5.1px] md:text-[12px] leading-none uppercase tracking-[0.14em] border px-[6px] py-0 md:px-[10px] md:py-1 transition-colors ${
                     topPanelHoverKey === "reset:info"
-                      ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
+                      ? "border-white/80 bg-white/20 text-white"
+                      : "border-white/50 bg-transparent text-white/60 hover:border-white/80 hover:bg-white/20 hover:text-white"
                   }`}
                 >
-                  ASTRO.LOG.IO
+                  {ui.info}
                 </button>
               </div>
               <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
@@ -5570,31 +5653,102 @@ export default function AstrologyCalculator() {
                   onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
                   className={`w-full h-[36px] md:h-[42px] font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                     topPanelHoverKey === "reset:main"
-                      ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
+                      ? "border-white/80 bg-white/20 text-white"
+                      : "border-white/50 bg-transparent text-white/60 hover:border-white/80 hover:bg-white/20 hover:text-white"
                   }`}
                 >
                   {ui.reset}
                 </button>
               </div>
-            </div>
-            {isExportingMp3 && (
-              <div className="mt-1.5 text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide text-white/70">
-                {ui.renderMp3}
               </div>
-            )}
-            {pendingMp3Download && !isExportingMp3 && (
-              <a
-                href={pendingMp3Download.url}
-                download={pendingMp3Download.fileName}
-                className="mt-1.5 block w-full text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
-              >
-                {ui.saveMp3}
-              </a>
-            )}
+              <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-end md:justify-between pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    stopCurrentPerformance()
+                    setShowSubject(true)
+                    setMenuOpen(false)
+                  }}
+                  className="border border-white/50 bg-transparent px-3 py-2 font-mono text-[10px] md:text-[12px] uppercase tracking-[0.16em] text-white/60 transition-colors hover:border-white/80 hover:bg-white/20 hover:text-white"
+                >
+                  {ui.dataInput}
+                </button>
+                <div className="relative self-end">
+                  <div
+                    className={`origin-bottom-right border px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight transition-all duration-200 ${
+                      isSubjectBoxHovered
+                        ? "border-white bg-white text-black"
+                        : "border-white/70 bg-black/75 text-white/80"
+                    }`}
+                    style={{
+                      touchAction: "manipulation",
+                      userSelect: "none",
+                      WebkitUserSelect: "none",
+                      WebkitTapHighlightColor: "transparent",
+                    }}
+                    onPointerDown={(event) => {
+                      if (event.pointerType === "touch") {
+                        event.preventDefault()
+                        event.stopPropagation()
+                      }
+                    }}
+                    onPointerEnter={() => setIsSubjectBoxHovered(true)}
+                    onPointerLeave={() => setIsSubjectBoxHovered(false)}
+                    onTouchStart={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      if (subjectHoverTouchTimeoutRef.current) {
+                        clearTimeout(subjectHoverTouchTimeoutRef.current)
+                        subjectHoverTouchTimeoutRef.current = null
+                      }
+                      setIsSubjectBoxHovered(true)
+                      subjectHoverTouchTimeoutRef.current = setTimeout(() => {
+                        setIsSubjectBoxHovered(false)
+                        subjectHoverTouchTimeoutRef.current = null
+                      }, TOP_PANEL_HINT_MS)
+                    }}
+                    onTouchCancel={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      if (subjectHoverTouchTimeoutRef.current) {
+                        clearTimeout(subjectHoverTouchTimeoutRef.current)
+                        subjectHoverTouchTimeoutRef.current = null
+                      }
+                      setIsSubjectBoxHovered(false)
+                    }}
+                  >
+                    <div>{formData.datetime ? new Date(formData.datetime).toLocaleDateString(localeCode) : ui.noDate}</div>
+                    <div>
+                      {formData.datetime
+                        ? new Date(formData.datetime).toLocaleTimeString(localeCode, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : ui.noTime}
+                    </div>
+                    <div>{subjectLocationLines.city}</div>
+                    <div>{subjectLocationLines.country}</div>
+                  </div>
+                </div>
+              </div>
+              {isExportingMp3 && (
+                <div className="mt-1.5 text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide text-white/70">
+                  {ui.renderMp3}
+                </div>
+              )}
+              {pendingMp3Download && !isExportingMp3 && (
+                <a
+                  href={pendingMp3Download.url}
+                  download={pendingMp3Download.fileName}
+                  className="mt-1.5 block w-full text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors pointer-events-auto"
+                >
+                  {ui.saveMp3}
+                </a>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {showInfoOverlay && (
         <div className="fixed inset-0 z-50 bg-black/92">

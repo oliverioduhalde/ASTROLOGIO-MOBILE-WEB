@@ -886,6 +886,7 @@ export default function AstrologyCalculator() {
   const topPanelHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuPanelRef = useRef<HTMLDivElement | null>(null)
   const chartSvgRef = useRef<SVGSVGElement | null>(null)
+  const exportAssetDataUrlCacheRef = useRef<Map<string, string>>(new Map())
   const desktopMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
@@ -2827,7 +2828,7 @@ export default function AstrologyCalculator() {
     return `ASTRO.LOG.IO_${yyyymmddhhmm}_${city}_${country}_${modeSuffix}.mp3`
   }, [formData.datetime, formData.location])
 
-  const buildSubjectJpgFileName = useCallback((mode: NavigationMode): string => {
+  const buildSubjectJpgFileName = useCallback((): string => {
     const datetime = formData.datetime.trim()
     const datetimeMatch = datetime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
     const yyyymmddhhmm = datetimeMatch
@@ -2842,125 +2843,133 @@ export default function AstrologyCalculator() {
     const rawCountry = locationParts.length > 1 ? locationParts[locationParts.length - 1] : "COUNTRY"
     const city = sanitizeFileToken(rawCity, "CITY")
     const country = sanitizeFileToken(rawCountry, "COUNTRY")
-    const modeSuffix = EXPORT_MODE_SUFFIX[mode]
-    return `ASTRO.LOG.IO_${yyyymmddhhmm}_${city}_${country}_${modeSuffix}.jpg`
+    return `ASTRO.LOG.IO_${yyyymmddhhmm}_${city}_${country}_SNAPSHOT.jpg`
   }, [formData.datetime, formData.location])
 
-  const downloadChartSnapshotJpg = useCallback(
-    async (mode: NavigationMode) => {
-      if (!horoscopeData || !chartSvgRef.current || isExportingJpg) return
+  const resolveSvgAssetToDataUrl = useCallback(async (assetHref: string) => {
+    const absoluteHref = new URL(assetHref, window.location.origin).href
+    const cachedDataUrl = exportAssetDataUrlCacheRef.current.get(absoluteHref)
+    if (cachedDataUrl) return cachedDataUrl
 
-      setError("")
-      setIsExportingJpg(true)
-      try {
-        const sourceSvg = chartSvgRef.current
-        const clone = sourceSvg.cloneNode(true) as SVGSVGElement
-        clone.setAttribute("xmlns", "http://www.w3.org/2000/svg")
-        clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink")
-        clone.setAttribute("width", "1600")
-        clone.setAttribute("height", "1600")
-        clone.setAttribute("viewBox", "0 0 400 400")
-        clone.style.background = "#000000"
+    const response = await fetch(absoluteHref)
+    if (!response.ok) {
+      throw new Error(`Asset fetch failed: ${absoluteHref}`)
+    }
 
-        clone.querySelectorAll("[data-export-pointer='true'], [data-export-dynamic-aspects='true'], [data-export-static-aspects='true']").forEach((node) => {
-          node.remove()
-        })
+    const contentType = response.headers.get("content-type") || ""
+    let dataUrl = absoluteHref
 
-        const originalNodes = Array.from(sourceSvg.querySelectorAll("*"))
-        const cloneNodes = Array.from(clone.querySelectorAll("*"))
-        originalNodes.forEach((originalNode, index) => {
-          const clonedNode = cloneNodes[index]
-          if (!(originalNode instanceof Element) || !(clonedNode instanceof Element)) return
+    if (contentType.includes("image/svg+xml") || absoluteHref.toLowerCase().endsWith(".svg")) {
+      const svgText = await response.text()
+      dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`
+    } else {
+      const blob = await response.blob()
+      dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : absoluteHref)
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(blob)
+      })
+    }
 
-          if (clonedNode.tagName.toLowerCase() === "text") {
-            const computed = window.getComputedStyle(originalNode)
-            clonedNode.setAttribute("fill", computed.fill || "#ffffff")
-            clonedNode.setAttribute("font-size", computed.fontSize || "8px")
-            clonedNode.setAttribute("font-family", computed.fontFamily || MONOTYPE_FONT_STACK)
-            clonedNode.setAttribute("font-weight", computed.fontWeight || "400")
-            clonedNode.setAttribute("letter-spacing", computed.letterSpacing || "0px")
-          }
+    exportAssetDataUrlCacheRef.current.set(absoluteHref, dataUrl)
+    return dataUrl
+  }, [])
 
-          if (clonedNode.tagName.toLowerCase() === "image") {
-            const href = clonedNode.getAttribute("href") || clonedNode.getAttributeNS("http://www.w3.org/1999/xlink", "href")
-            if (href) {
-              const resolvedHref = new URL(href, window.location.origin).href
-              clonedNode.setAttribute("href", resolvedHref)
-              clonedNode.setAttributeNS("http://www.w3.org/1999/xlink", "href", resolvedHref)
-            }
-          }
-        })
+  const downloadChartSnapshotJpg = useCallback(async () => {
+    if (!horoscopeData || !chartSvgRef.current || isExportingJpg) return
 
-        const aspectGroup = document.createElementNS("http://www.w3.org/2000/svg", "g")
-        aspectGroup.setAttribute("data-export-static-aspects", "true")
-        allChartAspectSegments.forEach((segment) => {
-          const line = document.createElementNS("http://www.w3.org/2000/svg", "line")
-          line.setAttribute("x1", segment.x1.toString())
-          line.setAttribute("y1", segment.y1.toString())
-          line.setAttribute("x2", segment.x2.toString())
-          line.setAttribute("y2", segment.y2.toString())
-          line.setAttribute("stroke", segment.stroke)
-          line.setAttribute("stroke-width", segment.strokeWidth.toString())
-          line.setAttribute("opacity", segment.opacity.toString())
-          aspectGroup.appendChild(line)
-        })
-
-        const firstPlanetNode = clone.querySelector("[data-export-planet-glyph='true']")
-        if (firstPlanetNode?.parentNode) {
-          firstPlanetNode.parentNode.insertBefore(aspectGroup, firstPlanetNode)
-        } else {
-          clone.appendChild(aspectGroup)
-        }
-
-        const serializedSvg = new XMLSerializer().serializeToString(clone)
-        const svgBlob = new Blob([serializedSvg], { type: "image/svg+xml;charset=utf-8" })
-        const svgUrl = URL.createObjectURL(svgBlob)
-
-        const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const nextImage = new Image()
-          nextImage.onload = () => resolve(nextImage)
-          nextImage.onerror = (event) => reject(event)
-          nextImage.src = svgUrl
-        })
-
-        const canvas = document.createElement("canvas")
-        canvas.width = 1600
-        canvas.height = 1600
-        const context = canvas.getContext("2d")
-        if (!context) {
-          URL.revokeObjectURL(svgUrl)
-          throw new Error("Canvas context unavailable")
-        }
-        context.fillStyle = "#000000"
-        context.fillRect(0, 0, canvas.width, canvas.height)
-        context.drawImage(image, 0, 0, canvas.width, canvas.height)
-        URL.revokeObjectURL(svgUrl)
-
-        const jpgBlob = await new Promise<Blob | null>((resolve) => {
-          canvas.toBlob(resolve, "image/jpeg", 0.94)
-        })
-
-        if (!jpgBlob || jpgBlob.size === 0) {
-          throw new Error("Empty JPG export")
-        }
-
-        const anchor = document.createElement("a")
-        anchor.href = URL.createObjectURL(jpgBlob)
-        anchor.download = buildSubjectJpgFileName(mode)
-        anchor.rel = "noopener"
-        document.body.appendChild(anchor)
-        anchor.click()
-        document.body.removeChild(anchor)
-        setTimeout(() => URL.revokeObjectURL(anchor.href), 2000)
-      } catch (snapshotError) {
-        console.error("[v0] JPG snapshot export error:", snapshotError)
-        setError(language === "es" ? "Fallo la exportacion JPG." : "JPG export failed.")
-      } finally {
-        setIsExportingJpg(false)
+    setError("")
+    setIsExportingJpg(true)
+    try {
+      const sourceSvg = chartSvgRef.current
+      const clone = sourceSvg.cloneNode(true) as SVGSVGElement
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg")
+      clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink")
+      clone.setAttribute("width", "1600")
+      clone.setAttribute("height", "1600")
+      clone.setAttribute("viewBox", "0 0 400 400")
+      clone.style.background = "#000000"
+      if (interfaceThemeFilter !== "none") {
+        clone.style.filter = interfaceThemeFilter
       }
-    },
-    [buildSubjectJpgFileName, horoscopeData, isExportingJpg, language],
-  )
+
+      clone.querySelectorAll("[data-export-pointer='true']").forEach((node) => {
+        node.remove()
+      })
+
+      const originalNodes = Array.from(sourceSvg.querySelectorAll("*"))
+      const cloneNodes = Array.from(clone.querySelectorAll("*"))
+      for (const [index, originalNode] of originalNodes.entries()) {
+        const clonedNode = cloneNodes[index]
+        if (!(originalNode instanceof Element) || !(clonedNode instanceof Element)) continue
+
+        if (clonedNode.tagName.toLowerCase() === "text") {
+          const computed = window.getComputedStyle(originalNode)
+          clonedNode.setAttribute("fill", computed.fill || "#ffffff")
+          clonedNode.setAttribute("font-size", computed.fontSize || "8px")
+          clonedNode.setAttribute("font-family", computed.fontFamily || MONOTYPE_FONT_STACK)
+          clonedNode.setAttribute("font-weight", computed.fontWeight || "400")
+          clonedNode.setAttribute("letter-spacing", computed.letterSpacing || "0px")
+        }
+
+        if (clonedNode.tagName.toLowerCase() === "image") {
+          const href = clonedNode.getAttribute("href") || clonedNode.getAttributeNS("http://www.w3.org/1999/xlink", "href")
+          if (href) {
+            const resolvedHref = await resolveSvgAssetToDataUrl(href)
+            clonedNode.setAttribute("href", resolvedHref)
+            clonedNode.setAttributeNS("http://www.w3.org/1999/xlink", "href", resolvedHref)
+          }
+        }
+      }
+
+      const serializedSvg = new XMLSerializer().serializeToString(clone)
+      const svgBlob = new Blob([serializedSvg], { type: "image/svg+xml;charset=utf-8" })
+      const svgUrl = URL.createObjectURL(svgBlob)
+
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const nextImage = new Image()
+        nextImage.onload = () => resolve(nextImage)
+        nextImage.onerror = (event) => reject(event)
+        nextImage.src = svgUrl
+      })
+
+      const canvas = document.createElement("canvas")
+      canvas.width = 1600
+      canvas.height = 1600
+      const context = canvas.getContext("2d")
+      if (!context) {
+        URL.revokeObjectURL(svgUrl)
+        throw new Error("Canvas context unavailable")
+      }
+      context.fillStyle = "#000000"
+      context.fillRect(0, 0, canvas.width, canvas.height)
+      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(svgUrl)
+
+      const jpgBlob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/jpeg", 0.94)
+      })
+
+      if (!jpgBlob || jpgBlob.size === 0) {
+        throw new Error("Empty JPG export")
+      }
+
+      const anchor = document.createElement("a")
+      anchor.href = URL.createObjectURL(jpgBlob)
+      anchor.download = buildSubjectJpgFileName()
+      anchor.rel = "noopener"
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      setTimeout(() => URL.revokeObjectURL(anchor.href), 2000)
+    } catch (snapshotError) {
+      console.error("[v0] JPG snapshot export error:", snapshotError)
+      setError(language === "es" ? "Fallo la exportacion JPG." : "JPG export failed.")
+    } finally {
+      setIsExportingJpg(false)
+    }
+  }, [buildSubjectJpgFileName, horoscopeData, interfaceThemeFilter, isExportingJpg, language, resolveSvgAssetToDataUrl])
 
   const downloadNavigationModeMp3 = useCallback(
     async (mode: NavigationMode) => {
@@ -3881,9 +3890,9 @@ export default function AstrologyCalculator() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-3 md:p-8" style={{ filter: interfaceThemeFilter }}>
-      <div className="max-w-[1400px] mx-auto pb-[108px] md:pb-[124px]">
-        <div className="relative mb-2 pb-1 md:mb-4 md:pb-2 border-b border-white flex items-end justify-center gap-3 min-h-[42px] md:min-h-[68px]">
+    <main className="min-h-screen bg-black text-white p-2 md:p-6" style={{ filter: interfaceThemeFilter }}>
+      <div className="max-w-[1400px] mx-auto pb-[84px] md:pb-[94px]">
+        <div className="relative mb-1 pb-1 border-b border-white flex items-end justify-center gap-3 min-h-[34px] md:min-h-[52px]">
           <div className="absolute left-0 top-full mt-[5px]">
             {menuOpen && (
               <div
@@ -4607,7 +4616,7 @@ export default function AstrologyCalculator() {
             ASTRO.LOG.IO
           </h1>
           {horoscopeData && !showSubject && (
-            <div className="relative shrink-0">
+            <div className="absolute right-0 bottom-0 shrink-0">
               <div
                 className={`border px-2 py-1 md:px-2.5 md:py-1.5 text-right font-mono text-[7px] md:text-[11px] uppercase tracking-wide leading-tight transition-all duration-200 ${
                   isSubjectBoxHovered ? "border-white bg-white text-black" : "border-white/70 bg-black/75 text-white/80"
@@ -4649,8 +4658,9 @@ export default function AstrologyCalculator() {
                   setIsSubjectBoxHovered(false)
                 }}
               >
-                <div>{formData.datetime ? new Date(formData.datetime).toLocaleDateString(localeCode) : ui.noDate}</div>
                 <div>
+                  {formData.datetime ? new Date(formData.datetime).toLocaleDateString(localeCode) : ui.noDate}
+                  {" "}
                   {formData.datetime
                     ? new Date(formData.datetime).toLocaleTimeString(localeCode, {
                         hour: "2-digit",
@@ -4658,8 +4668,7 @@ export default function AstrologyCalculator() {
                       })
                     : ui.noTime}
                 </div>
-                <div>{subjectLocationLines.city}</div>
-                <div>{subjectLocationLines.country}</div>
+                <div>{subjectLocationLines.city}, {subjectLocationLines.country}</div>
               </div>
             </div>
           )}
@@ -4863,10 +4872,10 @@ export default function AstrologyCalculator() {
         )}
 
         {horoscopeData && (
-          <div className="space-y-4 md:space-y-6">
+          <div className="space-y-2 md:space-y-3">
             {showChart && (
-              <div className="mb-3 md:mb-4 flex justify-center" style={{ transform: "translateY(-10px)" }}>
-                <div className="relative w-full max-w-[360px] aspect-square md:w-[min(84vh,90vw)] md:h-[min(84vh,90vw)] md:max-w-none md:aspect-auto">
+              <div className="mb-0 md:mb-1 flex justify-center" style={{ transform: "translateY(-4px)" }}>
+                <div className="relative w-full max-w-[324px] aspect-square md:w-[min(74vh,86vw)] md:h-[min(74vh,86vw)] md:max-w-none md:aspect-auto">
                   <svg ref={chartSvgRef} viewBox="0 0 400 400" className="w-full h-full scale-90 origin-center">
                     <defs>
                       <filter id="glyph-halo-only" x="-200%" y="-200%" width="400%" height="400%">
@@ -5819,7 +5828,7 @@ export default function AstrologyCalculator() {
                   style={{ left: `${Math.max(0, Math.min(100, playbackProgress * 100))}%` }}
                 />
               </div>
-              <div className="grid grid-cols-7 gap-0.5 items-stretch content-stretch md:gap-1.5 pointer-events-auto">
+              <div className="grid grid-cols-8 gap-0.5 items-stretch content-stretch md:gap-1.5 pointer-events-auto">
                 <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
                   <button
                     ref={(node) => {
@@ -5859,20 +5868,16 @@ export default function AstrologyCalculator() {
                   const isModePlaybackActive = isPlaybackActive && isActiveMode
                   const modeHoverKey = `mode:${mode}`
                   const playHoverKey = `play:${mode}`
-                  const photoHoverKey = `photo:${mode}`
                   const downloadHoverKey = `download:${mode}`
                   const isModeHoverActive = topPanelHoverKey === modeHoverKey
                   const isPlayHoverActive = topPanelHoverKey === playHoverKey
-                  const isPhotoHoverActive = topPanelHoverKey === photoHoverKey
                   const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
-                  const isModeHovering = isModeHoverActive || isPlayHoverActive || isPhotoHoverActive || isDownloadHoverActive
+                  const isModeHovering = isModeHoverActive || isPlayHoverActive || isDownloadHoverActive
                   const playTooltipText = isModePlaybackActive ? ui.stop : navModeActionLabel[mode]
                   const tooltipViewportClass =
                     "fixed left-1/2 -translate-x-1/2 bottom-[88px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
                   const tooltipText = isPlayHoverActive
                     ? playTooltipText
-                    : isPhotoHoverActive
-                      ? photoTooltipText
                     : isDownloadHoverActive
                       ? TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT
                       : isModeHoverActive
@@ -5905,7 +5910,7 @@ export default function AstrologyCalculator() {
                           }}
                           onMouseEnter={() => showTopPanelHint(playHoverKey)}
                           onFocus={() => showTopPanelHint(playHoverKey)}
-                          className={`flex h-full w-[18%] min-w-[18px] items-center justify-center border-r px-0.5 transition-colors ${
+                          className={`flex h-full w-[22%] min-w-[18px] items-center justify-center border-r px-0.5 transition-colors ${
                             isModePlaybackActive ? "border-black/25" : "border-white/30 hover:bg-white/12 hover:text-white"
                           }`}
                           title={playTooltipText}
@@ -5938,42 +5943,11 @@ export default function AstrologyCalculator() {
                           {navModeHintLabel[mode]}
                         </button>
                         <button
-                          onClick={() => {
-                            showTopPanelHint(photoHoverKey)
-                            void downloadChartSnapshotJpg(mode)
-                          }}
-                          onMouseEnter={() => showTopPanelHint(photoHoverKey)}
-                          onFocus={() => showTopPanelHint(photoHoverKey)}
-                          disabled={!horoscopeData || isExportingJpg}
-                          className={`flex h-full w-[18%] min-w-[18px] items-center justify-center border-l transition-colors ${
-                            !horoscopeData || isExportingJpg
-                              ? "border-white/20 text-white/20 cursor-not-allowed"
-                              : isModePlaybackActive
-                                ? "border-black/25 text-black"
-                                : "border-white/30 hover:bg-white/12 hover:text-white"
-                          }`}
-                          title={photoTooltipText}
-                        >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 18 18"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.6"
-                            aria-hidden="true"
-                          >
-                            <rect x="2.3" y="4.4" width="13.4" height="9.2" rx="1.4" />
-                            <path d="M5.5 4.4L6.8 2.9H11.2L12.5 4.4" />
-                            <circle cx="9" cy="9" r="2.5" />
-                          </svg>
-                        </button>
-                        <button
                           onClick={() => handleDownloadButtonPress(mode)}
                           onMouseEnter={() => showTopPanelHint(downloadHoverKey)}
                           onFocus={() => showTopPanelHint(downloadHoverKey)}
                           disabled={!horoscopeData || isExportingMp3}
-                          className={`flex h-full w-[18%] min-w-[18px] items-center justify-center border-l transition-colors ${
+                          className={`flex h-full w-[22%] min-w-[18px] items-center justify-center border-l transition-colors ${
                             !horoscopeData || isExportingMp3
                               ? "border-white/20 text-white/20 cursor-not-allowed"
                               : isModePlaybackActive
@@ -6012,6 +5986,51 @@ export default function AstrologyCalculator() {
                     </div>
                   )
                 })}
+                <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                  <button
+                    onClick={() => {
+                      showTopPanelHint("photo:single")
+                      void downloadChartSnapshotJpg()
+                    }}
+                    onMouseEnter={() => showTopPanelHint("photo:single")}
+                    onFocus={() => showTopPanelHint("photo:single")}
+                    disabled={!horoscopeData || isExportingJpg}
+                    className={`flex w-full h-[34px] md:h-[42px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                      !horoscopeData || isExportingJpg
+                        ? "border-white/20 bg-transparent text-white/20 cursor-not-allowed"
+                        : topPanelHoverKey === "photo:single"
+                          ? "border-white/80 bg-white/20 text-white"
+                          : "border-white/50 bg-transparent text-white/80 hover:border-white/80 hover:bg-white/20 hover:text-white"
+                    }`}
+                    title={photoTooltipText}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 18 18"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      aria-hidden="true"
+                    >
+                      <rect x="2.3" y="4.4" width="13.4" height="9.2" rx="1.4" />
+                      <path d="M5.5 4.4L6.8 2.9H11.2L12.5 4.4" />
+                      <circle cx="9" cy="9" r="2.5" />
+                    </svg>
+                  </button>
+                  <span
+                    className={`pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-[88px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)] whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                      topPanelHoverKey === "photo:single" ? "opacity-100" : "opacity-0"
+                    }`}
+                  >
+                    {photoTooltipText}
+                  </span>
+                  <span
+                    className={`pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+10px)] h-[20px] md:h-[96px] w-px bg-white/75 transition-opacity duration-500 ${
+                      topPanelHoverKey === "photo:single" ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                </div>
                 <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
                   <button
                     onClick={openInfoOverlay}

@@ -99,7 +99,7 @@ const MODE_NAME_BY_SIGN_INDEX_BY_LANGUAGE: Record<Language, Record<number, strin
 }
 
 type AudioEngineMode = "samples" | "fm_pad" | "tibetan_samples"
-type InterfaceTheme = "white" | "neon_blue" | "phosphor_green"
+type InterfaceTheme = "white" | "neon_blue" | "phosphor_green" | "amber_phosphor" | "mystical_purpura"
 type NavigationMode = "astral_chord" | "radial" | "sequential"
 type SubjectPreset = "manual" | "here_now" | "ba" | "cairo" | "ba77"
 type MajorAspectKey = "conjunction" | "opposition" | "trine" | "square" | "sextile"
@@ -185,12 +185,56 @@ const INTERFACE_THEME_OPTIONS_BY_LANGUAGE: Record<Language, Array<{ value: Inter
     { value: "white", label: "White" },
     { value: "neon_blue", label: "Neon Blue" },
     { value: "phosphor_green", label: "Phosphor Green" },
+    { value: "amber_phosphor", label: "Amber Phosphor" },
+    { value: "mystical_purpura", label: "Mystical Purpura" },
   ],
   es: [
     { value: "white", label: "Blanco" },
     { value: "neon_blue", label: "Azul Neon" },
     { value: "phosphor_green", label: "Verde Fosforo" },
+    { value: "amber_phosphor", label: "Fosforo Ambar" },
+    { value: "mystical_purpura", label: "Purpura Mistica" },
   ],
+}
+const INTERFACE_THEME_SWATCH_BY_THEME: Record<
+  InterfaceTheme,
+  { text: string; border: string; hover: string; activeBg: string; activeText: string }
+> = {
+  white: {
+    text: "rgba(255,255,255,0.92)",
+    border: "rgba(255,255,255,0.55)",
+    hover: "rgba(255,255,255,0.2)",
+    activeBg: "rgba(255,255,255,0.82)",
+    activeText: "#050505",
+  },
+  neon_blue: {
+    text: "#8fe6ff",
+    border: "rgba(143,230,255,0.7)",
+    hover: "rgba(143,230,255,0.16)",
+    activeBg: "rgba(143,230,255,0.82)",
+    activeText: "#02151d",
+  },
+  phosphor_green: {
+    text: "#a2ff8c",
+    border: "rgba(162,255,140,0.72)",
+    hover: "rgba(162,255,140,0.16)",
+    activeBg: "rgba(162,255,140,0.82)",
+    activeText: "#071603",
+  },
+  amber_phosphor: {
+    text: "#ffd07a",
+    border: "rgba(255,208,122,0.72)",
+    hover: "rgba(255,208,122,0.18)",
+    activeBg: "rgba(255,208,122,0.84)",
+    activeText: "#1a1000",
+  },
+  mystical_purpura: {
+    text: "#dca7ff",
+    border: "rgba(220,167,255,0.72)",
+    hover: "rgba(220,167,255,0.18)",
+    activeBg: "rgba(220,167,255,0.84)",
+    activeText: "#16051f",
+  },
 }
 // Zodiac SVG set sourced from Tabler Icons (MIT).
 const ZODIAC_GLYPH_SVGS: Record<string, string> = {
@@ -1094,7 +1138,7 @@ export default function AstrologyCalculator() {
   }, [formData.location, ui.noCity, ui.noCountry])
 
   const effectiveMasterVolume = navigationMode === "astral_chord" ? masterVolume * 0.6 : masterVolume
-  const themePulseEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
+  const themePulseEnabled = interfaceTheme !== "white"
   const earthCenterTwinkleTiming = useMemo(() => getThemeTwinkleTiming("earth-center"), [])
 
   // Added hook for planet audio
@@ -1151,8 +1195,36 @@ export default function AstrologyCalculator() {
     if (interfaceTheme === "phosphor_green") {
       return "sepia(1) saturate(7.8) hue-rotate(66deg) brightness(1.03) contrast(1.08)"
     }
+    if (interfaceTheme === "amber_phosphor") {
+      return "sepia(1) saturate(8.9) hue-rotate(346deg) brightness(1.02) contrast(1.08)"
+    }
+    if (interfaceTheme === "mystical_purpura") {
+      return "sepia(1) saturate(8.1) hue-rotate(218deg) brightness(1.03) contrast(1.08)"
+    }
     return "none"
   }, [interfaceTheme])
+  const playbackWaveAmplitude = useMemo(() => {
+    if (!isLoopRunning || isPaused) return 0
+    const averageLevel = (audioLevelLeftPost + audioLevelRightPost) / 2
+    return 1.4 + (averageLevel / 100) * 7.2
+  }, [audioLevelLeftPost, audioLevelRightPost, isLoopRunning, isPaused])
+  const playbackWavePath = useMemo(() => {
+    const width = 100
+    const baseY = 10
+    const centerX = Math.max(3, Math.min(97, playbackProgress * width))
+    const envelopeWidth = 7.5
+    const frequency = 0.82
+    let path = ""
+
+    for (let step = 0; step <= width; step += 1) {
+      const distance = step - centerX
+      const envelope = Math.exp(-(distance * distance) / (2 * envelopeWidth * envelopeWidth))
+      const y = baseY - Math.sin(distance * frequency) * playbackWaveAmplitude * envelope
+      path += `${step === 0 ? "M" : " L"} ${step} ${y.toFixed(2)}`
+    }
+
+    return path
+  }, [playbackProgress, playbackWaveAmplitude])
   const loadingDisplayProgress = useMemo(() => {
     if (!loadingIntroCompleted) return Math.min(99, loadingIntroProgressPct)
     if (loadingProgress >= 100) return 100
@@ -3593,15 +3665,15 @@ export default function AstrologyCalculator() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-4 md:p-8" style={{ filter: interfaceThemeFilter }}>
-      <div className="max-w-[1400px] mx-auto pb-[170px] md:pb-[190px]">
-        <div className="relative mb-4 pb-3 md:mb-8 md:pb-4 border-b border-white flex items-center justify-center min-h-[72px] md:min-h-[112px]">
-          <div className="relative">
+    <main className="min-h-screen bg-black text-white p-3 md:p-8" style={{ filter: interfaceThemeFilter }}>
+      <div className="max-w-[1400px] mx-auto pb-[108px] md:pb-[124px]">
+        <div className="relative mb-2 pb-1 md:mb-4 md:pb-2 border-b border-white flex items-end justify-between gap-3 min-h-[42px] md:min-h-[68px]">
+          <div className="absolute right-0 top-0">
             {menuOpen && (
               <div
                 ref={menuPanelRef}
-                className="fixed bottom-[122px] left-4 right-4 w-auto max-w-[575px] ml-auto bg-black border border-white p-3.5 text-white/80 z-50 max-h-[70vh] overflow-y-auto md:bottom-[132px] md:left-8 md:right-auto md:w-auto md:min-w-[300px] md:max-w-none md:z-10 md:scale-[2.4] md:origin-bottom-left"
-                style={{ zoom: 0.8 }}
+                className="fixed top-3 right-3 w-auto max-w-[680px] bg-black border border-white p-3.5 text-white/80 z-50 max-h-[72vh] overflow-y-auto md:top-8 md:right-8 md:min-w-[360px] md:max-w-none md:z-10"
+                style={{ zoom: 0.68 }}
               >
                 <div className="mb-2 flex items-center justify-between font-mono text-[7px] uppercase tracking-wide text-white/80">
                   <span>{ui.menu}</span>
@@ -3719,11 +3791,21 @@ export default function AstrologyCalculator() {
                         <button
                           key={`minimal-interface-${option.value}`}
                           onClick={() => setInterfaceTheme(option.value)}
-                          className={`font-mono text-[10px] border px-1.5 py-1 transition-colors ${
-                            interfaceTheme === option.value
-                              ? "bg-white text-black border-white"
-                              : "bg-transparent text-white border-gray-600 hover:border-white"
-                          }`}
+                          className="font-mono text-[10px] border px-1.5 py-1 transition-opacity hover:opacity-100"
+                          style={{
+                            color:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeText
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].text,
+                            borderColor:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].border,
+                            backgroundColor:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
+                                : "transparent",
+                          }}
                         >
                           {option.label}
                         </button>
@@ -3922,11 +4004,21 @@ export default function AstrologyCalculator() {
                         <button
                           key={`advanced-interface-${option.value}`}
                           onClick={() => setInterfaceTheme(option.value)}
-                          className={`font-mono text-[8.5px] border px-1.5 py-1 transition-colors ${
-                            interfaceTheme === option.value
-                              ? "bg-white text-black border-white"
-                              : "bg-transparent text-white border-gray-600 hover:border-white"
-                          }`}
+                          className="font-mono text-[8.5px] border px-1.5 py-1 transition-opacity hover:opacity-100"
+                          style={{
+                            color:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeText
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].text,
+                            borderColor:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].border,
+                            backgroundColor:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
+                                : "transparent",
+                          }}
                         >
                           {option.label}
                         </button>
@@ -4296,9 +4388,66 @@ export default function AstrologyCalculator() {
               </div>
             )}
           </div>
-          <h1 className="font-mono text-[28px] md:text-[52px] uppercase tracking-[0.24em] text-white text-center">
+          <h1 className="font-mono text-[17px] md:text-[31px] uppercase tracking-[0.2em] text-white text-left whitespace-nowrap">
             ASTRO.LOG.IO
           </h1>
+          {horoscopeData && !showSubject && (
+            <div className="relative shrink-0">
+              <div
+                className={`border px-2 py-1 md:px-2.5 md:py-1.5 text-right font-mono text-[7px] md:text-[11px] uppercase tracking-wide leading-tight transition-all duration-200 ${
+                  isSubjectBoxHovered ? "border-white bg-white text-black" : "border-white/70 bg-black/75 text-white/80"
+                }`}
+                style={{
+                  touchAction: "manipulation",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+                onPointerDown={(event) => {
+                  if (event.pointerType === "touch") {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }
+                }}
+                onPointerEnter={() => setIsSubjectBoxHovered(true)}
+                onPointerLeave={() => setIsSubjectBoxHovered(false)}
+                onTouchStart={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  if (subjectHoverTouchTimeoutRef.current) {
+                    clearTimeout(subjectHoverTouchTimeoutRef.current)
+                    subjectHoverTouchTimeoutRef.current = null
+                  }
+                  setIsSubjectBoxHovered(true)
+                  subjectHoverTouchTimeoutRef.current = setTimeout(() => {
+                    setIsSubjectBoxHovered(false)
+                    subjectHoverTouchTimeoutRef.current = null
+                  }, TOP_PANEL_HINT_MS)
+                }}
+                onTouchCancel={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  if (subjectHoverTouchTimeoutRef.current) {
+                    clearTimeout(subjectHoverTouchTimeoutRef.current)
+                    subjectHoverTouchTimeoutRef.current = null
+                  }
+                  setIsSubjectBoxHovered(false)
+                }}
+              >
+                <div>{formData.datetime ? new Date(formData.datetime).toLocaleDateString(localeCode) : ui.noDate}</div>
+                <div>
+                  {formData.datetime
+                    ? new Date(formData.datetime).toLocaleTimeString(localeCode, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : ui.noTime}
+                </div>
+                <div>{subjectLocationLines.city}</div>
+                <div>{subjectLocationLines.country}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {showSubject && (
@@ -4499,10 +4648,10 @@ export default function AstrologyCalculator() {
         )}
 
         {horoscopeData && (
-          <div className="space-y-8">
+          <div className="space-y-4 md:space-y-6">
             {showChart && (
-              <div className="mb-8 flex justify-center" style={{ transform: "translateY(-10px)" }}>
-                <div className="relative w-full max-w-[400px] aspect-square md:w-[min(90vh,90vw)] md:h-[min(90vh,90vw)] md:max-w-none md:aspect-auto">
+              <div className="mb-3 md:mb-4 flex justify-center" style={{ transform: "translateY(-10px)" }}>
+                <div className="relative w-full max-w-[360px] aspect-square md:w-[min(84vh,90vw)] md:h-[min(84vh,90vw)] md:max-w-none md:aspect-auto">
                   <svg viewBox="0 0 400 400" className="w-full h-full scale-90 origin-center">
                     <defs>
                       <filter id="glyph-halo-only" x="-200%" y="-200%" width="400%" height="400%">
@@ -5484,251 +5633,209 @@ export default function AstrologyCalculator() {
       {horoscopeData && !showSubject && (
         <div className="fixed bottom-0 inset-x-0 z-40 pointer-events-none">
           <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8">
-            <div className="pb-[calc(env(safe-area-inset-bottom)+12px)]">
-              <div className="relative mb-[5px] border-b border-white/90">
-                <span
-                  className={`absolute bottom-[-1px] h-[10px] w-px bg-white transition-opacity duration-200 ${
+            <div className="pb-[calc(env(safe-area-inset-bottom)+8px)]">
+              <div className="relative mb-[6px] h-[20px] overflow-hidden">
+                <div className="absolute inset-x-0 bottom-0 border-b border-white/90" />
+                <svg
+                  viewBox="0 0 100 20"
+                  preserveAspectRatio="none"
+                  className={`absolute inset-x-0 bottom-[-8px] h-[20px] w-full transition-opacity duration-300 ${
                     isPlaybackActive ? "opacity-100" : "opacity-0"
                   }`}
-                  style={{ left: `${Math.max(0, Math.min(100, playbackProgress * 100))}%` }}
-                />
-              </div>
-              <div className="grid grid-cols-6 gap-0.5 items-stretch content-stretch md:gap-1.5 pointer-events-auto">
-              <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
-                <button
-                  ref={(node) => {
-                    mobileMenuButtonRef.current = node
-                    desktopMenuButtonRef.current = node
-                  }}
-                  onClick={() => setMenuOpen((prev) => !prev)}
-                  className={`flex w-full h-[36px] md:h-[42px] items-center justify-center border px-0.5 py-0 transition-colors ${
-                    menuOpen
-                      ? "border-white/80 bg-white/20 text-white"
-                      : "border-white/50 bg-transparent text-white/60 hover:border-white/80 hover:bg-white/20 hover:text-white"
-                  }`}
+                  aria-hidden="true"
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-                    <path d="M2.5 5H13.5" />
-                    <path d="M2.5 8H13.5" />
-                    <path d="M2.5 11H13.5" />
-                  </svg>
-                </button>
+                  <path d="M 0 10 L 100 10" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.65" />
+                  <path d={playbackWavePath} fill="none" stroke="white" strokeWidth="0.95" strokeLinecap="round" />
+                </svg>
               </div>
-              {TOP_PANEL_MODE_ORDER.map((mode) => {
-                const isActiveMode = navigationMode === mode
-                const isModePlaybackActive = isPlaybackActive && isActiveMode
-                const modeHoverKey = `mode:${mode}`
-                const playHoverKey = `play:${mode}`
-                const downloadHoverKey = `download:${mode}`
-                const isModeHoverActive = topPanelHoverKey === modeHoverKey
-                const isPlayHoverActive = topPanelHoverKey === playHoverKey
-                const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
-                const isModeHovering = isModeHoverActive || isPlayHoverActive || isDownloadHoverActive
-                const playTooltipText = isModePlaybackActive ? ui.stop : navModeActionLabel[mode]
-                const tooltipViewportClass =
-                  "fixed left-1/2 -translate-x-1/2 bottom-[152px] md:bottom-[176px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
-                const tooltipText = isPlayHoverActive
-                  ? playTooltipText
-                  : isDownloadHoverActive
-                    ? TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT
-                    : isModeHoverActive
-                      ? navModeInstructionByMode[mode]
-                      : null
-                return (
-                  <div key={`top-nav-${mode}`} className="relative p-0 md:p-0.5 md:px-1 md:py-1">
-                    <div
-                      className={`relative flex h-[36px] md:h-[42px] overflow-hidden border transition-colors ${
-                        isModePlaybackActive
-                          ? "border-white bg-white/80 text-black"
-                          : isModeHovering
-                            ? "border-white/80 bg-white/20 text-white"
-                            : "border-white/50 bg-transparent text-white/60"
-                      }`}
-                    >
-                      <button
-                        onClick={() => {
-                          showTopPanelHint(playHoverKey)
-                          if (isModePlaybackActive) {
-                            stopCurrentPerformance()
-                            return
-                          }
-                          if (horoscopeData) {
-                            startNavigationMode(mode)
-                          } else {
-                            setNavigationMode(mode)
-                          }
-                        }}
-                        onMouseEnter={() => showTopPanelHint(playHoverKey)}
-                        onFocus={() => showTopPanelHint(playHoverKey)}
-                        className={`flex h-full w-[24%] min-w-[24px] items-center justify-center border-r px-1 transition-colors ${
-                          isModePlaybackActive ? "border-black/25" : "border-white/30 hover:bg-white/12 hover:text-white"
-                        }`}
-                        title={playTooltipText}
-                      >
-                        {isModePlaybackActive ? (
-                          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <rect x="5" y="5" width="10" height="10" />
-                          </svg>
-                        ) : (
-                          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path d="M6 4 L16 10 L6 16 Z" />
-                          </svg>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => {
-                          showTopPanelHint(modeHoverKey)
-                          if (horoscopeData) {
-                            startNavigationMode(mode)
-                          } else {
-                            setNavigationMode(mode)
-                          }
-                        }}
-                        onMouseEnter={() => showTopPanelHint(modeHoverKey)}
-                        onFocus={() => showTopPanelHint(modeHoverKey)}
-                        className={`flex-1 px-1 font-mono font-bold text-[5.5px] md:text-[12px] leading-none uppercase tracking-[0.12em] transition-colors ${
-                          isModePlaybackActive ? "text-black" : "hover:bg-white/12 hover:text-white"
-                        }`}
-                      >
-                        {navModeHintLabel[mode]}
-                      </button>
-                      <button
-                        onClick={() => handleDownloadButtonPress(mode)}
-                        onMouseEnter={() => showTopPanelHint(downloadHoverKey)}
-                        onFocus={() => showTopPanelHint(downloadHoverKey)}
-                        disabled={!horoscopeData || isExportingMp3}
-                        className={`flex h-full w-[24%] min-w-[22px] items-center justify-center border-l transition-colors ${
-                          !horoscopeData || isExportingMp3
-                            ? "border-white/20 text-white/20 cursor-not-allowed"
-                            : isModePlaybackActive
-                              ? "border-black/25 text-black"
-                              : "border-white/30 hover:bg-white/12 hover:text-white"
-                        }`}
-                        title={TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT}
-                      >
-                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.45" aria-hidden="true">
-                          <path d="M3 8.8V12.4H13V8.8" />
-                          <path d="M8 2.8V9.1" />
-                          <path d="M5.9 7L8 9.1L10.1 7" />
-                        </svg>
-                      </button>
-                      <span
-                        className={`pointer-events-none ${tooltipViewportClass} whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
-                          tooltipText ? "opacity-100" : "opacity-0"
-                        }`}
-                      >
-                        {tooltipText || ""}
-                      </span>
-                      <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-500 ${
-                          tooltipText ? "opacity-100" : "opacity-0"
-                        }`}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-              <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
-                <button
-                  onClick={openInfoOverlay}
-                  onMouseEnter={() => setTopPanelHoverKey("reset:info")}
-                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                  onFocus={() => setTopPanelHoverKey("reset:info")}
-                  onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                  className={`w-full h-[36px] md:h-[42px] font-mono font-bold text-[5.1px] md:text-[12px] leading-none uppercase tracking-[0.14em] border px-[6px] py-0 md:px-[10px] md:py-1 transition-colors ${
-                    topPanelHoverKey === "reset:info"
-                      ? "border-white/80 bg-white/20 text-white"
-                      : "border-white/50 bg-transparent text-white/60 hover:border-white/80 hover:bg-white/20 hover:text-white"
-                  }`}
-                >
-                  {ui.info}
-                </button>
-              </div>
-              <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
-                <button
-                  onClick={resetToInitialState}
-                  onMouseEnter={() => setTopPanelHoverKey("reset:main")}
-                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                  onFocus={() => setTopPanelHoverKey("reset:main")}
-                  onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                  className={`w-full h-[36px] md:h-[42px] font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
-                    topPanelHoverKey === "reset:main"
-                      ? "border-white/80 bg-white/20 text-white"
-                      : "border-white/50 bg-transparent text-white/60 hover:border-white/80 hover:bg-white/20 hover:text-white"
-                  }`}
-                >
-                  {ui.reset}
-                </button>
-              </div>
-              </div>
-              <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-end md:justify-between pointer-events-auto">
-                <button
-                  type="button"
-                  onClick={() => {
-                    stopCurrentPerformance()
-                    setShowSubject(true)
-                    setMenuOpen(false)
-                  }}
-                  className="border border-white/50 bg-transparent px-3 py-2 font-mono text-[10px] md:text-[12px] uppercase tracking-[0.16em] text-white/60 transition-colors hover:border-white/80 hover:bg-white/20 hover:text-white"
-                >
-                  {ui.dataInput}
-                </button>
-                <div className="relative self-end">
-                  <div
-                    className={`origin-bottom-right border px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight transition-all duration-200 ${
-                      isSubjectBoxHovered
-                        ? "border-white bg-white text-black"
-                        : "border-white/70 bg-black/75 text-white/80"
+              <div className="grid grid-cols-7 gap-0.5 items-stretch content-stretch md:gap-1.5 pointer-events-auto">
+                <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                  <button
+                    ref={(node) => {
+                      mobileMenuButtonRef.current = node
+                      desktopMenuButtonRef.current = node
+                    }}
+                    onClick={() => setMenuOpen((prev) => !prev)}
+                    className={`flex w-full h-[34px] md:h-[42px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                      menuOpen
+                        ? "border-white/80 bg-white/20 text-white"
+                        : "border-white/50 bg-transparent text-white/60 hover:border-white/80 hover:bg-white/20 hover:text-white"
                     }`}
-                    style={{
-                      touchAction: "manipulation",
-                      userSelect: "none",
-                      WebkitUserSelect: "none",
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                    onPointerDown={(event) => {
-                      if (event.pointerType === "touch") {
-                        event.preventDefault()
-                        event.stopPropagation()
-                      }
-                    }}
-                    onPointerEnter={() => setIsSubjectBoxHovered(true)}
-                    onPointerLeave={() => setIsSubjectBoxHovered(false)}
-                    onTouchStart={(event) => {
-                      event.preventDefault()
-                      event.stopPropagation()
-                      if (subjectHoverTouchTimeoutRef.current) {
-                        clearTimeout(subjectHoverTouchTimeoutRef.current)
-                        subjectHoverTouchTimeoutRef.current = null
-                      }
-                      setIsSubjectBoxHovered(true)
-                      subjectHoverTouchTimeoutRef.current = setTimeout(() => {
-                        setIsSubjectBoxHovered(false)
-                        subjectHoverTouchTimeoutRef.current = null
-                      }, TOP_PANEL_HINT_MS)
-                    }}
-                    onTouchCancel={(event) => {
-                      event.preventDefault()
-                      event.stopPropagation()
-                      if (subjectHoverTouchTimeoutRef.current) {
-                        clearTimeout(subjectHoverTouchTimeoutRef.current)
-                        subjectHoverTouchTimeoutRef.current = null
-                      }
-                      setIsSubjectBoxHovered(false)
-                    }}
                   >
-                    <div>{formData.datetime ? new Date(formData.datetime).toLocaleDateString(localeCode) : ui.noDate}</div>
-                    <div>
-                      {formData.datetime
-                        ? new Date(formData.datetime).toLocaleTimeString(localeCode, {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : ui.noTime}
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+                      <path d="M2.5 5H13.5" />
+                      <path d="M2.5 8H13.5" />
+                      <path d="M2.5 11H13.5" />
+                    </svg>
+                  </button>
+                </div>
+                {TOP_PANEL_MODE_ORDER.map((mode) => {
+                  const isActiveMode = navigationMode === mode
+                  const isModePlaybackActive = isPlaybackActive && isActiveMode
+                  const modeHoverKey = `mode:${mode}`
+                  const playHoverKey = `play:${mode}`
+                  const downloadHoverKey = `download:${mode}`
+                  const isModeHoverActive = topPanelHoverKey === modeHoverKey
+                  const isPlayHoverActive = topPanelHoverKey === playHoverKey
+                  const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
+                  const isModeHovering = isModeHoverActive || isPlayHoverActive || isDownloadHoverActive
+                  const playTooltipText = isModePlaybackActive ? ui.stop : navModeActionLabel[mode]
+                  const tooltipViewportClass =
+                    "fixed left-1/2 -translate-x-1/2 bottom-[88px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
+                  const tooltipText = isPlayHoverActive
+                    ? playTooltipText
+                    : isDownloadHoverActive
+                      ? TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT
+                      : isModeHoverActive
+                        ? navModeInstructionByMode[mode]
+                        : null
+
+                  return (
+                    <div key={`top-nav-${mode}`} className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                      <div
+                        className={`relative flex h-[34px] md:h-[42px] overflow-hidden border transition-colors ${
+                          isModePlaybackActive
+                            ? "border-white bg-white/80 text-black"
+                            : isModeHovering
+                              ? "border-white/80 bg-white/20 text-white"
+                              : "border-white/50 bg-transparent text-white/60"
+                        }`}
+                      >
+                        <button
+                          onClick={() => {
+                            showTopPanelHint(playHoverKey)
+                            if (isModePlaybackActive) {
+                              stopCurrentPerformance()
+                              return
+                            }
+                            if (horoscopeData) {
+                              startNavigationMode(mode)
+                            } else {
+                              setNavigationMode(mode)
+                            }
+                          }}
+                          onMouseEnter={() => showTopPanelHint(playHoverKey)}
+                          onFocus={() => showTopPanelHint(playHoverKey)}
+                          className={`flex h-full w-[22%] min-w-[18px] items-center justify-center border-r px-0.5 transition-colors ${
+                            isModePlaybackActive ? "border-black/25" : "border-white/30 hover:bg-white/12 hover:text-white"
+                          }`}
+                          title={playTooltipText}
+                        >
+                          {isModePlaybackActive ? (
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <rect x="5" y="5" width="10" height="10" />
+                            </svg>
+                          ) : (
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <path d="M6 4 L16 10 L6 16 Z" />
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            showTopPanelHint(modeHoverKey)
+                            if (horoscopeData) {
+                              startNavigationMode(mode)
+                            } else {
+                              setNavigationMode(mode)
+                            }
+                          }}
+                          onMouseEnter={() => showTopPanelHint(modeHoverKey)}
+                          onFocus={() => showTopPanelHint(modeHoverKey)}
+                          className={`flex-1 px-0.5 font-mono font-bold text-[4.4px] md:text-[11px] leading-none uppercase tracking-[0.09em] transition-colors ${
+                            isModePlaybackActive ? "text-black" : "hover:bg-white/12 hover:text-white"
+                          }`}
+                        >
+                          {navModeHintLabel[mode]}
+                        </button>
+                        <button
+                          onClick={() => handleDownloadButtonPress(mode)}
+                          onMouseEnter={() => showTopPanelHint(downloadHoverKey)}
+                          onFocus={() => showTopPanelHint(downloadHoverKey)}
+                          disabled={!horoscopeData || isExportingMp3}
+                          className={`flex h-full w-[22%] min-w-[18px] items-center justify-center border-l transition-colors ${
+                            !horoscopeData || isExportingMp3
+                              ? "border-white/20 text-white/20 cursor-not-allowed"
+                              : isModePlaybackActive
+                                ? "border-black/25 text-black"
+                                : "border-white/30 hover:bg-white/12 hover:text-white"
+                          }`}
+                          title={TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT}
+                        >
+                          <svg
+                            width="15"
+                            height="15"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.45"
+                            aria-hidden="true"
+                          >
+                            <path d="M3 8.8V12.4H13V8.8" />
+                            <path d="M8 2.8V9.1" />
+                            <path d="M5.9 7L8 9.1L10.1 7" />
+                          </svg>
+                        </button>
+                        <span
+                          className={`pointer-events-none ${tooltipViewportClass} whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                            tooltipText ? "opacity-100" : "opacity-0"
+                          }`}
+                        >
+                          {tooltipText || ""}
+                        </span>
+                        <span
+                          className={`pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+10px)] h-[20px] md:h-[96px] w-px bg-white/75 transition-opacity duration-500 ${
+                            tooltipText ? "opacity-100" : "opacity-0"
+                          }`}
+                        />
+                      </div>
                     </div>
-                    <div>{subjectLocationLines.city}</div>
-                    <div>{subjectLocationLines.country}</div>
-                  </div>
+                  )
+                })}
+                <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                  <button
+                    onClick={openInfoOverlay}
+                    onMouseEnter={() => setTopPanelHoverKey("reset:info")}
+                    onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
+                    onFocus={() => setTopPanelHoverKey("reset:info")}
+                    onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
+                    className={`w-full h-[34px] md:h-[42px] font-mono font-bold text-[4.6px] md:text-[11px] leading-none uppercase tracking-[0.11em] border px-[4px] py-0 md:px-[10px] md:py-1 transition-colors ${
+                      topPanelHoverKey === "reset:info"
+                        ? "border-white/80 bg-white/20 text-white"
+                        : "border-white/50 bg-transparent text-white/60 hover:border-white/80 hover:bg-white/20 hover:text-white"
+                    }`}
+                  >
+                    {ui.info}
+                  </button>
+                </div>
+                <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                  <button
+                    onClick={resetToInitialState}
+                    onMouseEnter={() => setTopPanelHoverKey("reset:main")}
+                    onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
+                    onFocus={() => setTopPanelHoverKey("reset:main")}
+                    onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
+                    className={`w-full h-[34px] md:h-[42px] font-mono font-bold text-[4.8px] md:text-[11px] leading-none uppercase tracking-[0.11em] border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                      topPanelHoverKey === "reset:main"
+                        ? "border-white/80 bg-white/20 text-white"
+                        : "border-white/50 bg-transparent text-white/60 hover:border-white/80 hover:bg-white/20 hover:text-white"
+                    }`}
+                  >
+                    {ui.reset}
+                  </button>
+                </div>
+                <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopCurrentPerformance()
+                      setShowSubject(true)
+                      setMenuOpen(false)
+                    }}
+                    className="w-full h-[34px] md:h-[42px] border border-white/50 bg-transparent px-0.5 py-0 font-mono text-[4.2px] md:text-[10px] uppercase tracking-[0.09em] leading-none text-white/60 transition-colors hover:border-white/80 hover:bg-white/20 hover:text-white"
+                  >
+                    {ui.dataInput}
+                  </button>
                 </div>
               </div>
               {isExportingMp3 && (

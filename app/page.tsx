@@ -3789,7 +3789,7 @@ export default function AstrologyCalculator() {
                   </button>
                 </div>
               </div>
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+              <div className="absolute bottom-10 md:bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
                 <div
                   className={`pointer-events-none min-h-[14px] font-mono text-[8px] md:text-[11px] uppercase tracking-[0.35em] text-white transition-opacity ${
                     loadingLanguageHint ? "opacity-100" : "opacity-0"
@@ -4848,7 +4848,7 @@ export default function AstrologyCalculator() {
         {horoscopeData && (
           <div className="space-y-2 md:space-y-3">
             {showChart && (
-              <div className="mb-0 md:mb-1 flex justify-center" style={{ transform: "translateY(-4px)" }}>
+              <div className="mt-4 md:mt-0 mb-0 md:mb-1 flex justify-center md:[transform:translateY(-4px)]">
                 <div className="relative w-full max-w-[324px] aspect-square md:w-[min(74vh,86vw)] md:h-[min(74vh,86vw)] md:max-w-none md:aspect-auto">
                   <svg ref={chartSvgRef} viewBox="0 0 400 400" className="w-full h-full scale-90 origin-center">
                     <defs>
@@ -5905,7 +5905,7 @@ export default function AstrologyCalculator() {
                           }}
                           onMouseEnter={() => showTopPanelHint(modeHoverKey)}
                           onFocus={() => showTopPanelHint(modeHoverKey)}
-                          className={`flex-1 px-0.5 font-mono font-bold text-[4.3px] md:text-[11px] leading-none uppercase tracking-[0.09em] transition-colors ${
+                          className={`flex-1 px-0.5 font-mono font-bold text-[4.8px] md:text-[11px] leading-none uppercase tracking-[0.09em] transition-colors ${
                             isModePlaybackActive ? "text-black" : "hover:bg-white/12 hover:text-white"
                           }`}
                         >
@@ -5997,7 +5997,7 @@ export default function AstrologyCalculator() {
                     onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
                     onFocus={() => setTopPanelHoverKey("reset:info")}
                     onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                    className={`w-full h-[34px] md:h-[42px] font-mono font-bold text-[4.6px] md:text-[11px] leading-none uppercase tracking-[0.11em] border px-[4px] py-0 md:px-[10px] md:py-1 transition-colors ${
+                    className={`w-full h-[34px] md:h-[42px] font-mono font-bold text-[5.1px] md:text-[11px] leading-none uppercase tracking-[0.11em] border px-[4px] py-0 md:px-[10px] md:py-1 transition-colors ${
                       topPanelHoverKey === "reset:info"
                         ? "border-white/80 bg-white/20 text-white"
                         : "border-white/50 bg-transparent text-white/80 hover:border-white/80 hover:bg-white/20 hover:text-white"
@@ -6013,7 +6013,7 @@ export default function AstrologyCalculator() {
                     onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
                     onFocus={() => setTopPanelHoverKey("reset:main")}
                     onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                    className={`w-full h-[34px] md:h-[42px] font-mono font-bold text-[4.8px] md:text-[11px] leading-none uppercase tracking-[0.11em] border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                    className={`w-full h-[34px] md:h-[42px] font-mono font-bold text-[5.3px] md:text-[11px] leading-none uppercase tracking-[0.11em] border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
                       topPanelHoverKey === "reset:main"
                         ? "border-white/80 bg-white/20 text-white"
                         : "border-white/50 bg-transparent text-white/80 hover:border-white/80 hover:bg-white/20 hover:text-white"
@@ -6030,7 +6030,7 @@ export default function AstrologyCalculator() {
                       setShowSubject(true)
                       setMenuOpen(false)
                     }}
-                    className="w-full h-[34px] md:h-[42px] border border-white/50 bg-transparent px-0.5 py-0 font-mono text-[4.2px] md:text-[10px] uppercase tracking-[0.09em] leading-none text-white/80 transition-colors hover:border-white/80 hover:bg-white/20 hover:text-white"
+                    className="w-full h-[34px] md:h-[42px] border border-white/50 bg-transparent px-0.5 py-0 font-mono text-[4.6px] md:text-[10px] uppercase tracking-[0.09em] leading-none text-white/80 transition-colors hover:border-white/80 hover:bg-white/20 hover:text-white"
                   >
                     {ui.dataInput}
                   </button>

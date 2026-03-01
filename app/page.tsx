@@ -3481,7 +3481,8 @@ export default function AstrologyCalculator() {
             {menuOpen && (
               <div
                 ref={menuPanelRef}
-                className="fixed top-[52px] right-4 w-[calc(100vw-2rem)] max-w-[460px] mt-0 bg-black border border-white p-3.5 text-white/80 z-50 max-h-[85vh] overflow-y-auto md:absolute md:top-full md:left-0 md:right-auto md:mt-2 md:w-auto md:min-w-[240px] md:max-w-none md:z-10 md:scale-[2.4] md:origin-top-left"
+                className="fixed top-[52px] right-4 w-[calc((100vw-2rem)*1.25)] max-w-[575px] mt-0 bg-black border border-white p-3.5 text-white/80 z-50 max-h-[85vh] overflow-y-auto md:absolute md:top-full md:left-0 md:right-auto md:mt-2 md:w-auto md:min-w-[300px] md:max-w-none md:z-10 md:scale-[2.4] md:origin-top-left"
+                style={{ zoom: 0.8 }}
               >
                 <div className="mb-2 flex items-center justify-between font-mono text-[7px] uppercase tracking-wide text-white/80">
                   <span>{ui.menu}</span>
@@ -5402,7 +5403,7 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
-      <div className="fixed top-[50px] inset-x-0 z-[35] pointer-events-none md:hidden">
+      <div className="fixed top-[46px] inset-x-0 z-[35] pointer-events-none md:hidden">
         <div className="mx-auto w-full max-w-[calc(1400px+2rem)] px-4">
           <div className="border-b border-white/90" />
         </div>

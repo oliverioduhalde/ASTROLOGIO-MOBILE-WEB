@@ -3435,8 +3435,8 @@ export default function AstrologyCalculator() {
                       <path d="M28 0L17.1 5.45H14.4L28 0Z" fill="#FFFFFF" />
                       <path d="M0 14L10.9 8.55H13.6L0 14Z" fill="#FFFFFF" />
                       <path d="M28 14L17.1 8.55H14.4L28 14Z" fill="#FFFFFF" />
-                      <rect x="11.3" width="5.4" height="14" fill="#FFFFFF" />
-                      <rect y="4.3" width="28" height="5.4" fill="#FFFFFF" />
+                      <rect x="12.5" width="3" height="14" fill="#FFFFFF" />
+                      <rect y="5.5" width="28" height="3" fill="#FFFFFF" />
                       <rect x="0.4" y="0.4" width="27.2" height="13.2" stroke="#8A8A8A" strokeWidth="0.25" />
                     </svg>
                   </button>

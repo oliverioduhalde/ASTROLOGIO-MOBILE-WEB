@@ -3865,7 +3865,7 @@ export default function AstrologyCalculator() {
 
   return (
     <main className="min-h-screen bg-black text-white p-2 md:p-6" style={{ filter: interfaceThemeFilter }}>
-      <div className="max-w-[1400px] mx-auto pb-[84px] md:pb-[94px]">
+      <div className={`max-w-[1400px] mx-auto ${showSubject ? "pb-3 md:pb-[94px]" : "pb-[126px] md:pb-[94px]"}`}>
         <div className="relative mb-1 pb-1 border-b border-white flex items-end justify-center gap-3 min-h-[34px] md:min-h-[52px]">
           <div className="absolute left-0 top-full mt-[5px]">
             {menuOpen && (
@@ -4590,9 +4590,9 @@ export default function AstrologyCalculator() {
             ASTRO.LOG.IO
           </h1>
           {horoscopeData && !showSubject && (
-            <div className="absolute right-0 bottom-0 shrink-0">
+            <div className="fixed right-2 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-30 shrink-0 md:absolute md:right-0 md:bottom-0 md:z-auto">
               <div
-                className={`border px-2 py-1 md:px-2.5 md:py-1.5 text-right font-mono text-[7px] md:text-[11px] uppercase tracking-wide leading-tight transition-all duration-200 ${
+                className={`border px-2 py-1 md:px-2.5 md:py-1.5 text-right font-mono text-[8px] md:text-[11px] uppercase tracking-[0.08em] md:tracking-wide leading-tight transition-all duration-200 ${
                   isSubjectBoxHovered ? "border-white bg-white text-black" : "border-white/70 bg-black/75 text-white/80"
                 }`}
                 style={{
@@ -4649,13 +4649,13 @@ export default function AstrologyCalculator() {
         </div>
 
         {showSubject && (
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-1.5 mb-2">
+          <div className="space-y-2 md:space-y-3">
+            <div className="mb-1.5 grid grid-cols-2 gap-1 md:mb-2 md:flex md:flex-wrap md:gap-1.5">
               <button
                 onClick={() => {
                   void applyHereAndNow()
                 }}
-                className={`px-5 py-2 text-[14px] md:text-[18px] font-mono border transition-colors ${
+                className={`w-full px-2.5 py-1.5 text-[10px] leading-tight md:px-5 md:py-2 md:text-[18px] font-mono border transition-colors ${
                   selectedPreset === "here_now"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -4665,7 +4665,7 @@ export default function AstrologyCalculator() {
               </button>
               <button
                 onClick={setManualMode}
-                className={`px-5 py-2 text-[14px] md:text-[18px] font-mono border transition-colors ${
+                className={`w-full px-2.5 py-1.5 text-[10px] leading-tight md:px-5 md:py-2 md:text-[18px] font-mono border transition-colors ${
                   selectedPreset === "manual"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -4676,20 +4676,20 @@ export default function AstrologyCalculator() {
             </div>
 
             {(selectedPreset === "manual" || selectedPreset === "here_now") && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2 md:gap-3">
                 <div>
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">
+                  <label className="mb-0.5 block font-mono text-[10px] text-gray-300 md:mb-1 md:text-[18px]">
                     {ui.dateTime}
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.datetime}
                     onChange={(e) => setFormData({ ...formData, datetime: e.target.value })}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 p-1.5 text-[12px] text-white md:p-2 md:text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
                 <div className="relative">
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">
+                  <label className="mb-0.5 block font-mono text-[10px] text-gray-300 md:mb-1 md:text-[18px]">
                     {ui.location}
                   </label>
                   <input
@@ -4706,11 +4706,11 @@ export default function AstrologyCalculator() {
                         void resolveLocationAndUpdateCoords(formData.location)
                       }
                     }}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 p-1.5 text-[12px] text-white md:p-2 md:text-[20px] font-mono focus:border-white focus:outline-none"
                     placeholder={ui.cityCountryPlaceholder}
                   />
                   {isResolvingLocation && (
-                    <div className="mt-1 text-[10px] md:text-[12px] font-mono text-white/70">{ui.resolvingLocation}</div>
+                    <div className="mt-1 text-[9px] md:text-[12px] font-mono text-white/70">{ui.resolvingLocation}</div>
                   )}
                   {locationSuggestions.length > 0 && (
                     <div className="absolute z-20 mt-1 w-full border border-gray-500 bg-black max-h-44 overflow-y-auto">
@@ -4718,7 +4718,7 @@ export default function AstrologyCalculator() {
                         <button
                           key={`${suggestion.display}-${index}`}
                           type="button"
-                          className="w-full text-left px-2 py-2 text-[12px] md:text-[15px] font-mono text-white hover:bg-white hover:text-black transition-colors border-b border-gray-700 last:border-b-0"
+                          className="w-full text-left border-b border-gray-700 px-2 py-1.5 text-[10px] md:text-[15px] font-mono text-white hover:bg-white hover:text-black transition-colors last:border-b-0"
                           onClick={() => {
                             setFormData((prev) => ({
                               ...prev,
@@ -4736,7 +4736,7 @@ export default function AstrologyCalculator() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">
+                  <label className="mb-0.5 block font-mono text-[10px] text-gray-300 md:mb-1 md:text-[18px]">
                     {ui.latitude}
                   </label>
                   <input
@@ -4744,11 +4744,11 @@ export default function AstrologyCalculator() {
                     step="0.0001"
                     value={formData.latitude}
                     onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 p-1.5 text-[12px] text-white md:p-2 md:text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">
+                  <label className="mb-0.5 block font-mono text-[10px] text-gray-300 md:mb-1 md:text-[18px]">
                     {ui.longitude}
                   </label>
                   <input
@@ -4756,13 +4756,13 @@ export default function AstrologyCalculator() {
                     step="0.0001"
                     value={formData.longitude}
                     onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 p-1.5 text-[12px] text-white md:p-2 md:text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
               </div>
             )}
 
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="mt-4 grid grid-cols-1 gap-1.5 md:mt-8 md:grid-cols-3 md:gap-2">
               {TOP_PANEL_MODE_ORDER.map((mode) => {
                 const modeHoverKey = `subject-mode:${mode}`
                 const playHoverKey = `subject-play:${mode}`
@@ -4783,7 +4783,7 @@ export default function AstrologyCalculator() {
                 return (
                   <div key={`subject-launch-${mode}`} className="relative">
                     <div
-                      className={`relative flex h-[42px] overflow-hidden border transition-colors ${
+                      className={`relative flex h-[38px] md:h-[42px] overflow-hidden border transition-colors ${
                         isHovered ? "border-white bg-white/20 text-white" : "border-white/50 bg-transparent text-white/60"
                       }`}
                     >
@@ -4812,7 +4812,7 @@ export default function AstrologyCalculator() {
                         }}
                         onMouseEnter={() => showTopPanelHint(modeHoverKey)}
                         onFocus={() => showTopPanelHint(modeHoverKey)}
-                        className="flex-1 px-2 font-mono font-bold text-[11px] md:text-[12px] leading-none uppercase tracking-[0.12em] transition-colors hover:bg-white/12"
+                        className="flex-1 px-1.5 md:px-2 font-mono font-bold text-[9px] md:text-[12px] leading-none uppercase tracking-[0.1em] md:tracking-[0.12em] transition-colors hover:bg-white/12"
                       >
                         {navModeHintLabel[mode]}
                       </button>
@@ -5802,7 +5802,7 @@ export default function AstrologyCalculator() {
                   style={{ left: `${Math.max(0, Math.min(100, playbackProgress * 100))}%` }}
                 />
               </div>
-              <div className="grid grid-cols-8 gap-0.5 items-stretch content-stretch md:gap-1.5 pointer-events-auto">
+              <div className="grid grid-cols-4 gap-0.5 items-stretch content-stretch md:grid-cols-8 md:gap-1.5 pointer-events-auto">
                 <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
                   <button
                     ref={(node) => {
@@ -5825,7 +5825,7 @@ export default function AstrologyCalculator() {
                     </svg>
                   </button>
                   <span
-                    className={`pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-[88px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)] whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                    className={`pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-[126px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)] whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
                       topPanelHoverKey === "menu" ? "opacity-100" : "opacity-0"
                     }`}
                   >
@@ -5844,7 +5844,7 @@ export default function AstrologyCalculator() {
                   const isModeHovering = isModeHoverActive || isPlayHoverActive || isDownloadHoverActive
                   const playTooltipText = isModePlaybackActive ? ui.stop : navModeActionLabel[mode]
                   const tooltipViewportClass =
-                    "fixed left-1/2 -translate-x-1/2 bottom-[88px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
+                    "fixed left-1/2 -translate-x-1/2 bottom-[126px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
                   const tooltipText = isPlayHoverActive
                     ? playTooltipText
                     : isDownloadHoverActive
@@ -5983,7 +5983,7 @@ export default function AstrologyCalculator() {
                     </svg>
                   </button>
                   <span
-                    className={`pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-[88px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)] whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                    className={`pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-[126px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)] whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
                       topPanelHoverKey === "photo:single" ? "opacity-100" : "opacity-0"
                     }`}
                   >

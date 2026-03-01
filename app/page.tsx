@@ -104,8 +104,6 @@ type InterfaceTheme =
   | "neon_blue"
   | "phosphor_green"
   | "amber_phosphor"
-  | "magical_magenta"
-  | "black_room_red"
   | "mystical_purpura"
   | "inverted"
 type NavigationMode = "astral_chord" | "radial" | "sequential"
@@ -199,8 +197,6 @@ const INTERFACE_THEME_OPTIONS_BY_LANGUAGE: Record<Language, Array<{ value: Inter
     { value: "neon_blue", label: "Neon Blue" },
     { value: "phosphor_green", label: "Phosphor Green" },
     { value: "amber_phosphor", label: "Amber Phosphor" },
-    { value: "magical_magenta", label: "Magical Magenta" },
-    { value: "black_room_red", label: "Black Room Red" },
     { value: "mystical_purpura", label: "Mystical Purpura" },
     { value: "inverted", label: "Inverted" },
   ],
@@ -209,8 +205,6 @@ const INTERFACE_THEME_OPTIONS_BY_LANGUAGE: Record<Language, Array<{ value: Inter
     { value: "neon_blue", label: "Azul Neon" },
     { value: "phosphor_green", label: "Verde Fosforo" },
     { value: "amber_phosphor", label: "Fosforo Ambar" },
-    { value: "magical_magenta", label: "Magenta Magico" },
-    { value: "black_room_red", label: "Rojo Black Room" },
     { value: "mystical_purpura", label: "Purpura Mistica" },
     { value: "inverted", label: "Invertido" },
   ],
@@ -246,20 +240,6 @@ const INTERFACE_THEME_SWATCH_BY_THEME: Record<
     hover: "rgba(255,208,122,0.18)",
     activeBg: "rgba(255,208,122,0.84)",
     activeText: "#1a1000",
-  },
-  magical_magenta: {
-    text: "#ff8ae6",
-    border: "rgba(255,138,230,0.72)",
-    hover: "rgba(255,138,230,0.18)",
-    activeBg: "rgba(255,138,230,0.84)",
-    activeText: "#190014",
-  },
-  black_room_red: {
-    text: "#ff7d7d",
-    border: "rgba(255,125,125,0.72)",
-    hover: "rgba(255,125,125,0.18)",
-    activeBg: "rgba(255,125,125,0.84)",
-    activeText: "#180000",
   },
   mystical_purpura: {
     text: "#dca7ff",
@@ -1031,7 +1011,7 @@ export default function AstrologyCalculator() {
             modeOff: "APAGADO",
             manual: "MANUAL",
             hereNow: "AQUI Y AHORA",
-            dateTimePlaceInput: "FECHA-HORA-LUGAR",
+            dateTimePlaceInput: "DATOS DE FECHA Y LUGAR",
             dataInput: "INGRESO DE DATOS",
             dateTime: "Fecha y Hora",
             location: "Ubicacion",
@@ -1118,7 +1098,7 @@ export default function AstrologyCalculator() {
             modeOff: "OFF",
             manual: "MANUAL",
             hereNow: "HERE & NOW",
-            dateTimePlaceInput: "DATE-TIME-PLACE INPUT",
+            dateTimePlaceInput: "DATE & PLACE DATA INPUT",
             dataInput: "DATA INPUT",
             dateTime: "Date & Time",
             location: "Location",
@@ -1241,12 +1221,6 @@ export default function AstrologyCalculator() {
     }
     if (interfaceTheme === "amber_phosphor") {
       return "sepia(1) saturate(8.9) hue-rotate(346deg) brightness(1.02) contrast(1.08)"
-    }
-    if (interfaceTheme === "magical_magenta") {
-      return "sepia(1) saturate(8.8) hue-rotate(252deg) brightness(1.04) contrast(1.08)"
-    }
-    if (interfaceTheme === "black_room_red") {
-      return "sepia(1) saturate(8.6) hue-rotate(318deg) brightness(1.03) contrast(1.08)"
     }
     if (interfaceTheme === "mystical_purpura") {
       return "sepia(1) saturate(8.1) hue-rotate(218deg) brightness(1.03) contrast(1.08)"
@@ -3921,7 +3895,7 @@ export default function AstrologyCalculator() {
                         }}
                         className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                       />
-                      {ui.subject}
+                      {ui.dataInput}
                     </label>
                     <label className="flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.12em] cursor-pointer border border-white/60 px-2 py-1.5">
                       <input
@@ -4069,7 +4043,7 @@ export default function AstrologyCalculator() {
                       }}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    {ui.subject}
+                    {ui.dataInput}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -5857,11 +5831,6 @@ export default function AstrologyCalculator() {
                   >
                     {TOP_PANEL_MENU_TOOLTIP_TEXT}
                   </span>
-                  <span
-                    className={`pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+10px)] h-[20px] md:h-[96px] w-px bg-white/75 transition-opacity duration-500 ${
-                      topPanelHoverKey === "menu" ? "opacity-100" : "opacity-0"
-                    }`}
-                  />
                 </div>
                 {TOP_PANEL_MODE_ORDER.map((mode) => {
                   const isActiveMode = navigationMode === mode
@@ -5977,11 +5946,6 @@ export default function AstrologyCalculator() {
                         >
                           {tooltipText || ""}
                         </span>
-                        <span
-                          className={`pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+10px)] h-[20px] md:h-[96px] w-px bg-white/75 transition-opacity duration-500 ${
-                            tooltipText ? "opacity-100" : "opacity-0"
-                          }`}
-                        />
                       </div>
                     </div>
                   )
@@ -6025,11 +5989,6 @@ export default function AstrologyCalculator() {
                   >
                     {photoTooltipText}
                   </span>
-                  <span
-                    className={`pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+10px)] h-[20px] md:h-[96px] w-px bg-white/75 transition-opacity duration-500 ${
-                      topPanelHoverKey === "photo:single" ? "opacity-100" : "opacity-0"
-                    }`}
-                  />
                 </div>
                 <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
                   <button

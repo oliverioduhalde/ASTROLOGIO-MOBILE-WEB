@@ -3457,7 +3457,7 @@ export default function AstrologyCalculator() {
             {menuOpen && (
               <div
                 ref={menuPanelRef}
-                className="fixed top-[52px] right-4 w-[calc(100vw-2rem)] max-w-[430px] mt-0 bg-black border border-white p-3 z-50 max-h-[85vh] overflow-y-auto md:absolute md:top-full md:left-0 md:right-auto md:mt-2 md:w-auto md:max-w-none md:z-10 md:scale-[2.3] md:origin-top-left"
+                className="fixed top-[52px] right-4 w-[calc(100vw-2rem)] max-w-[460px] mt-0 bg-black border border-white p-3.5 text-white/80 z-50 max-h-[85vh] overflow-y-auto md:absolute md:top-full md:left-0 md:right-auto md:mt-2 md:w-auto md:min-w-[240px] md:max-w-none md:z-10 md:scale-[2.4] md:origin-top-left"
               >
                 <div className="mb-2 flex items-center justify-between font-mono text-[7px] uppercase tracking-wide text-white/80">
                   <span>{ui.menu}</span>
@@ -5446,22 +5446,21 @@ export default function AstrologyCalculator() {
                         }}
                         onMouseEnter={() => showTopPanelHint(playHoverKey)}
                         onFocus={() => showTopPanelHint(playHoverKey)}
-                        className={`flex h-full w-[24%] min-w-[22px] items-center justify-center border-r transition-colors ${
+                        className={`flex h-full w-[28%] min-w-[28px] items-center justify-center border-r px-1 font-mono font-bold text-[5.2px] md:text-[10px] uppercase tracking-[0.14em] transition-colors ${
                           isModeButtonActive ? "border-black/25" : "border-white/30 hover:bg-white/12 hover:text-white"
                         }`}
                         title={TOP_PANEL_PLAY_TOOLTIP_TEXT}
                       >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
-                          <path d="M3.2 8.3A4.8 4.8 0 0 1 8 3.5a4.8 4.8 0 0 1 4.8 4.8" />
-                          <rect x="2.4" y="8" width="1.8" height="4.1" rx="0.6" fill="currentColor" stroke="none" />
-                          <rect x="11.8" y="8" width="1.8" height="4.1" rx="0.6" fill="currentColor" stroke="none" />
-                          <path d="M6.2 6.2v3.6l3-1.8-3-1.8Z" fill="currentColor" stroke="none" />
-                        </svg>
+                        <span>{TOP_PANEL_PLAY_TOOLTIP_TEXT}</span>
                       </button>
                       <button
                         onClick={() => {
                           showTopPanelHint(modeHoverKey)
-                          setNavigationModeFromMenu(mode)
+                          if (horoscopeData) {
+                            startNavigationMode(mode)
+                          } else {
+                            setNavigationMode(mode)
+                          }
                         }}
                         onMouseEnter={() => showTopPanelHint(modeHoverKey)}
                         onFocus={() => showTopPanelHint(modeHoverKey)}

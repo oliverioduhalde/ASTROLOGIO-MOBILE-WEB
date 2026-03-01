@@ -2796,6 +2796,32 @@ export default function AstrologyCalculator() {
     startNavigationMode(mode)
   }
 
+  const stopCurrentPerformance = useCallback(() => {
+    cancelAllNavigationSchedulers()
+    clearAspectTimers()
+    loopStartTimeRef.current = 0
+    loopElapsedBeforePauseMsRef.current = 0
+    lastUiCommitTimeRef.current = 0
+    if (startButtonPhaseTimeoutRef.current) {
+      clearTimeout(startButtonPhaseTimeoutRef.current)
+      startButtonPhaseTimeoutRef.current = null
+    }
+    setIsLoopRunning(false)
+    setIsPaused(false)
+    setPointerRotation(180)
+    setPointerOpacity(1)
+    setPointerOpacityTransitionMs(0)
+    setChartAspectsTransitionMs(0)
+    setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
+    setCurrentPlanetUnderPointer(null)
+    setDebugPointerAngle(0)
+    setStartButtonPhase("contracted")
+    setActivePlanetAspectsMap({})
+    stopBackgroundSound()
+    stopElementBackground()
+    stopAll()
+  }, [cancelAllNavigationSchedulers, clearAspectTimers, stopAll, stopBackgroundSound, stopElementBackground])
+
   const clearMobileDownloadArm = useCallback(() => {
     if (mobileDownloadArmTimeoutRef.current) {
       clearTimeout(mobileDownloadArmTimeoutRef.current)
@@ -3431,12 +3457,10 @@ export default function AstrologyCalculator() {
                   >
                     <svg className="h-full w-full" viewBox="0 0 28 14" fill="none" aria-hidden="true" preserveAspectRatio="none">
                       <rect width="28" height="14" fill="#050505" />
-                      <path d="M0 0L10.9 5.45H13.6L0 0Z" fill="#FFFFFF" />
-                      <path d="M28 0L17.1 5.45H14.4L28 0Z" fill="#FFFFFF" />
-                      <path d="M0 14L10.9 8.55H13.6L0 14Z" fill="#FFFFFF" />
-                      <path d="M28 14L17.1 8.55H14.4L28 14Z" fill="#FFFFFF" />
-                      <rect x="12.5" width="3" height="14" fill="#FFFFFF" />
-                      <rect y="5.5" width="28" height="3" fill="#FFFFFF" />
+                      <line x1="0" y1="0" x2="28" y2="14" stroke="#FFFFFF" strokeWidth="1.15" strokeLinecap="square" />
+                      <line x1="28" y1="0" x2="0" y2="14" stroke="#FFFFFF" strokeWidth="1.15" strokeLinecap="square" />
+                      <line x1="14" y1="0" x2="14" y2="14" stroke="#FFFFFF" strokeWidth="1.15" strokeLinecap="square" />
+                      <line x1="0" y1="7" x2="28" y2="7" stroke="#FFFFFF" strokeWidth="1.15" strokeLinecap="square" />
                       <rect x="0.4" y="0.4" width="27.2" height="13.2" stroke="#8A8A8A" strokeWidth="0.25" />
                     </svg>
                   </button>
@@ -5410,6 +5434,7 @@ export default function AstrologyCalculator() {
               </div>
               {TOP_PANEL_MODE_ORDER.map((mode) => {
                 const isActiveMode = navigationMode === mode
+                const isModePlaybackActive = isPlaybackActive && isActiveMode
                 const modeHoverKey = `mode:${mode}`
                 const playHoverKey = `play:${mode}`
                 const downloadHoverKey = `download:${mode}`
@@ -5417,10 +5442,11 @@ export default function AstrologyCalculator() {
                 const isPlayHoverActive = topPanelHoverKey === playHoverKey
                 const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
                 const isModeButtonActive = isActiveMode || isModeHoverActive || isPlayHoverActive || isDownloadHoverActive
+                const playTooltipText = isModePlaybackActive ? ui.stop : ui.play
                 const tooltipViewportClass =
                   "fixed left-1/2 -translate-x-1/2 top-[90px] md:top-[164px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
                 const tooltipText = isPlayHoverActive
-                  ? TOP_PANEL_PLAY_TOOLTIP_TEXT
+                  ? playTooltipText
                   : isDownloadHoverActive
                     ? TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT
                     : isModeHoverActive
@@ -5438,6 +5464,10 @@ export default function AstrologyCalculator() {
                       <button
                         onClick={() => {
                           showTopPanelHint(playHoverKey)
+                          if (isModePlaybackActive) {
+                            stopCurrentPerformance()
+                            return
+                          }
                           if (horoscopeData) {
                             startNavigationMode(mode)
                           } else {
@@ -5446,12 +5476,20 @@ export default function AstrologyCalculator() {
                         }}
                         onMouseEnter={() => showTopPanelHint(playHoverKey)}
                         onFocus={() => showTopPanelHint(playHoverKey)}
-                        className={`flex h-full w-[28%] min-w-[28px] items-center justify-center border-r px-1 font-mono font-bold text-[5.2px] md:text-[10px] uppercase tracking-[0.14em] transition-colors ${
+                        className={`flex h-full w-[24%] min-w-[24px] items-center justify-center border-r px-1 transition-colors ${
                           isModeButtonActive ? "border-black/25" : "border-white/30 hover:bg-white/12 hover:text-white"
                         }`}
-                        title={TOP_PANEL_PLAY_TOOLTIP_TEXT}
+                        title={playTooltipText}
                       >
-                        <span>{TOP_PANEL_PLAY_TOOLTIP_TEXT}</span>
+                        {isModePlaybackActive ? (
+                          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <rect x="5" y="5" width="10" height="10" />
+                          </svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path d="M6 4 L16 10 L6 16 Z" />
+                          </svg>
+                        )}
                       </button>
                       <button
                         onClick={() => {

@@ -3789,7 +3789,7 @@ export default function AstrologyCalculator() {
                   </button>
                 </div>
               </div>
-              <div className="absolute bottom-10 md:bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+              <div className="absolute bottom-[190px] md:bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
                 <div
                   className={`pointer-events-none min-h-[14px] font-mono text-[8px] md:text-[11px] uppercase tracking-[0.35em] text-white transition-opacity ${
                     loadingLanguageHint ? "opacity-100" : "opacity-0"
@@ -4590,7 +4590,7 @@ export default function AstrologyCalculator() {
             ASTRO.LOG.IO
           </h1>
           {horoscopeData && !showSubject && (
-            <div className="fixed right-2 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-30 shrink-0 md:absolute md:right-0 md:bottom-0 md:z-auto">
+            <div className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-30 shrink-0 md:absolute md:right-0 md:bottom-0 md:z-auto">
               <div
                 className={`border px-2 py-1 md:px-2.5 md:py-1.5 text-right font-mono text-[8px] md:text-[11px] uppercase tracking-[0.08em] md:tracking-wide leading-tight transition-all duration-200 ${
                   isSubjectBoxHovered ? "border-white bg-white text-black" : "border-white/70 bg-black/75 text-white/80"
@@ -4655,7 +4655,7 @@ export default function AstrologyCalculator() {
                 onClick={() => {
                   void applyHereAndNow()
                 }}
-                className={`w-full px-2.5 py-1.5 text-[10px] leading-tight md:px-5 md:py-2 md:text-[18px] font-mono border transition-colors ${
+                className={`w-full px-2.5 py-1.5 text-[10px] leading-tight md:px-5 md:py-2 md:text-[18px] font-mono font-bold border transition-colors ${
                   selectedPreset === "here_now"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -4665,7 +4665,7 @@ export default function AstrologyCalculator() {
               </button>
               <button
                 onClick={setManualMode}
-                className={`w-full px-2.5 py-1.5 text-[10px] leading-tight md:px-5 md:py-2 md:text-[18px] font-mono border transition-colors ${
+                className={`w-full px-2.5 py-1.5 text-[10px] leading-tight md:px-5 md:py-2 md:text-[18px] font-mono font-bold border transition-colors ${
                   selectedPreset === "manual"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white border-gray-600 hover:border-white"
@@ -6030,7 +6030,7 @@ export default function AstrologyCalculator() {
                       setShowSubject(true)
                       setMenuOpen(false)
                     }}
-                    className="w-full h-[34px] md:h-[42px] border border-white/50 bg-transparent px-0.5 py-0 font-mono text-[4.6px] md:text-[10px] uppercase tracking-[0.09em] leading-none text-white/80 transition-colors hover:border-white/80 hover:bg-white/20 hover:text-white"
+                    className="w-full h-[34px] md:h-[42px] border border-white/50 bg-transparent px-0.5 py-0 font-mono font-bold text-[4.6px] md:text-[10px] uppercase tracking-[0.09em] leading-none text-white/80 transition-colors hover:border-white/80 hover:bg-white/20 hover:text-white"
                   >
                     {ui.dataInput}
                   </button>

@@ -839,6 +839,7 @@ export default function AstrologyCalculator() {
   const [showAngles, setShowAngles] = useState(false)
   const [showAstroChart, setShowAstroChart] = useState(false)
   const [loadingIntroCompleted, setLoadingIntroCompleted] = useState(false)
+  const [loadingIntroSkipped, setLoadingIntroSkipped] = useState(false)
   const [loadingIntroProgressPct, setLoadingIntroProgressPct] = useState(0)
   const [loadingIntroIndex, setLoadingIntroIndex] = useState(0)
   const [loadingIntroTick, setLoadingIntroTick] = useState(0)
@@ -1211,7 +1212,7 @@ export default function AstrologyCalculator() {
   }, [horoscopeData, modalEnabled, prepareOrbitalStarBackground])
   const lastPlayedPlanetRef = useRef<string | null>(null)
   const totalLoadingIntroDurationMs = loadingIntroParagraphs.length * LOADING_SUBTITLE_STEP_MS
-  const showLoadingIntroScreen = loadingProgress < 100 || !loadingIntroCompleted
+  const showLoadingIntroScreen = !loadingIntroSkipped && (loadingProgress < 100 || !loadingIntroCompleted)
   const interfaceThemeFilter = useMemo(() => {
     if (interfaceTheme === "neon_blue") {
       return "sepia(1) saturate(8.5) hue-rotate(163deg) brightness(1.04) contrast(1.07)"
@@ -1230,11 +1231,29 @@ export default function AstrologyCalculator() {
     }
     return "none"
   }, [interfaceTheme])
-  const loadingDisplayProgress = useMemo(() => {
-    if (!loadingIntroCompleted) return Math.min(99, loadingIntroProgressPct)
-    if (loadingProgress >= 100) return 100
-    return 99
+  const loadingDisplayProgressTarget = useMemo(() => {
+    // Keep bar proportional to actual loading while preserving intro timeline as minimum floor.
+    const proportionalLoad = Math.max(0, Math.min(100, loadingProgress))
+    const introFloor = loadingIntroCompleted ? 100 : Math.min(99, loadingIntroProgressPct)
+    return Math.max(proportionalLoad, introFloor)
   }, [loadingIntroCompleted, loadingIntroProgressPct, loadingProgress])
+  const [loadingDisplayProgress, setLoadingDisplayProgress] = useState(0)
+
+  useEffect(() => {
+    let frameId: number | null = null
+    const animate = () => {
+      setLoadingDisplayProgress((prev) => {
+        const delta = loadingDisplayProgressTarget - prev
+        if (Math.abs(delta) < 0.05) return loadingDisplayProgressTarget
+        return prev + delta * 0.16
+      })
+      frameId = requestAnimationFrame(animate)
+    }
+    frameId = requestAnimationFrame(animate)
+    return () => {
+      if (frameId !== null) cancelAnimationFrame(frameId)
+    }
+  }, [loadingDisplayProgressTarget])
 
   const clearLoadingIntroAdvanceTimeout = useCallback(() => {
     if (loadingIntroAdvanceTimeoutRef.current) {
@@ -1303,6 +1322,12 @@ export default function AstrologyCalculator() {
     setLoadingIntroTick((prev) => prev + 1)
     setLoadingIntroProgressPct((loadingIntroElapsedBeforeCurrentMsRef.current / totalLoadingIntroDurationMs) * 100)
   }, [totalLoadingIntroDurationMs])
+
+  const skipLoadingIntro = useCallback(() => {
+    setLoadingIntroSkipped(true)
+    setLoadingIntroCompleted(true)
+    clearLoadingIntroAdvanceTimeout()
+  }, [clearLoadingIntroAdvanceTimeout])
 
   const openInfoOverlay = useCallback(() => {
     setInfoParagraphIndex(0)
@@ -3810,10 +3835,10 @@ export default function AstrologyCalculator() {
                     }}
                     onMouseEnter={() => showLoadingLanguageHint("es")}
                     onFocus={() => showLoadingLanguageHint("es")}
-                    className={`flex h-[30px] w-[60px] md:h-[34px] md:w-[68px] items-center justify-center overflow-hidden border p-0 transition-opacity ${
+                    className={`flex h-[18px] w-[36px] md:h-[34px] md:w-[68px] items-center justify-center overflow-hidden border p-0 transform-gpu transition-all duration-200 hover:scale-[1.16] ${
                       language === "es"
-                        ? "border-white opacity-100"
-                        : "border-white/50 opacity-80 hover:border-white hover:opacity-100"
+                        ? "border-white/80 opacity-80"
+                        : "border-white/40 opacity-30 hover:border-white hover:opacity-100"
                     }`}
                     aria-label={language === "es" ? "Cambiar a espanol" : "Switch to Spanish"}
                   >
@@ -3838,10 +3863,10 @@ export default function AstrologyCalculator() {
                     }}
                     onMouseEnter={() => showLoadingLanguageHint("en")}
                     onFocus={() => showLoadingLanguageHint("en")}
-                    className={`flex h-[30px] w-[60px] md:h-[34px] md:w-[68px] items-center justify-center overflow-hidden border p-0 transition-opacity ${
+                    className={`flex h-[18px] w-[36px] md:h-[34px] md:w-[68px] items-center justify-center overflow-hidden border p-0 transform-gpu transition-all duration-200 hover:scale-[1.16] ${
                       language === "en"
-                        ? "border-white opacity-100"
-                        : "border-white/50 opacity-80 hover:border-white hover:opacity-100"
+                        ? "border-white/80 opacity-80"
+                        : "border-white/40 opacity-30 hover:border-white hover:opacity-100"
                     }`}
                     aria-label={language === "es" ? "Cambiar a ingles" : "Switch to English"}
                   >
@@ -3856,6 +3881,13 @@ export default function AstrologyCalculator() {
                   </button>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={skipLoadingIntro}
+                className="absolute bottom-2 right-1 md:right-0 font-mono text-[10px] md:text-[12px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors px-2 py-1"
+              >
+                SKIP
+              </button>
             </div>
           </div>
         </div>

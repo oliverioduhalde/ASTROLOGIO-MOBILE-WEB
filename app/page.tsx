@@ -3870,13 +3870,17 @@ export default function AstrologyCalculator() {
                     }`}
                     aria-label={language === "es" ? "Cambiar a ingles" : "Switch to English"}
                   >
-                    <svg className="h-full w-full" viewBox="0 0 28 14" fill="none" aria-hidden="true" preserveAspectRatio="none">
-                      <rect width="28" height="14" fill="#050505" />
-                      <line x1="0" y1="0" x2="28" y2="14" stroke="#FFFFFF" strokeWidth="1.15" strokeLinecap="square" />
-                      <line x1="28" y1="0" x2="0" y2="14" stroke="#FFFFFF" strokeWidth="1.15" strokeLinecap="square" />
-                      <line x1="14" y1="0" x2="14" y2="14" stroke="#FFFFFF" strokeWidth="1.15" strokeLinecap="square" />
-                      <line x1="0" y1="7" x2="28" y2="7" stroke="#FFFFFF" strokeWidth="1.15" strokeLinecap="square" />
-                      <rect x="0.4" y="0.4" width="27.2" height="13.2" stroke="#8A8A8A" strokeWidth="0.25" />
+                    <svg className="h-full w-full" viewBox="0 0 60 30" fill="none" aria-hidden="true" preserveAspectRatio="none">
+                      <rect width="60" height="30" fill="#012169" />
+                      <path d="M0 0H6L60 24V30H54L0 6V0Z" fill="#FFFFFF" />
+                      <path d="M60 0H54L0 24V30H6L60 6V0Z" fill="#FFFFFF" />
+                      <path d="M0 0H3L60 27V30H57L0 3V0Z" fill="#C8102E" />
+                      <path d="M60 0V3L3 30H0V27L57 0H60Z" fill="#C8102E" />
+                      <rect x="24" width="12" height="30" fill="#FFFFFF" />
+                      <rect y="9" width="60" height="12" fill="#FFFFFF" />
+                      <rect x="26" width="8" height="30" fill="#C8102E" />
+                      <rect y="11" width="60" height="8" fill="#C8102E" />
+                      <rect x="0.6" y="0.6" width="58.8" height="28.8" stroke="#8A8A8A" strokeWidth="0.6" />
                     </svg>
                   </button>
                 </div>

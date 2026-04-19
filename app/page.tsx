@@ -181,9 +181,9 @@ const PHOTO_TOOLTIP_TEXT_BY_LANGUAGE: Record<Language, string> = {
 }
 const SNAPSHOT_EXPORT_DIMENSION = 1600
 const SNAPSHOT_EXPORT_VIEWBOX = {
-  x: 20,
-  y: 20,
-  size: 360,
+  x: 0,
+  y: 0,
+  size: 400,
 }
 const DOWNLOAD_TOOLTIP_TEXT_BY_LANGUAGE: Record<Language, string> = {
   en: "download audio file (tap twice on mobile)",
@@ -1413,15 +1413,25 @@ export default function AstrologyCalculator() {
       <div aria-hidden="true" className="crt-vignette-overlay pointer-events-none fixed inset-0 z-0" />
     </>
   ) : null
+  const chartAnalogGlowAnimation = themeMotionEnabled ? "theme-star-pulse-subtle 6.4s ease-in-out infinite" : undefined
+  const chartAnalogGlowFilter =
+    "drop-shadow(0 0 2.2px rgba(255,255,255,0.82)) drop-shadow(0 0 6.8px rgba(255,255,255,0.46)) drop-shadow(0 0 14px rgba(255,255,255,0.28))"
   const chartAddonGlowStyle = useMemo(
     () =>
       ({
-        pointerEvents: "none",
-        filter: "drop-shadow(0 0 2.4px rgba(255,255,255,0.72)) drop-shadow(0 0 7.6px rgba(255,255,255,0.34))",
-        animation: themeMotionEnabled ? "theme-star-pulse-subtle 6.4s ease-in-out infinite" : undefined,
+        filter: chartAnalogGlowFilter,
+        animation: chartAnalogGlowAnimation,
         mixBlendMode: "screen",
       }) satisfies CSSProperties,
-    [themeMotionEnabled],
+    [chartAnalogGlowAnimation],
+  )
+  const chartAddonPassiveGlowStyle = useMemo(
+    () =>
+      ({
+        ...chartAddonGlowStyle,
+        pointerEvents: "none",
+      }) satisfies CSSProperties,
+    [chartAddonGlowStyle],
   )
   const loadingDisplayProgressTarget = useMemo(() => {
     // Keep bar proportional to actual loading while preserving intro timeline as minimum floor.
@@ -5255,11 +5265,13 @@ export default function AstrologyCalculator() {
                     </defs>
 
                     {showCircle && (
-                      <circle cx="200" cy="200" r="180" fill="none" stroke="white" strokeWidth="1" opacity="0.2" />
+                      <g style={chartAddonPassiveGlowStyle}>
+                        <circle cx="200" cy="200" r="180" fill="none" stroke="white" strokeWidth="1" opacity="0.2" />
+                      </g>
                     )}
 
                     {showMatrix && (
-                      <>
+                      <g style={chartAddonPassiveGlowStyle}>
                         <line x1="200" y1="20" x2="200" y2="380" stroke="white" strokeWidth="1" opacity="0.15" />
                         <line x1="20" y1="200" x2="380" y2="200" stroke="white" strokeWidth="1" opacity="0.15" />
 
@@ -5299,11 +5311,11 @@ export default function AstrologyCalculator() {
                         >
                           90°
                         </text>
-                      </>
+                      </g>
                     )}
 
                     {showSignsRing && (
-                      <g style={chartAddonGlowStyle}>
+                      <g style={chartAddonPassiveGlowStyle}>
                         <circle cx="200" cy="200" r="146" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
                         {zodiacRingItems.map((sign, index) => {
                           const signPosition = polarToCartesian(200, 200, 160, adjustToCanvasAngle(sign.centerDegrees))
@@ -5339,7 +5351,7 @@ export default function AstrologyCalculator() {
                     )}
 
                     {showHousesRing && (
-                      <g style={chartAddonGlowStyle}>
+                      <g style={chartAddonPassiveGlowStyle}>
                         <circle cx="200" cy="200" r="114" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
                         {houseRingItems.map((house) => {
                           const cuspStart = polarToCartesian(200, 200, 124, adjustToCanvasAngle(house.startDegrees))
@@ -5368,7 +5380,7 @@ export default function AstrologyCalculator() {
                                 {house.id}
                               </text>
                             </g>
-                              )
+                          )
                         })}
                       </g>
                     )}
@@ -5533,6 +5545,7 @@ export default function AstrologyCalculator() {
                               textAnchor="middle"
                               dominantBaseline="middle"
                               className="fill-white font-mono text-[6px] select-none"
+                              style={{ filter: chartAnalogGlowFilter, mixBlendMode: "screen" }}
                             >
                               {originalDegrees.toFixed(1)}°
                             </text>
@@ -5563,7 +5576,7 @@ export default function AstrologyCalculator() {
                             const horizonLabelPos = ascTheta !== null ? polarToCartesian(200, 200, 194, ascTheta) : null
 
                             return (
-                              <g style={chartAddonGlowStyle}>
+                              <g style={chartAddonPassiveGlowStyle}>
                                 {horizonPosA && horizonPosB && (
                                   <>
                                     <line
@@ -5622,7 +5635,7 @@ export default function AstrologyCalculator() {
 
                     {showAspectGraph &&
                       allChartAspectSegments.map((segment) => (
-                        <g key={segment.key} data-export-static-aspects="true" style={{ pointerEvents: "none" }}>
+                        <g key={segment.key} data-export-static-aspects="true" style={chartAddonPassiveGlowStyle}>
                           <line
                             x1={segment.x1}
                             y1={segment.y1}
@@ -5643,7 +5656,8 @@ export default function AstrologyCalculator() {
                             animation: themeMotionEnabled
                               ? `theme-star-pulse-subtle 5s ease-in-out infinite, subtle-star-glitch-soft ${earthCenterTwinkleTiming.durationSec}s steps(2, end) ${earthCenterTwinkleTiming.delaySec}s infinite`
                               : undefined,
-                            filter: "drop-shadow(0 0 5px rgba(255,255,255,0.34))",
+                            filter: chartAnalogGlowFilter,
+                            mixBlendMode: "screen",
                             transformOrigin: `${EARTH_CENTER_X}px ${EARTH_CENTER_Y}px`,
                           }}
                         >
@@ -5688,7 +5702,7 @@ export default function AstrologyCalculator() {
                           />
                         </g>
 
-                        <g data-export-pointer="true">
+                        <g data-export-pointer="true" style={chartAddonPassiveGlowStyle}>
                           {/* Animated pointer - rotates clockwise from ASC (180°) */}
                           {shouldShowIdlePointer && (
                             <circle
@@ -5793,7 +5807,7 @@ export default function AstrologyCalculator() {
                           let aspectOpacity = Math.min(data.opacity, MAX_ASPECT_LINE_OPACITY)
 
                           return (
-                            <g key={`aspect-${planetName}-${index}`} data-export-dynamic-aspects="true" style={{ pointerEvents: "none" }}>
+                            <g key={`aspect-${planetName}-${index}`} data-export-dynamic-aspects="true" style={chartAddonPassiveGlowStyle}>
                               <line
                                 x1={trimmedSegment.x1}
                                 y1={trimmedSegment.y1}

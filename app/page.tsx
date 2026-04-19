@@ -1220,10 +1220,10 @@ export default function AstrologyCalculator() {
       return "sepia(1) saturate(8.5) hue-rotate(163deg) brightness(1.04) contrast(1.07)"
     }
     if (interfaceTheme === "phosphor_green") {
-      return "sepia(1) saturate(7.8) hue-rotate(66deg) brightness(1.03) contrast(1.08)"
+      return "sepia(1) saturate(7.35) hue-rotate(66deg) brightness(0.96) contrast(1.06)"
     }
     if (interfaceTheme === "amber_phosphor") {
-      return "sepia(1) saturate(8.9) hue-rotate(346deg) brightness(1.02) contrast(1.08)"
+      return "sepia(1) saturate(6.4) hue-rotate(344deg) brightness(0.88) contrast(1.04)"
     }
     if (interfaceTheme === "mystical_purpura") {
       return "sepia(1) saturate(8.1) hue-rotate(218deg) brightness(1.03) contrast(1.08)"
@@ -1233,6 +1233,9 @@ export default function AstrologyCalculator() {
     }
     return "none"
   }, [interfaceTheme])
+  const isCrtPhosphorTheme = interfaceTheme === "phosphor_green" || interfaceTheme === "amber_phosphor"
+  const crtOverlayTone = interfaceTheme === "phosphor_green" ? "rgba(135,255,168,0.12)" : "rgba(255,181,92,0.1)"
+  const crtBloomTone = interfaceTheme === "phosphor_green" ? "rgba(138,255,173,0.09)" : "rgba(255,170,72,0.075)"
   const loadingDisplayProgressTarget = useMemo(() => {
     // Keep bar proportional to actual loading while preserving intro timeline as minimum floor.
     const proportionalLoad = Math.max(0, Math.min(100, loadingProgress))
@@ -3919,8 +3922,40 @@ export default function AstrologyCalculator() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-2 md:p-6" style={{ filter: interfaceThemeFilter }}>
-      <div className={`max-w-[1400px] mx-auto ${showSubject ? "pb-3 md:pb-[94px]" : "pb-[126px] md:pb-[94px]"}`}>
+    <main className="relative min-h-screen overflow-x-hidden bg-black p-2 text-white md:p-6" style={{ filter: interfaceThemeFilter }}>
+      {isCrtPhosphorTheme && (
+        <>
+          <div
+            aria-hidden="true"
+            className="crt-scan-overlay pointer-events-none fixed inset-0 z-0 opacity-100"
+            style={{
+              backgroundImage: [
+                `radial-gradient(circle at 50% 50%, ${crtBloomTone} 0%, rgba(0,0,0,0) 62%)`,
+                "repeating-linear-gradient(to bottom, rgba(255,255,255,0.055) 0px, rgba(255,255,255,0.055) 1px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 4px)",
+              ].join(", "),
+              backgroundBlendMode: "screen",
+              mixBlendMode: "screen",
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className="crt-phosphor-overlay pointer-events-none fixed inset-0 z-0 opacity-100"
+            style={{
+              background: `linear-gradient(180deg, rgba(0,0,0,0.06) 0%, ${crtOverlayTone} 48%, rgba(0,0,0,0.12) 100%)`,
+              mixBlendMode: "screen",
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-0 z-0"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 54%, rgba(0,0,0,0.2) 100%)",
+            }}
+          />
+        </>
+      )}
+      <div className={`relative z-10 mx-auto max-w-[1400px] ${showSubject ? "pb-3 md:pb-[94px]" : "pb-[126px] md:pb-[94px]"}`}>
         <div className="relative mb-1 pb-1 border-b border-white flex items-end justify-center gap-3 min-h-[34px] md:min-h-[52px]">
           <div className="absolute left-0 top-full mt-[5px]">
             {menuOpen && (
@@ -5867,13 +5902,13 @@ export default function AstrologyCalculator() {
                     onClick={() => setMenuOpen((prev) => !prev)}
                     onMouseEnter={() => showTopPanelHint("menu")}
                     onFocus={() => showTopPanelHint("menu")}
-                    className={`flex w-full h-[34px] md:h-[42px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                    className={`flex h-[38px] w-full items-center justify-center border px-1 py-0 transition-colors md:h-[46px] ${
                       menuOpen
                         ? "border-white/80 bg-white/20 text-white"
                         : "border-white/50 bg-transparent text-white/80 hover:border-white/80 hover:bg-white/20 hover:text-white"
                     }`}
                   >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <svg width="19" height="19" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
                       <path d="M2.5 5H13.5" />
                       <path d="M2.5 8H13.5" />
                       <path d="M2.5 11H13.5" />
@@ -5911,7 +5946,7 @@ export default function AstrologyCalculator() {
                   return (
                     <div key={`top-nav-${mode}`} className="relative p-0 md:p-0.5 md:px-1 md:py-1">
                       <div
-                        className={`relative flex h-[34px] md:h-[42px] overflow-hidden border transition-colors ${
+                        className={`relative flex h-[38px] overflow-hidden border transition-colors md:h-[46px] ${
                           isModePlaybackActive
                             ? "border-white bg-white/80 text-black"
                             : isModeHovering
@@ -5934,17 +5969,17 @@ export default function AstrologyCalculator() {
                           }}
                           onMouseEnter={() => showTopPanelHint(playHoverKey)}
                           onFocus={() => showTopPanelHint(playHoverKey)}
-                          className={`flex h-full w-[22%] min-w-[18px] items-center justify-center border-r px-0.5 transition-colors ${
+                          className={`flex h-full w-[24%] min-w-[24px] items-center justify-center border-r px-1 transition-colors ${
                             isModePlaybackActive ? "border-black/25" : "border-white/30 hover:bg-white/12 hover:text-white"
                           }`}
                           title={playTooltipText}
                         >
                           {isModePlaybackActive ? (
-                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <svg width="19" height="19" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                               <rect x="5" y="5" width="10" height="10" />
                             </svg>
                           ) : (
-                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <svg width="19" height="19" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                               <path d="M6 4 L16 10 L6 16 Z" />
                             </svg>
                           )}
@@ -5960,7 +5995,7 @@ export default function AstrologyCalculator() {
                           }}
                           onMouseEnter={() => showTopPanelHint(modeHoverKey)}
                           onFocus={() => showTopPanelHint(modeHoverKey)}
-                          className={`flex-1 px-0.5 font-mono font-bold text-[4.8px] md:text-[11px] leading-none uppercase tracking-[0.09em] transition-colors ${
+                          className={`flex-1 px-1 font-mono font-bold text-[5.3px] leading-none uppercase tracking-[0.09em] transition-colors md:text-[11.5px] ${
                             isModePlaybackActive ? "text-black" : "hover:bg-white/12 hover:text-white"
                           }`}
                         >
@@ -5971,7 +6006,7 @@ export default function AstrologyCalculator() {
                           onMouseEnter={() => showTopPanelHint(downloadHoverKey)}
                           onFocus={() => showTopPanelHint(downloadHoverKey)}
                           disabled={!horoscopeData || isExportingMp3}
-                          className={`flex h-full w-[22%] min-w-[18px] items-center justify-center border-l transition-colors ${
+                          className={`flex h-full w-[24%] min-w-[24px] items-center justify-center border-l transition-colors ${
                             !horoscopeData || isExportingMp3
                               ? "border-white/20 text-white/20 cursor-not-allowed"
                               : isModePlaybackActive
@@ -5981,8 +6016,8 @@ export default function AstrologyCalculator() {
                           title={TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT}
                         >
                           <svg
-                            width="16"
-                            height="16"
+                            width="19"
+                            height="19"
                             viewBox="0 0 16 16"
                             fill="none"
                             stroke="currentColor"
@@ -6014,7 +6049,7 @@ export default function AstrologyCalculator() {
                     onMouseEnter={() => showTopPanelHint("photo:single")}
                     onFocus={() => showTopPanelHint("photo:single")}
                     disabled={!horoscopeData || isExportingJpg}
-                    className={`flex w-full h-[34px] md:h-[42px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                    className={`flex h-[38px] w-full items-center justify-center border px-1 py-0 transition-colors md:h-[46px] ${
                       !horoscopeData || isExportingJpg
                         ? "border-white/20 bg-transparent text-white/20 cursor-not-allowed"
                         : topPanelHoverKey === "photo:single"
@@ -6024,8 +6059,8 @@ export default function AstrologyCalculator() {
                     title={photoTooltipText}
                   >
                     <svg
-                      width="16"
-                      height="16"
+                      width="19"
+                      height="19"
                       viewBox="0 0 18 18"
                       fill="none"
                       stroke="currentColor"
@@ -6052,7 +6087,7 @@ export default function AstrologyCalculator() {
                     onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
                     onFocus={() => setTopPanelHoverKey("reset:info")}
                     onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                    className={`w-full h-[34px] md:h-[42px] font-mono font-bold text-[5.1px] md:text-[11px] leading-none uppercase tracking-[0.11em] border px-[4px] py-0 md:px-[10px] md:py-1 transition-colors ${
+                    className={`h-[38px] w-full border px-[6px] py-0 font-mono text-[5.6px] font-bold leading-none uppercase tracking-[0.11em] transition-colors md:h-[46px] md:px-[10px] md:py-1 md:text-[11.5px] ${
                       topPanelHoverKey === "reset:info"
                         ? "border-white/80 bg-white/20 text-white"
                         : "border-white/50 bg-transparent text-white/80 hover:border-white/80 hover:bg-white/20 hover:text-white"
@@ -6068,7 +6103,7 @@ export default function AstrologyCalculator() {
                     onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
                     onFocus={() => setTopPanelHoverKey("reset:main")}
                     onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                    className={`w-full h-[34px] md:h-[42px] font-mono font-bold text-[5.3px] md:text-[11px] leading-none uppercase tracking-[0.11em] border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                    className={`h-[38px] w-full border px-1 py-0 font-mono text-[5.6px] font-bold leading-none uppercase tracking-[0.11em] transition-colors md:h-[46px] md:px-1.5 md:py-1 md:text-[11.5px] ${
                       topPanelHoverKey === "reset:main"
                         ? "border-white/80 bg-white/20 text-white"
                         : "border-white/50 bg-transparent text-white/80 hover:border-white/80 hover:bg-white/20 hover:text-white"
@@ -6085,7 +6120,7 @@ export default function AstrologyCalculator() {
                       setShowSubject(true)
                       setMenuOpen(false)
                     }}
-                    className="w-full h-[34px] md:h-[42px] border border-white/50 bg-transparent px-0.5 py-0 font-mono font-bold text-[4.6px] md:text-[10px] uppercase tracking-[0.09em] leading-none text-white/80 transition-colors hover:border-white/80 hover:bg-white/20 hover:text-white"
+                    className="h-[38px] w-full border border-white/50 bg-transparent px-1 py-0 font-mono text-[5px] font-bold uppercase tracking-[0.09em] leading-none text-white/80 transition-colors hover:border-white/80 hover:bg-white/20 hover:text-white md:h-[46px] md:text-[10.5px]"
                   >
                     {ui.dataInput}
                   </button>

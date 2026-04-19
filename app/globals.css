@@ -379,6 +379,62 @@
   will-change: opacity;
 }
 
+@keyframes crt-scan-drift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  33% {
+    transform: translate3d(0, -0.35px, 0);
+  }
+  66% {
+    transform: translate3d(0, 0.25px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes crt-flicker-soft {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  17% {
+    opacity: 0.105;
+  }
+  39% {
+    opacity: 0.14;
+  }
+  58% {
+    opacity: 0.11;
+  }
+  81% {
+    opacity: 0.13;
+  }
+}
+
+@keyframes crt-phosphor-breathe {
+  0%,
+  100% {
+    opacity: 0.085;
+    filter: blur(0px);
+  }
+  50% {
+    opacity: 0.12;
+    filter: blur(0.6px);
+  }
+}
+
+.crt-scan-overlay {
+  animation: crt-scan-drift 4.8s ease-in-out infinite, crt-flicker-soft 2.9s steps(2, end) infinite;
+  will-change: transform, opacity;
+}
+
+.crt-phosphor-overlay {
+  animation: crt-phosphor-breathe 5.2s ease-in-out infinite;
+  will-change: opacity, filter;
+}
+
 /* Aspect indicator box with backdrop blur */
 .aspect-indicator-box {
   @apply absolute bottom-4 left-4 bg-black/30 backdrop-blur-sm border border-white/20 rounded-lg p-3 max-w-sm;

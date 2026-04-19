@@ -179,6 +179,12 @@ const PHOTO_TOOLTIP_TEXT_BY_LANGUAGE: Record<Language, string> = {
   en: "PHOTO",
   es: "FOTO",
 }
+const SNAPSHOT_EXPORT_DIMENSION = 1600
+const SNAPSHOT_EXPORT_VIEWBOX = {
+  x: 20,
+  y: 20,
+  size: 360,
+}
 const DOWNLOAD_TOOLTIP_TEXT_BY_LANGUAGE: Record<Language, string> = {
   en: "download audio file (tap twice on mobile)",
   es: "descargar archivo de audio (doble toque en movil)",
@@ -3058,7 +3064,7 @@ export default function AstrologyCalculator() {
     return `ASTRO.LOG.IO_${yyyymmddhhmm}_${city}_${country}_${modeSuffix}.mp3`
   }, [formData.datetime, formData.location])
 
-  const buildSubjectJpgFileName = useCallback((): string => {
+  const buildSubjectSnapshotFileName = useCallback((): string => {
     const datetime = formData.datetime.trim()
     const datetimeMatch = datetime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
     const yyyymmddhhmm = datetimeMatch
@@ -3073,7 +3079,7 @@ export default function AstrologyCalculator() {
     const rawCountry = locationParts.length > 1 ? locationParts[locationParts.length - 1] : "COUNTRY"
     const city = sanitizeFileToken(rawCity, "CITY")
     const country = sanitizeFileToken(rawCountry, "COUNTRY")
-    return `ASTRO.LOG.IO_${yyyymmddhhmm}_${city}_${country}_SNAPSHOT.jpg`
+    return `ASTRO.LOG.IO_${yyyymmddhhmm}_${city}_${country}_SNAPSHOT.png`
   }, [formData.datetime, formData.location])
 
   const resolveSvgAssetToDataUrl = useCallback(async (assetHref: string) => {
@@ -3116,10 +3122,13 @@ export default function AstrologyCalculator() {
       const clone = sourceSvg.cloneNode(true) as SVGSVGElement
       clone.setAttribute("xmlns", "http://www.w3.org/2000/svg")
       clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink")
-      clone.setAttribute("width", "1600")
-      clone.setAttribute("height", "1600")
-      clone.setAttribute("viewBox", "0 0 400 400")
-      clone.style.background = "#000000"
+      clone.setAttribute("width", String(SNAPSHOT_EXPORT_DIMENSION))
+      clone.setAttribute("height", String(SNAPSHOT_EXPORT_DIMENSION))
+      clone.setAttribute(
+        "viewBox",
+        `${SNAPSHOT_EXPORT_VIEWBOX.x} ${SNAPSHOT_EXPORT_VIEWBOX.y} ${SNAPSHOT_EXPORT_VIEWBOX.size} ${SNAPSHOT_EXPORT_VIEWBOX.size}`,
+      )
+      clone.style.background = "transparent"
       if (interfaceThemeFilter !== "none") {
         clone.style.filter = interfaceThemeFilter
       }
@@ -3165,41 +3174,50 @@ export default function AstrologyCalculator() {
       })
 
       const canvas = document.createElement("canvas")
-      canvas.width = 1600
-      canvas.height = 1600
+      canvas.width = SNAPSHOT_EXPORT_DIMENSION
+      canvas.height = SNAPSHOT_EXPORT_DIMENSION
       const context = canvas.getContext("2d")
       if (!context) {
         URL.revokeObjectURL(svgUrl)
         throw new Error("Canvas context unavailable")
       }
+      const exportCenter = SNAPSHOT_EXPORT_DIMENSION / 2
+      const exportRadius = SNAPSHOT_EXPORT_DIMENSION / 2
+      context.clearRect(0, 0, canvas.width, canvas.height)
+      context.save()
+      context.beginPath()
+      context.arc(exportCenter, exportCenter, exportRadius, 0, Math.PI * 2)
+      context.closePath()
+      context.clip()
       context.fillStyle = "#000000"
       context.fillRect(0, 0, canvas.width, canvas.height)
       context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      context.restore()
       URL.revokeObjectURL(svgUrl)
 
-      const jpgBlob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(resolve, "image/jpeg", 0.94)
+      const pngBlob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/png")
       })
 
-      if (!jpgBlob || jpgBlob.size === 0) {
-        throw new Error("Empty JPG export")
+      if (!pngBlob || pngBlob.size === 0) {
+        throw new Error("Empty snapshot export")
       }
 
       const anchor = document.createElement("a")
-      anchor.href = URL.createObjectURL(jpgBlob)
-      anchor.download = buildSubjectJpgFileName()
+      anchor.href = URL.createObjectURL(pngBlob)
+      anchor.download = buildSubjectSnapshotFileName()
       anchor.rel = "noopener"
       document.body.appendChild(anchor)
       anchor.click()
       document.body.removeChild(anchor)
       setTimeout(() => URL.revokeObjectURL(anchor.href), 2000)
     } catch (snapshotError) {
-      console.error("[v0] JPG snapshot export error:", snapshotError)
-      setError(language === "es" ? "Fallo la exportacion JPG." : "JPG export failed.")
+      console.error("[v0] Snapshot export error:", snapshotError)
+      setError(language === "es" ? "Fallo la exportacion de la foto." : "Photo export failed.")
     } finally {
       setIsExportingJpg(false)
     }
-  }, [buildSubjectJpgFileName, horoscopeData, interfaceThemeFilter, isExportingJpg, language, resolveSvgAssetToDataUrl])
+  }, [buildSubjectSnapshotFileName, horoscopeData, interfaceThemeFilter, isExportingJpg, language, resolveSvgAssetToDataUrl])
 
   const downloadNavigationModeMp3 = useCallback(
     async (mode: NavigationMode) => {

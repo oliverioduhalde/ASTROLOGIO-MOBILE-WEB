@@ -840,6 +840,7 @@ export default function AstrologyCalculator() {
   const [showAstroChart, setShowAstroChart] = useState(false)
   const [loadingIntroCompleted, setLoadingIntroCompleted] = useState(false)
   const [loadingIntroSkipped, setLoadingIntroSkipped] = useState(false)
+  const [loadingIntroExitReady, setLoadingIntroExitReady] = useState(false)
   const [loadingIntroProgressPct, setLoadingIntroProgressPct] = useState(0)
   const [loadingIntroIndex, setLoadingIntroIndex] = useState(0)
   const [loadingIntroTick, setLoadingIntroTick] = useState(0)
@@ -1212,7 +1213,8 @@ export default function AstrologyCalculator() {
   }, [horoscopeData, modalEnabled, prepareOrbitalStarBackground])
   const lastPlayedPlanetRef = useRef<string | null>(null)
   const totalLoadingIntroDurationMs = loadingIntroParagraphs.length * LOADING_SUBTITLE_STEP_MS
-  const showLoadingIntroScreen = !loadingIntroSkipped && (loadingProgress < 100 || !loadingIntroCompleted)
+  const showLoadingIntroScreen =
+    !loadingIntroSkipped && (loadingProgress < 100 || !loadingIntroCompleted || !loadingIntroExitReady)
   const interfaceThemeFilter = useMemo(() => {
     if (interfaceTheme === "neon_blue") {
       return "sepia(1) saturate(8.5) hue-rotate(163deg) brightness(1.04) contrast(1.07)"
@@ -1326,6 +1328,7 @@ export default function AstrologyCalculator() {
   const skipLoadingIntro = useCallback(() => {
     setLoadingIntroSkipped(true)
     setLoadingIntroCompleted(true)
+    setLoadingIntroExitReady(true)
     clearLoadingIntroAdvanceTimeout()
   }, [clearLoadingIntroAdvanceTimeout])
 
@@ -1406,6 +1409,22 @@ export default function AstrologyCalculator() {
       clearLoadingIntroAdvanceTimeout()
     }
   }, [advanceLoadingIntroParagraph, clearLoadingIntroAdvanceTimeout, loadingIntroCompleted, loadingIntroIndex, showLoadingIntroScreen])
+
+  useEffect(() => {
+    if (loadingIntroSkipped) return
+    if (!loadingIntroCompleted || loadingProgress < 100) {
+      setLoadingIntroExitReady(false)
+      return
+    }
+
+    const timeoutId = setTimeout(() => {
+      setLoadingIntroExitReady(true)
+    }, 10000)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [loadingIntroCompleted, loadingIntroSkipped, loadingProgress])
 
   useEffect(() => {
     if (!showInfoOverlay) return
@@ -3871,15 +3890,15 @@ export default function AstrologyCalculator() {
                     aria-label={language === "es" ? "Cambiar a ingles" : "Switch to English"}
                   >
                     <svg className="h-full w-full" viewBox="0 0 60 30" fill="none" aria-hidden="true" preserveAspectRatio="none">
-                      <rect width="60" height="30" fill="#012169" />
-                      <path d="M0 0H6L60 24V30H54L0 6V0Z" fill="#FFFFFF" />
-                      <path d="M60 0H54L0 24V30H6L60 6V0Z" fill="#FFFFFF" />
-                      <path d="M0 0H3L60 27V30H57L0 3V0Z" fill="#C8102E" />
-                      <path d="M60 0V3L3 30H0V27L57 0H60Z" fill="#C8102E" />
-                      <rect x="24" width="12" height="30" fill="#FFFFFF" />
-                      <rect y="9" width="60" height="12" fill="#FFFFFF" />
-                      <rect x="26" width="8" height="30" fill="#C8102E" />
-                      <rect y="11" width="60" height="8" fill="#C8102E" />
+                      <rect width="60" height="30" fill="#141414" />
+                      <path d="M0 0H6L60 24V30H54L0 6V0Z" fill="#F2F2F2" />
+                      <path d="M60 0H54L0 24V30H6L60 6V0Z" fill="#F2F2F2" />
+                      <path d="M0 0H3L60 27V30H57L0 3V0Z" fill="#8F8F8F" />
+                      <path d="M60 0V3L3 30H0V27L57 0H60Z" fill="#8F8F8F" />
+                      <rect x="24" width="12" height="30" fill="#F2F2F2" />
+                      <rect y="9" width="60" height="12" fill="#F2F2F2" />
+                      <rect x="26" width="8" height="30" fill="#8F8F8F" />
+                      <rect y="11" width="60" height="8" fill="#8F8F8F" />
                       <rect x="0.6" y="0.6" width="58.8" height="28.8" stroke="#8A8A8A" strokeWidth="0.6" />
                     </svg>
                   </button>
@@ -3888,7 +3907,7 @@ export default function AstrologyCalculator() {
               <button
                 type="button"
                 onClick={skipLoadingIntro}
-                className="absolute bottom-2 right-1 md:right-0 font-mono text-[10px] md:text-[12px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors px-2 py-1"
+                className="absolute bottom-[190px] right-1 md:bottom-3 md:right-0 font-mono text-[10px] md:text-[12px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors px-2 py-1"
               >
                 SKIP
               </button>

@@ -137,6 +137,7 @@ const CHORD_ASPECTS_FADE_IN_MS = 14000
 const CHORD_ASPECTS_HOLD_MS = 5000
 const CHORD_ASPECTS_FADE_OUT_MS = 10000
 const TOP_PANEL_HINT_MS = 4000
+const BUILD_MARK = "V09"
 
 const NAV_MODE_HINT_LABEL_BY_LANGUAGE: Record<Language, Record<NavigationMode, string>> = {
   en: {
@@ -3907,13 +3908,18 @@ export default function AstrologyCalculator() {
                   </button>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={skipLoadingIntro}
-                className="absolute bottom-[190px] right-1 md:bottom-3 md:right-0 font-mono text-[10px] md:text-[12px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors px-2 py-1"
-              >
-                SKIP
-              </button>
+              <div className="absolute inset-x-0 bottom-[190px] flex items-center justify-between px-1 md:bottom-3 md:px-0">
+                <span className="font-mono text-[10px] md:text-[12px] uppercase tracking-[0.2em] text-white/55 px-2 py-1">
+                  {BUILD_MARK}
+                </span>
+                <button
+                  type="button"
+                  onClick={skipLoadingIntro}
+                  className="font-mono text-[15px] md:text-[18px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors px-2 py-1"
+                >
+                  SKIP
+                </button>
+              </div>
             </div>
           </div>
         </div>

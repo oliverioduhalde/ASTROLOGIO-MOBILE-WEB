@@ -1027,6 +1027,7 @@ export default function AstrologyCalculator() {
   const desktopMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const [menuPanelPosition, setMenuPanelPosition] = useState<{ top: number; left: number } | null>(null)
+  const [crtFocusPoint, setCrtFocusPoint] = useState({ x: 50, y: 50 })
   const [isSidereal, setIsSidereal] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<SubjectPreset>("here_now")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
@@ -1383,6 +1384,15 @@ export default function AstrologyCalculator() {
   const crtOverlayTone = activeThemeVisual.overlayTone
   const crtBloomTone = activeThemeVisual.bloomTone
   const phosphorShellStyle = activeThemeVisual.shellStyle
+  const phosphorShellStyleWithFocus = useMemo(
+    () =>
+      ({
+        ...phosphorShellStyle,
+        "--crt-focus-x": `${crtFocusPoint.x}%`,
+        "--crt-focus-y": `${crtFocusPoint.y}%`,
+      }) satisfies CSSProperties,
+    [crtFocusPoint.x, crtFocusPoint.y, phosphorShellStyle],
+  )
   const contentToneStyle = useMemo(
     () => ({ filter: interfaceThemeFilter }) satisfies CSSProperties,
     [interfaceThemeFilter],
@@ -1394,7 +1404,7 @@ export default function AstrologyCalculator() {
         className="crt-scan-overlay pointer-events-none fixed inset-0 z-0 opacity-100"
         style={{
           backgroundImage: [
-            `radial-gradient(circle at 50% 50%, ${crtBloomTone} 0%, rgba(0,0,0,0) 62%)`,
+            `radial-gradient(circle at var(--crt-focus-x, 50%) var(--crt-focus-y, 50%), ${crtBloomTone} 0%, rgba(0,0,0,0) 62%)`,
             "repeating-linear-gradient(to bottom, rgba(255,255,255,0.055) 0px, rgba(255,255,255,0.055) 1px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 4px)",
           ].join(", "),
           backgroundBlendMode: "screen",
@@ -3749,10 +3759,33 @@ export default function AstrologyCalculator() {
   const playbackUiShellClassName = `playback-ui-shell ${
     isPlaybackUiHidden ? "playback-ui-shell--hidden" : "playback-ui-shell--visible"
   }`
+  const chartScreenPaddingClassName = showSubject
+    ? "pb-3 md:pb-[94px]"
+    : isPlaybackUiHidden
+      ? "pb-0 md:pb-0"
+      : "pb-[126px] md:pb-[94px]"
 
   useEffect(() => {
     playbackUiVisibleRef.current = playbackUiVisible
   }, [playbackUiVisible])
+
+  const updateCrtFocusPoint = useCallback(() => {
+    if (typeof window === "undefined") return
+    const svgRect = chartSvgRef.current?.getBoundingClientRect()
+    if (!svgRect || showSubject || !showChart || !horoscopeData) {
+      setCrtFocusPoint((current) => (current.x === 50 && current.y === 50 ? current : { x: 50, y: 50 }))
+      return
+    }
+
+    const nextX = Math.max(0, Math.min(100, ((svgRect.left + svgRect.width / 2) / window.innerWidth) * 100))
+    const nextY = Math.max(0, Math.min(100, ((svgRect.top + svgRect.height / 2) / window.innerHeight) * 100))
+
+    setCrtFocusPoint((current) =>
+      Math.abs(current.x - nextX) < 0.15 && Math.abs(current.y - nextY) < 0.15
+        ? current
+        : { x: nextX, y: nextY },
+    )
+  }, [horoscopeData, showChart, showSubject])
 
   const clearPlaybackUiHideTimeout = useCallback(() => {
     if (playbackUiHideTimeoutRef.current) {
@@ -3801,6 +3834,42 @@ export default function AstrologyCalculator() {
       window.removeEventListener("touchstart", revealPlaybackUi)
     }
   }, [clearPlaybackUiHideTimeout, isPlaybackActive, schedulePlaybackUiHide])
+
+  useEffect(() => {
+    if (!isPlaybackUiHidden) return
+    setMenuOpen(false)
+  }, [isPlaybackUiHidden])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    let frameId: number | null = null
+    const syncCrtFocus = () => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId)
+      }
+      frameId = window.requestAnimationFrame(() => {
+        updateCrtFocusPoint()
+        frameId = null
+      })
+    }
+
+    syncCrtFocus()
+    const shortDelayId = window.setTimeout(syncCrtFocus, 120)
+    const transitionDelayId = window.setTimeout(syncCrtFocus, 620)
+    window.addEventListener("resize", syncCrtFocus)
+    window.addEventListener("scroll", syncCrtFocus, true)
+
+    return () => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId)
+      }
+      window.clearTimeout(shortDelayId)
+      window.clearTimeout(transitionDelayId)
+      window.removeEventListener("resize", syncCrtFocus)
+      window.removeEventListener("scroll", syncCrtFocus, true)
+    }
+  }, [horoscopeData, isPlaybackUiHidden, playbackUiVisible, showChart, showSubject, updateCrtFocusPoint])
 
   const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
   const chartRotation = 180 - ascDegrees
@@ -4085,7 +4154,7 @@ export default function AstrologyCalculator() {
         className={`min-h-screen bg-black text-white flex items-start justify-center p-4 pt-8 md:pt-10 relative ${
           isThemeMotionActive ? "astro-phosphor-shell astro-phosphor-shell--active" : ""
         }`}
-        style={phosphorShellStyle}
+        style={phosphorShellStyleWithFocus}
         data-phosphor-theme={themeMotionDataAttr}
       >
         {themeMotionOverlays}
@@ -4238,14 +4307,12 @@ export default function AstrologyCalculator() {
       className={`relative min-h-screen overflow-x-hidden bg-black p-2 text-white md:p-6 ${
         isThemeMotionActive ? "astro-phosphor-shell astro-phosphor-shell--active" : ""
       }`}
-      style={phosphorShellStyle}
+      style={phosphorShellStyleWithFocus}
       data-phosphor-theme={themeMotionDataAttr}
     >
       {themeMotionOverlays}
       <div
-        className={`relative z-10 mx-auto max-w-[1400px] astro-phosphor-content ${
-          showSubject ? "pb-3 md:pb-[94px]" : "pb-[126px] md:pb-[94px]"
-        }`}
+        className={`relative z-10 mx-auto max-w-[1400px] astro-phosphor-content ${chartScreenPaddingClassName}`}
         style={contentToneStyle}
       >
         <div className={`${playbackUiShellClassName} relative mb-1 pb-1 border-b border-white flex items-end justify-center gap-3 min-h-[34px] md:min-h-[52px]`}>
@@ -4254,7 +4321,7 @@ export default function AstrologyCalculator() {
               ? createPortal(
                   <div
                     ref={menuPanelRef}
-                    className="fixed z-[70] w-[min(92vw,540px)] md:w-[560px] bg-black border border-white px-5 py-5 text-white/88 max-h-[72vh] overflow-y-auto shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
+                    className={`${playbackUiShellClassName} fixed z-[70] w-[min(92vw,540px)] md:w-[560px] bg-black border border-white px-5 py-5 text-white/88 max-h-[72vh] overflow-y-auto shadow-[0_0_0_1px_rgba(255,255,255,0.12)]`}
                     style={{
                       top: menuPanelPosition.top,
                       left: menuPanelPosition.left,

@@ -501,7 +501,7 @@
 
 .astro-phosphor-shell--active {
   background:
-    radial-gradient(circle at center, var(--phosphor-aura) 0%, transparent 40%),
+    radial-gradient(circle at var(--crt-focus-x, 50%) var(--crt-focus-y, 50%), var(--phosphor-aura) 0%, transparent 40%),
     radial-gradient(circle at top, var(--phosphor-top-glow) 0%, transparent 22%),
     linear-gradient(180deg, var(--phosphor-bg-top) 0%, var(--phosphor-bg-mid) 52%, var(--phosphor-bg-bottom) 100%);
 }
@@ -560,7 +560,15 @@
   opacity: 0;
   transform: translateY(10px);
   filter: blur(6px);
+  max-height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border-width: 0 !important;
+  overflow: hidden !important;
   user-select: none;
+  visibility: hidden;
 }
 
 .playback-ui-shell--hidden,
@@ -588,7 +596,8 @@
 }
 
 .crt-vignette-overlay {
-  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.02) 0%, rgba(0, 0, 0, 0) 54%, var(--phosphor-vignette) 100%);
+  background:
+    radial-gradient(circle at var(--crt-focus-x, 50%) var(--crt-focus-y, 50%), rgba(255, 255, 255, 0.02) 0%, rgba(0, 0, 0, 0) 54%, var(--phosphor-vignette) 100%);
   box-shadow: inset 0 0 0 1px var(--phosphor-frame), inset 0 0 42px rgba(0, 0, 0, 0.56);
   animation: astro-phosphor-vignette-breathe 7.5s ease-in-out infinite;
   will-change: opacity;

@@ -1413,6 +1413,16 @@ export default function AstrologyCalculator() {
       <div aria-hidden="true" className="crt-vignette-overlay pointer-events-none fixed inset-0 z-0" />
     </>
   ) : null
+  const chartAddonGlowStyle = useMemo(
+    () =>
+      ({
+        pointerEvents: "none",
+        filter: "drop-shadow(0 0 2.4px rgba(255,255,255,0.72)) drop-shadow(0 0 7.6px rgba(255,255,255,0.34))",
+        animation: themeMotionEnabled ? "theme-star-pulse-subtle 6.4s ease-in-out infinite" : undefined,
+        mixBlendMode: "screen",
+      }) satisfies CSSProperties,
+    [themeMotionEnabled],
+  )
   const loadingDisplayProgressTarget = useMemo(() => {
     // Keep bar proportional to actual loading while preserving intro timeline as minimum floor.
     const proportionalLoad = Math.max(0, Math.min(100, loadingProgress))
@@ -5067,51 +5077,53 @@ export default function AstrologyCalculator() {
                     className="w-full bg-black border border-gray-500 p-1.5 text-[12px] text-white md:p-2 md:text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
-                <div className="relative">
+                <div>
                   <label className="mb-0.5 block font-mono text-[10px] text-gray-300 md:mb-1 md:text-[18px]">
                     {ui.location}
                   </label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    onBlur={() => {
-                      if (formData.location.trim()) {
-                        void resolveLocationAndUpdateCoords(formData.location)
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if ((e.key === "Enter" || e.key === "Tab") && formData.location.trim()) {
-                        void resolveLocationAndUpdateCoords(formData.location)
-                      }
-                    }}
-                    className="w-full bg-black border border-gray-500 p-1.5 text-[12px] text-white md:p-2 md:text-[20px] font-mono focus:border-white focus:outline-none"
-                    placeholder={ui.cityCountryPlaceholder}
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      onBlur={() => {
+                        if (formData.location.trim()) {
+                          void resolveLocationAndUpdateCoords(formData.location)
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if ((e.key === "Enter" || e.key === "Tab") && formData.location.trim()) {
+                          void resolveLocationAndUpdateCoords(formData.location)
+                        }
+                      }}
+                      className="w-full bg-black border border-gray-500 p-1.5 text-[12px] text-white md:p-2 md:text-[20px] font-mono focus:border-white focus:outline-none"
+                      placeholder={ui.cityCountryPlaceholder}
+                    />
+                    {locationSuggestions.length > 0 && (
+                      <div className="absolute left-0 top-full z-20 mt-1 w-full border border-gray-500 bg-black max-h-44 overflow-y-auto">
+                        {locationSuggestions.map((suggestion, index) => (
+                          <button
+                            key={`${suggestion.display}-${index}`}
+                            type="button"
+                            className="w-full text-left border-b border-gray-700 px-2 py-1.5 text-[10px] md:text-[15px] font-mono text-white hover:bg-white hover:text-black transition-colors last:border-b-0"
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                location: suggestion.display,
+                                latitude: suggestion.latitude.toFixed(4),
+                                longitude: suggestion.longitude.toFixed(4),
+                              }))
+                              setLocationSuggestions([])
+                            }}
+                          >
+                            {suggestion.display}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {isResolvingLocation && (
                     <div className="mt-1 text-[9px] md:text-[12px] font-mono text-white/70">{ui.resolvingLocation}</div>
-                  )}
-                  {locationSuggestions.length > 0 && (
-                    <div className="absolute z-20 mt-1 w-full border border-gray-500 bg-black max-h-44 overflow-y-auto">
-                      {locationSuggestions.map((suggestion, index) => (
-                        <button
-                          key={`${suggestion.display}-${index}`}
-                          type="button"
-                          className="w-full text-left border-b border-gray-700 px-2 py-1.5 text-[10px] md:text-[15px] font-mono text-white hover:bg-white hover:text-black transition-colors last:border-b-0"
-                          onClick={() => {
-                            setFormData((prev) => ({
-                              ...prev,
-                              location: suggestion.display,
-                              latitude: suggestion.latitude.toFixed(4),
-                              longitude: suggestion.longitude.toFixed(4),
-                            }))
-                            setLocationSuggestions([])
-                          }}
-                        >
-                          {suggestion.display}
-                        </button>
-                      ))}
-                    </div>
                   )}
                 </div>
                 <div>
@@ -5291,7 +5303,7 @@ export default function AstrologyCalculator() {
                     )}
 
                     {showSignsRing && (
-                      <>
+                      <g style={chartAddonGlowStyle}>
                         <circle cx="200" cy="200" r="146" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
                         {zodiacRingItems.map((sign, index) => {
                           const signPosition = polarToCartesian(200, 200, 160, adjustToCanvasAngle(sign.centerDegrees))
@@ -5323,11 +5335,11 @@ export default function AstrologyCalculator() {
                             </g>
                           )
                         })}
-                      </>
+                      </g>
                     )}
 
                     {showHousesRing && (
-                      <>
+                      <g style={chartAddonGlowStyle}>
                         <circle cx="200" cy="200" r="114" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
                         {houseRingItems.map((house) => {
                           const cuspStart = polarToCartesian(200, 200, 124, adjustToCanvasAngle(house.startDegrees))
@@ -5356,9 +5368,9 @@ export default function AstrologyCalculator() {
                                 {house.id}
                               </text>
                             </g>
-                          )
+                              )
                         })}
-                      </>
+                      </g>
                     )}
 
                     {horoscopeData.planets.map((planet) => {
@@ -5551,7 +5563,7 @@ export default function AstrologyCalculator() {
                             const horizonLabelPos = ascTheta !== null ? polarToCartesian(200, 200, 194, ascTheta) : null
 
                             return (
-                              <g>
+                              <g style={chartAddonGlowStyle}>
                                 {horizonPosA && horizonPosB && (
                                   <>
                                     <line

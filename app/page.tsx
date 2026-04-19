@@ -67,26 +67,49 @@ const EMPTY_SUBJECT_FORM: SubjectFormData = {
   longitude: "",
 }
 
-const MODE_NAME_BY_SIGN_INDEX: Record<number, string> = {
-  0: "Phrygian Dominant",
-  1: "Dorian",
-  2: "Lydian",
-  3: "Aeolian",
-  4: "Ionian",
-  5: "Aeolian",
-  6: "Ionian",
-  7: "Phrygian",
-  8: "Mixolydian",
-  9: "Harmonic Minor",
-  10: "Lydian Dominant",
-  11: "Locrian",
+const MODE_NAME_BY_SIGN_INDEX_BY_LANGUAGE: Record<Language, Record<number, string>> = {
+  en: {
+    0: "Phrygian Dominant",
+    1: "Dorian",
+    2: "Lydian",
+    3: "Aeolian",
+    4: "Ionian",
+    5: "Aeolian",
+    6: "Ionian",
+    7: "Phrygian",
+    8: "Mixolydian",
+    9: "Harmonic Minor",
+    10: "Lydian Dominant",
+    11: "Locrian",
+  },
+  es: {
+    0: "Frigio Dominante",
+    1: "Dorico",
+    2: "Lidio",
+    3: "Eolico",
+    4: "Jonico",
+    5: "Eolico",
+    6: "Jonico",
+    7: "Frigio",
+    8: "Mixolidio",
+    9: "Menor Armonico",
+    10: "Lidio Dominante",
+    11: "Locrio",
+  },
 }
 
 type AudioEngineMode = "samples" | "fm_pad" | "tibetan_samples"
-type InterfaceTheme = "white" | "neon_blue" | "phosphor_green"
+type InterfaceTheme =
+  | "white"
+  | "neon_blue"
+  | "phosphor_green"
+  | "amber_phosphor"
+  | "mystical_purpura"
+  | "inverted"
 type NavigationMode = "astral_chord" | "radial" | "sequential"
 type SubjectPreset = "manual" | "here_now" | "ba" | "cairo" | "ba77"
 type MajorAspectKey = "conjunction" | "opposition" | "trine" | "square" | "sextile"
+type Language = "en" | "es"
 
 const SEQUENTIAL_PLANET_ORDER = [
   "sun",
@@ -115,29 +138,124 @@ const CHORD_ASPECTS_HOLD_MS = 5000
 const CHORD_ASPECTS_FADE_OUT_MS = 10000
 const TOP_PANEL_HINT_MS = 4000
 
-const NAV_MODE_HINT_LABEL: Record<NavigationMode, string> = {
-  astral_chord: "CHORD",
-  radial: "ORBITAL",
-  sequential: "CHART",
+const NAV_MODE_HINT_LABEL_BY_LANGUAGE: Record<Language, Record<NavigationMode, string>> = {
+  en: {
+    astral_chord: "CHORD",
+    radial: "ORBITAL",
+    sequential: "CHART",
+  },
+  es: {
+    astral_chord: "ACORDE",
+    radial: "ORBITAL",
+    sequential: "CARTA",
+  },
+}
+const NAV_MODE_ACTION_LABEL_BY_LANGUAGE: Record<Language, Record<NavigationMode, string>> = {
+  en: {
+    astral_chord: "Play Chord",
+    radial: "Play Orbital",
+    sequential: "Play Chart",
+  },
+  es: {
+    astral_chord: "Repro Acorde",
+    radial: "Repro Orbital",
+    sequential: "Repro Carta",
+  },
 }
 const NAVIGATION_MODES: NavigationMode[] = ["astral_chord", "radial", "sequential"]
-const TOP_PANEL_MODE_ORDER: NavigationMode[] = ["astral_chord", "sequential", "radial"]
+const TOP_PANEL_MODE_ORDER: NavigationMode[] = ["radial", "sequential", "astral_chord"]
+const TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT = "DOWNLOAD"
+const TOP_PANEL_MENU_TOOLTIP_TEXT = "EXTENDED MENU"
 const EXPORT_MODE_SUFFIX: Record<NavigationMode, string> = {
   astral_chord: "CHORD",
   radial: "ORBITAL",
   sequential: "CHART",
 }
-const DOWNLOAD_TOOLTIP_TEXT = "download audio file (tap twice on mobile)"
-const ENGINE_OPTIONS: Array<{ value: AudioEngineMode; label: string }> = [
-  { value: "samples", label: "ASTROLOG SOUNDS" },
-  { value: "tibetan_samples", label: "TIBETAN BOWLS" },
-  { value: "fm_pad", label: "SYNTH" },
-]
-const INTERFACE_THEME_OPTIONS: Array<{ value: InterfaceTheme; label: string }> = [
-  { value: "white", label: "White" },
-  { value: "neon_blue", label: "Neon Blue" },
-  { value: "phosphor_green", label: "Phosphor Green" },
-]
+const PHOTO_TOOLTIP_TEXT_BY_LANGUAGE: Record<Language, string> = {
+  en: "PHOTO",
+  es: "FOTO",
+}
+const DOWNLOAD_TOOLTIP_TEXT_BY_LANGUAGE: Record<Language, string> = {
+  en: "download audio file (tap twice on mobile)",
+  es: "descargar archivo de audio (doble toque en movil)",
+}
+const ENGINE_OPTIONS_BY_LANGUAGE: Record<Language, Array<{ value: AudioEngineMode; label: string }>> = {
+  en: [
+    { value: "samples", label: "ASTROLOG SOUNDS" },
+    { value: "tibetan_samples", label: "TIBETAN BOWLS" },
+    { value: "fm_pad", label: "SYNTH" },
+  ],
+  es: [
+    { value: "samples", label: "SONIDOS ASTROLOG" },
+    { value: "tibetan_samples", label: "CUENCOS TIBETANOS" },
+    { value: "fm_pad", label: "SINTETIZADOR" },
+  ],
+}
+const INTERFACE_THEME_OPTIONS_BY_LANGUAGE: Record<Language, Array<{ value: InterfaceTheme; label: string }>> = {
+  en: [
+    { value: "white", label: "White" },
+    { value: "neon_blue", label: "Neon Blue" },
+    { value: "phosphor_green", label: "Phosphor Green" },
+    { value: "amber_phosphor", label: "Amber Phosphor" },
+    { value: "mystical_purpura", label: "Mystical Purpura" },
+    { value: "inverted", label: "Inverted" },
+  ],
+  es: [
+    { value: "white", label: "Blanco" },
+    { value: "neon_blue", label: "Azul Neon" },
+    { value: "phosphor_green", label: "Verde Fosforo" },
+    { value: "amber_phosphor", label: "Fosforo Ambar" },
+    { value: "mystical_purpura", label: "Purpura Mistica" },
+    { value: "inverted", label: "Invertido" },
+  ],
+}
+const INTERFACE_THEME_SWATCH_BY_THEME: Record<
+  InterfaceTheme,
+  { text: string; border: string; hover: string; activeBg: string; activeText: string }
+> = {
+  white: {
+    text: "rgba(255,255,255,0.92)",
+    border: "rgba(255,255,255,0.55)",
+    hover: "rgba(255,255,255,0.2)",
+    activeBg: "rgba(255,255,255,0.82)",
+    activeText: "#050505",
+  },
+  neon_blue: {
+    text: "#8fe6ff",
+    border: "rgba(143,230,255,0.7)",
+    hover: "rgba(143,230,255,0.16)",
+    activeBg: "rgba(143,230,255,0.82)",
+    activeText: "#02151d",
+  },
+  phosphor_green: {
+    text: "#a2ff8c",
+    border: "rgba(162,255,140,0.72)",
+    hover: "rgba(162,255,140,0.16)",
+    activeBg: "rgba(162,255,140,0.82)",
+    activeText: "#071603",
+  },
+  amber_phosphor: {
+    text: "#ffd07a",
+    border: "rgba(255,208,122,0.72)",
+    hover: "rgba(255,208,122,0.18)",
+    activeBg: "rgba(255,208,122,0.84)",
+    activeText: "#1a1000",
+  },
+  mystical_purpura: {
+    text: "#dca7ff",
+    border: "rgba(220,167,255,0.72)",
+    hover: "rgba(220,167,255,0.18)",
+    activeBg: "rgba(220,167,255,0.84)",
+    activeText: "#16051f",
+  },
+  inverted: {
+    text: "#050505",
+    border: "rgba(255,255,255,0.88)",
+    hover: "rgba(255,255,255,0.16)",
+    activeBg: "rgba(255,255,255,0.96)",
+    activeText: "#050505",
+  },
+}
 // Zodiac SVG set sourced from Tabler Icons (MIT).
 const ZODIAC_GLYPH_SVGS: Record<string, string> = {
   aries: "/zodiac-glyphs/aries.svg",
@@ -188,6 +306,93 @@ const ZODIAC_SIGN_KEY_BY_LABEL: Record<string, string> = {
   piscis: "pisces",
   pisces: "pisces",
 }
+const PLANET_LABEL_BY_KEY_BY_LANGUAGE: Record<Language, Record<string, string>> = {
+  en: {
+    sun: "Sun",
+    moon: "Moon",
+    mercury: "Mercury",
+    venus: "Venus",
+    mars: "Mars",
+    jupiter: "Jupiter",
+    saturn: "Saturn",
+    uranus: "Uranus",
+    neptune: "Neptune",
+    pluto: "Pluto",
+    asc: "Ascendant",
+    mc: "Midheaven",
+  },
+  es: {
+    sun: "Sol",
+    moon: "Luna",
+    mercury: "Mercurio",
+    venus: "Venus",
+    mars: "Marte",
+    jupiter: "Jupiter",
+    saturn: "Saturno",
+    uranus: "Urano",
+    neptune: "Neptuno",
+    pluto: "Pluton",
+    asc: "Ascendente",
+    mc: "Medio Cielo",
+  },
+}
+const PLANET_KEY_BY_LABEL: Record<string, string> = {
+  sun: "sun",
+  sol: "sun",
+  moon: "moon",
+  luna: "moon",
+  mercury: "mercury",
+  mercurio: "mercury",
+  venus: "venus",
+  mars: "mars",
+  marte: "mars",
+  jupiter: "jupiter",
+  saturn: "saturn",
+  saturno: "saturn",
+  uranus: "uranus",
+  urano: "uranus",
+  neptune: "neptune",
+  neptuno: "neptune",
+  pluto: "pluto",
+  pluton: "pluto",
+  asc: "asc",
+  ascendant: "asc",
+  ascendente: "asc",
+  mc: "mc",
+  midheaven: "mc",
+  mediocielo: "mc",
+  "medio cielo": "mc",
+}
+const SIGN_LABEL_BY_KEY_BY_LANGUAGE: Record<Language, Record<string, string>> = {
+  en: {
+    aries: "Aries",
+    taurus: "Taurus",
+    gemini: "Gemini",
+    cancer: "Cancer",
+    leo: "Leo",
+    virgo: "Virgo",
+    libra: "Libra",
+    scorpio: "Scorpio",
+    sagittarius: "Sagittarius",
+    capricorn: "Capricorn",
+    aquarius: "Aquarius",
+    pisces: "Pisces",
+  },
+  es: {
+    aries: "Aries",
+    taurus: "Tauro",
+    gemini: "Geminis",
+    cancer: "Cancer",
+    leo: "Leo",
+    virgo: "Virgo",
+    libra: "Libra",
+    scorpio: "Escorpio",
+    sagittarius: "Sagitario",
+    capricorn: "Capricornio",
+    aquarius: "Acuario",
+    pisces: "Piscis",
+  },
+}
 
 const EARTH_CENTER_X = 200
 const EARTH_CENTER_Y = 200
@@ -207,29 +412,67 @@ const ORBIT_POINTER_FILL_OPACITY = 0.1575 // +5%
 const CHORD_POINTER_FILL_OPACITY = 0.126 // +5%
 const LOADING_SUBTITLE_STEP_MS = 25000
 const MONOTYPE_FONT_STACK = '"Roboto Mono", "Courier New", Courier, monospace'
-const LOADING_INTRO_PARAGRAPHS = [
-  "ASTRO.LOG.IO is a unique immersive audio experience inspired by the Harmony of the Spheres, from ancient cosmology to Kepler’s celestial music, transforming astrological data into sound. Use headphones and explore different dates and places, including the here and now.",
-]
-const INFO_PARAGRAPHS = [
-  "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler’s vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
-  "CHORD MODE: the chart is heard as a dense, simultaneous harmonic field.\nCHART MODE: the experience becomes a sequential astrological reading, planet by planet.\nORBITAL MODE: listening follows a circular path that moves around the planets in continuous rotation.",
-  "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that celestial body. Its spatial placement and tuning emerge from astrological chart coordinates, and interplanetary relationships are organized through astrological criteria.",
-  "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now.\nFor a fully immersive experience, we recommend using headphones.\nEnjoy the spatial energies that surround us all.",
-]
-const NAV_MODE_INSTRUCTION_BY_MODE: Record<NavigationMode, string> = {
-  astral_chord: "Astral Chord: dense, simultaneous harmonic field.",
-  radial: "Orbital: continuous circular listening around the planets.",
-  sequential: "Chart: sequential astrological reading, planet by planet.",
+const LOADING_INTRO_PARAGRAPHS_BY_LANGUAGE: Record<Language, string[]> = {
+  en: [
+    "ASTRO.LOG.IO is inspired by Kepler’s Harmony of the Spheres.",
+    "This vision of celestial music translates accurate astral data into music.",
+    "By introrducing place and time you may listen and download sonic astrological charts.",
+  ],
+  es: [
+    "ASTRO.LOG.IO está inspirado en la música de las Esferas de Keppler.",
+    "Esta visión de la música celestial traduce datos astrales precisos en música.",
+    "Introduciendo ubicación y hora podrás escuchar y descargar cartas astrales sonoras.",
+  ],
+}
+const INFO_PARAGRAPHS_BY_LANGUAGE: Record<Language, string[]> = {
+  en: [
+    "ASTRO.LOG.IO is inspired by the historical idea of the Harmony of the Spheres, from ancient cosmology to Kepler’s vision of celestial music. It translates an astronomically accurate astrological chart into a living, immersive sonic system where planetary motion becomes audible form.",
+    "CHORD MODE: the chart is heard as a dense, simultaneous harmonic field.\nCHART MODE: the experience becomes a sequential astrological reading, planet by planet.\nORBITAL MODE: listening follows a circular path that moves around the planets in continuous rotation.",
+    "Each planetary timbre was carefully chosen to express the distinct character traditionally associated with that celestial body. Its spatial placement and tuning emerge from astrological chart coordinates, and interplanetary relationships are organized through astrological criteria.",
+    "All rendered audio files can be downloaded and freely distributed, so feel free to experiment with different dates and combinations, including the here & now.\nFor a fully immersive experience, we recommend using headphones.\nEnjoy the spatial energies that surround us all.",
+  ],
+  es: [
+    "ASTRO.LOG.IO se inspira en la idea historica de la Armonia de las Esferas, desde la cosmologia antigua hasta la vision de Kepler sobre la musica celeste. Traduce una carta astrologica astronomicamente precisa en un sistema sonoro vivo e inmersivo donde el movimiento planetario se vuelve forma audible.",
+    "MODO CHORD: la carta se escucha como un campo armonico denso y simultaneo.\nMODO CHART: la experiencia se vuelve una lectura astrologica secuencial, planeta por planeta.\nMODO ORBITAL: la escucha sigue una orbita circular que recorre los planetas en rotacion continua.",
+    "Cada timbre planetario fue elegido cuidadosamente para expresar el caracter distintivo asociado tradicionalmente a cada cuerpo celeste. Su ubicacion espacial y afinacion surgen de las coordenadas de la carta y de relaciones interplanetarias organizadas con criterio astrologico.",
+    "Todos los archivos de audio renderizados pueden descargarse y distribuirse libremente, asi que puedes experimentar con diferentes fechas y combinaciones, incluyendo el aqui y ahora.\nPara una experiencia totalmente inmersiva recomendamos usar auriculares.\nDisfruta las energias espaciales que nos rodean.",
+  ],
+}
+const NAV_MODE_INSTRUCTION_BY_MODE_BY_LANGUAGE: Record<Language, Record<NavigationMode, string>> = {
+  en: {
+    astral_chord: "Astral Chord: dense, simultaneous harmonic field.",
+    radial: "Orbital: continuous circular listening around the planets.",
+    sequential: "Chart: sequential astrological reading, planet by planet.",
+  },
+  es: {
+    astral_chord: "Acorde Astral: campo armonico denso y simultaneo.",
+    radial: "Orbital: escucha circular continua alrededor de los planetas.",
+    sequential: "Carta: lectura astrologica secuencial, planeta por planeta.",
+  },
 }
 
-function renderLoadingParagraph(index: number) {
-  const paragraph = LOADING_INTRO_PARAGRAPHS[index] ?? ""
-  return <>{paragraph}</>
-}
-
-function renderInfoParagraph(index: number) {
-  const paragraph = INFO_PARAGRAPHS[index] ?? ""
+function renderInfoParagraph(language: Language, infoParagraphs: string[], index: number) {
+  const paragraph = infoParagraphs[index] ?? ""
   if (index !== 1) return <>{paragraph}</>
+
+  if (language === "es") {
+    return (
+      <>
+        <span className="block">
+          <span className="font-bold uppercase">MODO CHORD</span>: la carta se escucha como un campo armonico denso y
+          simultaneo.
+        </span>
+        <span className="block">
+          <span className="font-bold uppercase">MODO CHART</span>: la experiencia se vuelve una lectura astrologica secuencial,
+          planeta por planeta.
+        </span>
+        <span className="block">
+          <span className="font-bold uppercase">MODO ORBITAL</span>: la escucha sigue una orbita circular que recorre los
+          planetas en rotacion continua.
+        </span>
+      </>
+    )
+  }
 
   return (
     <>
@@ -256,12 +499,21 @@ const ASPECT_SYMBOL_BY_KEY: Record<MajorAspectKey, string> = {
   sextile: "⚹",
 }
 
-const ASPECT_LABEL_BY_KEY_EN: Record<MajorAspectKey, string> = {
-  conjunction: "Conjunction",
-  opposition: "Opposition",
-  trine: "Trine",
-  square: "Square",
-  sextile: "Sextile",
+const ASPECT_LABEL_BY_KEY_BY_LANGUAGE: Record<Language, Record<MajorAspectKey, string>> = {
+  en: {
+    conjunction: "Conjunction",
+    opposition: "Opposition",
+    trine: "Trine",
+    square: "Square",
+    sextile: "Sextile",
+  },
+  es: {
+    conjunction: "Conjuncion",
+    opposition: "Oposicion",
+    trine: "Trigono",
+    square: "Cuadratura",
+    sextile: "Sextil",
+  },
 }
 
 function normalizeCompareText(value: string): string {
@@ -287,9 +539,9 @@ function isMajorAspectType(aspectType: string): boolean {
   return getMajorAspectKey(aspectType) !== null
 }
 
-function getMajorAspectLabel(aspectType: string): string {
+function getMajorAspectLabel(aspectType: string, language: Language): string {
   const key = getMajorAspectKey(aspectType)
-  return key ? ASPECT_LABEL_BY_KEY_EN[key] : aspectType
+  return key ? ASPECT_LABEL_BY_KEY_BY_LANGUAGE[language][key] : aspectType
 }
 
 function getMajorAspectSymbol(aspectType: string): string {
@@ -339,38 +591,75 @@ function titleCaseLocationToken(value: string): string {
     .replace(/\b([a-z])/g, (match) => match.toUpperCase())
 }
 
-function getCountryFromLocale(): string | null {
+function getCountryFromLocale(preferredLanguage: Language = "en"): string | null {
   if (typeof navigator === "undefined") return null
   const language = (navigator.language || "").replace("_", "-")
   const region = language.split("-")[1]?.toUpperCase()
   if (!region) return null
-  const countryByRegion: Record<string, string> = {
-    AR: "Argentina",
-    UY: "Uruguay",
-    PY: "Paraguay",
-    BO: "Bolivia",
-    BR: "Brazil",
-    CL: "Chile",
-    PE: "Peru",
-    EC: "Ecuador",
-    CO: "Colombia",
-    VE: "Venezuela",
-    MX: "Mexico",
-    US: "United States",
-    CA: "Canada",
-    ES: "Spain",
-    PT: "Portugal",
-    FR: "France",
-    DE: "Germany",
-    IT: "Italy",
-    GB: "United Kingdom",
-    AU: "Australia",
-    NZ: "New Zealand",
+
+  const locale = preferredLanguage === "es" ? "es-ES" : "en-GB"
+  try {
+    if (typeof Intl !== "undefined" && typeof (Intl as any).DisplayNames === "function") {
+      const displayNames = new Intl.DisplayNames([locale], { type: "region" })
+      const localizedName = displayNames.of(region)
+      if (localizedName) return localizedName
+    }
+  } catch {
+    // Fall through to manual map.
   }
-  return countryByRegion[region] || null
+
+  const fallbackCountryByRegionByLanguage: Record<Language, Record<string, string>> = {
+    en: {
+      AR: "Argentina",
+      UY: "Uruguay",
+      PY: "Paraguay",
+      BO: "Bolivia",
+      BR: "Brazil",
+      CL: "Chile",
+      PE: "Peru",
+      EC: "Ecuador",
+      CO: "Colombia",
+      VE: "Venezuela",
+      MX: "Mexico",
+      US: "United States",
+      CA: "Canada",
+      ES: "Spain",
+      PT: "Portugal",
+      FR: "France",
+      DE: "Germany",
+      IT: "Italy",
+      GB: "United Kingdom",
+      AU: "Australia",
+      NZ: "New Zealand",
+    },
+    es: {
+      AR: "Argentina",
+      UY: "Uruguay",
+      PY: "Paraguay",
+      BO: "Bolivia",
+      BR: "Brasil",
+      CL: "Chile",
+      PE: "Peru",
+      EC: "Ecuador",
+      CO: "Colombia",
+      VE: "Venezuela",
+      MX: "Mexico",
+      US: "Estados Unidos",
+      CA: "Canada",
+      ES: "Espana",
+      PT: "Portugal",
+      FR: "Francia",
+      DE: "Alemania",
+      IT: "Italia",
+      GB: "Reino Unido",
+      AU: "Australia",
+      NZ: "Nueva Zelanda",
+    },
+  }
+  return fallbackCountryByRegionByLanguage[preferredLanguage][region] || null
 }
 
-function buildLocationFromTimeZone(): string | null {
+function buildLocationFromTimeZone(preferredLanguage: Language = "en"): string | null {
   if (typeof Intl === "undefined") return null
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""
   const segments = timeZone.split("/").filter(Boolean)
@@ -382,7 +671,7 @@ function buildLocationFromTimeZone(): string | null {
   if (segments.length >= 3) {
     country = titleCaseLocationToken(segments[segments.length - 2])
   } else {
-    country = getCountryFromLocale()
+    country = getCountryFromLocale(preferredLanguage)
   }
 
   if (!city) return country
@@ -394,6 +683,17 @@ function normalizeSignLabel(label: string): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+}
+
+function getLocalizedPlanetLabel(planetNameOrLabel: string, language: Language): string {
+  const normalized = normalizeCompareText(planetNameOrLabel)
+  const planetKey = PLANET_KEY_BY_LABEL[normalized] || normalized
+  return PLANET_LABEL_BY_KEY_BY_LANGUAGE[language][planetKey] || planetNameOrLabel
+}
+
+function getLocalizedSignLabel(signLabel: string, language: Language): string {
+  const signKey = ZODIAC_SIGN_KEY_BY_LABEL[normalizeSignLabel(signLabel)] || normalizeSignLabel(signLabel)
+  return SIGN_LABEL_BY_KEY_BY_LANGUAGE[language][signKey] || signLabel
 }
 
 function getGlyphGlowTiming(glyphName: string) {
@@ -539,9 +839,13 @@ export default function AstrologyCalculator() {
   const [showAngles, setShowAngles] = useState(false)
   const [showAstroChart, setShowAstroChart] = useState(false)
   const [loadingIntroCompleted, setLoadingIntroCompleted] = useState(false)
+  const [loadingIntroSkipped, setLoadingIntroSkipped] = useState(false)
+  const [loadingIntroExitReady, setLoadingIntroExitReady] = useState(false)
   const [loadingIntroProgressPct, setLoadingIntroProgressPct] = useState(0)
   const [loadingIntroIndex, setLoadingIntroIndex] = useState(0)
   const [loadingIntroTick, setLoadingIntroTick] = useState(0)
+  const [loadingLanguageHint, setLoadingLanguageHint] = useState<Language | null>(null)
+  const [loadingLanguageHintFading, setLoadingLanguageHintFading] = useState(false)
   const [showInfoOverlay, setShowInfoOverlay] = useState(false)
   const [infoParagraphIndex, setInfoParagraphIndex] = useState(0)
   const [peakLevelLeftPre, setPeakLevelLeftPre] = useState(0)
@@ -557,15 +861,18 @@ export default function AstrologyCalculator() {
   const [navigationMode, setNavigationMode] = useState<NavigationMode>("radial")
   const [topPanelHoverKey, setTopPanelHoverKey] = useState<string | null>(null)
   const [isExportingMp3, setIsExportingMp3] = useState(false)
+  const [isExportingJpg, setIsExportingJpg] = useState(false)
   const [pendingMp3Download, setPendingMp3Download] = useState<{ url: string; fileName: string } | null>(null)
   const mobileDownloadArmedModeRef = useRef<NavigationMode | null>(null)
   const mobileDownloadArmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const topPanelHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuPanelRef = useRef<HTMLDivElement | null>(null)
+  const chartSvgRef = useRef<SVGSVGElement | null>(null)
+  const exportAssetDataUrlCacheRef = useRef<Map<string, string>>(new Map())
   const desktopMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
-  const [selectedPreset, setSelectedPreset] = useState<SubjectPreset>("manual")
+  const [selectedPreset, setSelectedPreset] = useState<SubjectPreset>("here_now")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
   const [horoscopeData, setHoroscopeData] = useState<HoroscopeData | null>(null)
   const [error, setError] = useState<string>("")
@@ -596,6 +903,7 @@ export default function AstrologyCalculator() {
   const [modalEnabled, setModalEnabled] = useState(true)
   const [audioEngineMode, setAudioEngineMode] = useState<AudioEngineMode>("samples")
   const [interfaceTheme, setInterfaceTheme] = useState<InterfaceTheme>("white")
+  const [language, setLanguage] = useState<Language>("en")
   const [synthVolume, setSynthVolume] = useState(450)
 
   const [glyphAnimationManager] = useState(() => new GlyphAnimationManager())
@@ -620,6 +928,7 @@ export default function AstrologyCalculator() {
   const [pressedGlyph, setPressedGlyph] = useState<string | null>(null)
   const [glyphHoverOpacity, setGlyphHoverOpacity] = useState(0)
   const [showAspectIndicator, setShowAspectIndicator] = useState(false) // Declared showAspectIndicator
+  const [playbackProgress, setPlaybackProgress] = useState(0)
   const aspectClickTimersRef = useRef<Record<string, NodeJS.Timeout[]>>({})
   const affectedScaleTimersRef = useRef<Record<string, { start: NodeJS.Timeout | null; end: NodeJS.Timeout | null }>>(
     {},
@@ -628,14 +937,207 @@ export default function AstrologyCalculator() {
   const pressedGlyphReleaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const interactivePreviewClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const skipNextAutoCalculateRef = useRef(false)
+  const pendingModeLaunchRef = useRef<NavigationMode | null>(null)
+  const playbackProgressFrameRef = useRef<number | null>(null)
   const loadingIntroIndexRef = useRef(0)
   const loadingIntroElapsedBeforeCurrentMsRef = useRef(0)
   const loadingIntroParagraphStartTimeRef = useRef(0)
   const loadingIntroAdvanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loadingLanguageHintFadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loadingLanguageHintClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [locationSuggestions, setLocationSuggestions] = useState<GeoSuggestion[]>([])
   const [isResolvingLocation, setIsResolvingLocation] = useState(false)
   const chartAspectsKeyRef = useRef("__chart__")
   const subjectHoverTouchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loadingIntroParagraphs = useMemo(() => LOADING_INTRO_PARAGRAPHS_BY_LANGUAGE[language], [language])
+  const infoParagraphs = useMemo(() => INFO_PARAGRAPHS_BY_LANGUAGE[language], [language])
+  const navModeHintLabel = useMemo(() => NAV_MODE_HINT_LABEL_BY_LANGUAGE[language], [language])
+  const navModeActionLabel = useMemo(() => NAV_MODE_ACTION_LABEL_BY_LANGUAGE[language], [language])
+  const navModeInstructionByMode = useMemo(() => NAV_MODE_INSTRUCTION_BY_MODE_BY_LANGUAGE[language], [language])
+  const downloadTooltipText = useMemo(() => DOWNLOAD_TOOLTIP_TEXT_BY_LANGUAGE[language], [language])
+  const photoTooltipText = useMemo(() => PHOTO_TOOLTIP_TEXT_BY_LANGUAGE[language], [language])
+  const engineOptions = useMemo(() => ENGINE_OPTIONS_BY_LANGUAGE[language], [language])
+  const interfaceThemeOptions = useMemo(() => INTERFACE_THEME_OPTIONS_BY_LANGUAGE[language], [language])
+  const localeCode = language === "es" ? "es-ES" : "en-US"
+  const ui = useMemo(
+    () =>
+      language === "es"
+        ? {
+            menu: "Menu",
+            advanced: "Avanzado",
+            on: "ACTIVO",
+            off: "INACTIVO",
+            subject: "Sujeto",
+            signs: "Signos",
+            houses: "Casas",
+            reset: "Reset",
+            info: "Info",
+            engine: "Motor",
+            interface: "Interfaz",
+            minimal: "Minimo",
+            planets: "Planetas",
+            aspects: "Aspectos",
+            dynAspects: "Aspectos Dinamicos",
+            chart: "Carta",
+            matrix: "Matriz",
+            circle: "Circulo",
+            signsRing: "Anillo de Signos",
+            housesRing: "Anillo de Casas",
+            degrees: "Grados",
+            astroChart: "AstroCarta",
+            pointerInfo: "Info del Puntero",
+            aspectBox: "Caja de Aspectos",
+            modeInfo: "Info de Modo",
+            navigation: "Navegacion",
+            loop: "Vuelta",
+            audioEnvelope: "Envolvente de Audio",
+            mode: "Modo",
+            fadeIn: "Fade In",
+            fadeOut: "Fade Out",
+            bgVol: "Vol Fondo",
+            element: "Elemento",
+            aspectVol: "Vol Aspectos",
+            masterVol: "Vol Master",
+            reverb: "Reverb",
+            chordReverb: "RVB Acorde",
+            synthVol: "Vol Sint",
+            tuning: "Afinacion",
+            dynamicAspects: "Aspectos Dinamicos",
+            sustain: "Sustain",
+            vu: "VU",
+            vuMeter: "Medidor VU",
+            pre: "Pre",
+            post: "Post",
+            comp: "Comp",
+            modeLabel: "Modo",
+            modeOff: "APAGADO",
+            manual: "MANUAL",
+            hereNow: "AQUI Y AHORA",
+            dateTimePlaceInput: "DATOS DE FECHA Y LUGAR",
+            dataInput: "INGRESO DE DATOS",
+            dateTime: "Fecha y Hora",
+            location: "Ubicacion",
+            latitude: "Latitud",
+            longitude: "Longitud",
+            cityCountryPlaceholder: "Ciudad, Pais",
+            resolvingLocation: "Resolviendo ubicacion...",
+            send: "ENVIAR",
+            astrologicalData: "Datos Astrologicos",
+            astrologicalAspects: "Aspectos Astrologicos",
+            majorAspects: "Conjuncion, Oposicion, Trigono, Cuadratura, Sextil",
+            total: "Total",
+            planet1: "Planeta 1",
+            planet2: "Planeta 2",
+            aspect: "Aspecto",
+            angle: "Angulo (°)",
+            orb: "Orb (°)",
+            glyph: "Glifo",
+            ecliptic: "Ecliptica (°)",
+            sign: "Signo",
+            house: "Casa",
+            position: "Posicion",
+            horizon: "Horizonte (°)",
+            retrograde: "Retrogrado",
+            aspectsOf: "Aspectos de",
+            renderMp3: "RENDER MP3...",
+            saveMp3: "GUARDAR MP3",
+            close: "CERRAR",
+            noDate: "Sin Fecha",
+            noTime: "Sin Hora",
+            noCity: "Sin Ciudad",
+            noCountry: "Sin Pais",
+            play: "Reproducir",
+            stop: "Detener",
+          }
+        : {
+            menu: "Menu",
+            advanced: "Advanced",
+            on: "ON",
+            off: "OFF",
+            subject: "Subject",
+            signs: "Signs",
+            houses: "Houses",
+            reset: "Reset",
+            info: "Info",
+            engine: "Engine",
+            interface: "Interface",
+            minimal: "Minimal",
+            planets: "Planets",
+            aspects: "Aspects",
+            dynAspects: "DynAspects",
+            chart: "Chart",
+            matrix: "Matrix",
+            circle: "Circle",
+            signsRing: "Signs Ring",
+            housesRing: "Houses Ring",
+            degrees: "Degrees",
+            astroChart: "AstroChart",
+            pointerInfo: "Pointer Info",
+            aspectBox: "Aspect Box",
+            modeInfo: "Mode Info",
+            navigation: "Navigation",
+            loop: "Loop",
+            audioEnvelope: "Audio Envelope",
+            mode: "Mode",
+            fadeIn: "Fade In",
+            fadeOut: "Fade Out",
+            bgVol: "BG Vol",
+            element: "Element",
+            aspectVol: "Aspect Vol",
+            masterVol: "Master Vol",
+            reverb: "Reverb",
+            chordReverb: "Chord RVB",
+            synthVol: "Synth Vol",
+            tuning: "Tuning",
+            dynamicAspects: "Dynamic Aspects",
+            sustain: "Sustain",
+            vu: "VU",
+            vuMeter: "VU Meter",
+            pre: "Pre",
+            post: "Post",
+            comp: "Comp",
+            modeLabel: "Mode",
+            modeOff: "OFF",
+            manual: "MANUAL",
+            hereNow: "HERE & NOW",
+            dateTimePlaceInput: "DATE & PLACE DATA INPUT",
+            dataInput: "DATA INPUT",
+            dateTime: "Date & Time",
+            location: "Location",
+            latitude: "Latitude",
+            longitude: "Longitude",
+            cityCountryPlaceholder: "City, Country",
+            resolvingLocation: "Resolving location...",
+            send: "SEND",
+            astrologicalData: "Astrological Data",
+            astrologicalAspects: "Astrological Aspects",
+            majorAspects: "Conjunction, Opposition, Trine, Square, Sextile",
+            total: "Total",
+            planet1: "Planet 1",
+            planet2: "Planet 2",
+            aspect: "Aspect",
+            angle: "Angle (°)",
+            orb: "Orb (°)",
+            glyph: "Glyph",
+            ecliptic: "Ecliptic (°)",
+            sign: "Sign",
+            house: "House",
+            position: "Position",
+            horizon: "Horizon (°)",
+            retrograde: "Retrograde",
+            aspectsOf: "Aspects of",
+            renderMp3: "RENDER MP3...",
+            saveMp3: "SAVE MP3",
+            close: "CLOSE",
+            noDate: "No Date",
+            noTime: "No Time",
+            noCity: "No City",
+            noCountry: "No Country",
+            play: "Play",
+            stop: "Stop",
+          },
+    [language],
+  )
 
   const modalSunSignIndex = useMemo(() => {
     const sunDegrees = horoscopeData?.planets?.find((p) => p.name === "sun")?.ChartPosition?.Ecliptic?.DecimalDegrees
@@ -644,7 +1146,11 @@ export default function AstrologyCalculator() {
   }, [horoscopeData?.planets])
 
   const currentModeLabel =
-    modalSunSignIndex !== null ? MODE_NAME_BY_SIGN_INDEX[modalSunSignIndex] || "Modal" : "Modal"
+    modalSunSignIndex !== null
+      ? MODE_NAME_BY_SIGN_INDEX_BY_LANGUAGE[language][modalSunSignIndex] || (language === "es" ? "Modal" : "Modal")
+      : language === "es"
+        ? "Modal"
+        : "Modal"
   const subjectLocationLines = useMemo(() => {
     const sanitized = sanitizeLocationLabel(formData.location)
     const parts = sanitized
@@ -652,13 +1158,13 @@ export default function AstrologyCalculator() {
       .map((part) => part.trim())
       .filter(Boolean)
     return {
-      city: parts[0] || "No City",
-      country: parts.length > 1 ? parts[parts.length - 1] : "No Country",
+      city: parts[0] || ui.noCity,
+      country: parts.length > 1 ? parts[parts.length - 1] : ui.noCountry,
     }
-  }, [formData.location])
+  }, [formData.location, ui.noCity, ui.noCountry])
 
   const effectiveMasterVolume = navigationMode === "astral_chord" ? masterVolume * 0.6 : masterVolume
-  const themePulseEnabled = interfaceTheme === "neon_blue" || interfaceTheme === "phosphor_green"
+  const themePulseEnabled = interfaceTheme !== "white"
   const earthCenterTwinkleTiming = useMemo(() => getThemeTwinkleTiming("earth-center"), [])
 
   // Added hook for planet audio
@@ -706,8 +1212,9 @@ export default function AstrologyCalculator() {
     void prepareOrbitalStarBackground(sunSignIndex, { modalEnabled, force: true })
   }, [horoscopeData, modalEnabled, prepareOrbitalStarBackground])
   const lastPlayedPlanetRef = useRef<string | null>(null)
-  const totalLoadingIntroDurationMs = LOADING_INTRO_PARAGRAPHS.length * LOADING_SUBTITLE_STEP_MS
-  const showLoadingIntroScreen = loadingProgress < 100 || !loadingIntroCompleted
+  const totalLoadingIntroDurationMs = loadingIntroParagraphs.length * LOADING_SUBTITLE_STEP_MS
+  const showLoadingIntroScreen =
+    !loadingIntroSkipped && (loadingProgress < 100 || !loadingIntroCompleted || !loadingIntroExitReady)
   const interfaceThemeFilter = useMemo(() => {
     if (interfaceTheme === "neon_blue") {
       return "sepia(1) saturate(8.5) hue-rotate(163deg) brightness(1.04) contrast(1.07)"
@@ -715,13 +1222,40 @@ export default function AstrologyCalculator() {
     if (interfaceTheme === "phosphor_green") {
       return "sepia(1) saturate(7.8) hue-rotate(66deg) brightness(1.03) contrast(1.08)"
     }
+    if (interfaceTheme === "amber_phosphor") {
+      return "sepia(1) saturate(8.9) hue-rotate(346deg) brightness(1.02) contrast(1.08)"
+    }
+    if (interfaceTheme === "mystical_purpura") {
+      return "sepia(1) saturate(8.1) hue-rotate(218deg) brightness(1.03) contrast(1.08)"
+    }
+    if (interfaceTheme === "inverted") {
+      return "invert(1)"
+    }
     return "none"
   }, [interfaceTheme])
-  const loadingDisplayProgress = useMemo(() => {
-    if (!loadingIntroCompleted) return Math.min(99, loadingIntroProgressPct)
-    if (loadingProgress >= 100) return 100
-    return 99
+  const loadingDisplayProgressTarget = useMemo(() => {
+    // Keep bar proportional to actual loading while preserving intro timeline as minimum floor.
+    const proportionalLoad = Math.max(0, Math.min(100, loadingProgress))
+    const introFloor = loadingIntroCompleted ? 100 : Math.min(99, loadingIntroProgressPct)
+    return Math.max(proportionalLoad, introFloor)
   }, [loadingIntroCompleted, loadingIntroProgressPct, loadingProgress])
+  const [loadingDisplayProgress, setLoadingDisplayProgress] = useState(0)
+
+  useEffect(() => {
+    let frameId: number | null = null
+    const animate = () => {
+      setLoadingDisplayProgress((prev) => {
+        const delta = loadingDisplayProgressTarget - prev
+        if (Math.abs(delta) < 0.05) return loadingDisplayProgressTarget
+        return prev + delta * 0.16
+      })
+      frameId = requestAnimationFrame(animate)
+    }
+    frameId = requestAnimationFrame(animate)
+    return () => {
+      if (frameId !== null) cancelAnimationFrame(frameId)
+    }
+  }, [loadingDisplayProgressTarget])
 
   const clearLoadingIntroAdvanceTimeout = useCallback(() => {
     if (loadingIntroAdvanceTimeoutRef.current) {
@@ -730,8 +1264,33 @@ export default function AstrologyCalculator() {
     }
   }, [])
 
+  const showLoadingLanguageHint = useCallback((nextLanguage: Language) => {
+    if (loadingLanguageHintFadeTimeoutRef.current) {
+      clearTimeout(loadingLanguageHintFadeTimeoutRef.current)
+      loadingLanguageHintFadeTimeoutRef.current = null
+    }
+    if (loadingLanguageHintClearTimeoutRef.current) {
+      clearTimeout(loadingLanguageHintClearTimeoutRef.current)
+      loadingLanguageHintClearTimeoutRef.current = null
+    }
+
+    setLoadingLanguageHint(nextLanguage)
+    setLoadingLanguageHintFading(false)
+
+    loadingLanguageHintFadeTimeoutRef.current = setTimeout(() => {
+      setLoadingLanguageHintFading(true)
+      loadingLanguageHintFadeTimeoutRef.current = null
+    }, 5000)
+
+    loadingLanguageHintClearTimeoutRef.current = setTimeout(() => {
+      setLoadingLanguageHint(null)
+      setLoadingLanguageHintFading(false)
+      loadingLanguageHintClearTimeoutRef.current = null
+    }, 8000)
+  }, [])
+
   const advanceLoadingIntroParagraph = useCallback(() => {
-    const lastParagraphIndex = LOADING_INTRO_PARAGRAPHS.length - 1
+    const lastParagraphIndex = loadingIntroParagraphs.length - 1
     if (loadingIntroIndexRef.current >= lastParagraphIndex) {
       loadingIntroElapsedBeforeCurrentMsRef.current = totalLoadingIntroDurationMs
       loadingIntroParagraphStartTimeRef.current = performance.now()
@@ -766,6 +1325,13 @@ export default function AstrologyCalculator() {
     setLoadingIntroProgressPct((loadingIntroElapsedBeforeCurrentMsRef.current / totalLoadingIntroDurationMs) * 100)
   }, [totalLoadingIntroDurationMs])
 
+  const skipLoadingIntro = useCallback(() => {
+    setLoadingIntroSkipped(true)
+    setLoadingIntroCompleted(true)
+    setLoadingIntroExitReady(true)
+    clearLoadingIntroAdvanceTimeout()
+  }, [clearLoadingIntroAdvanceTimeout])
+
   const openInfoOverlay = useCallback(() => {
     setInfoParagraphIndex(0)
     setShowInfoOverlay(true)
@@ -778,17 +1344,17 @@ export default function AstrologyCalculator() {
   const advanceInfoParagraph = useCallback(() => {
     setInfoParagraphIndex((prev) => {
       const next = prev + 1
-      if (next >= INFO_PARAGRAPHS.length) {
+      if (next >= infoParagraphs.length) {
         setShowInfoOverlay(false)
         return 0
       }
       return next
     })
-  }, [])
+  }, [infoParagraphs.length])
 
   const retreatInfoParagraph = useCallback(() => {
-    setInfoParagraphIndex((prev) => (prev - 1 + INFO_PARAGRAPHS.length) % INFO_PARAGRAPHS.length)
-  }, [])
+    setInfoParagraphIndex((prev) => (prev - 1 + infoParagraphs.length) % infoParagraphs.length)
+  }, [infoParagraphs.length])
 
   useEffect(() => {
     if (!showLoadingIntroScreen) return
@@ -845,6 +1411,22 @@ export default function AstrologyCalculator() {
   }, [advanceLoadingIntroParagraph, clearLoadingIntroAdvanceTimeout, loadingIntroCompleted, loadingIntroIndex, showLoadingIntroScreen])
 
   useEffect(() => {
+    if (loadingIntroSkipped) return
+    if (!loadingIntroCompleted || loadingProgress < 100) {
+      setLoadingIntroExitReady(false)
+      return
+    }
+
+    const timeoutId = setTimeout(() => {
+      setLoadingIntroExitReady(true)
+    }, 10000)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [loadingIntroCompleted, loadingIntroSkipped, loadingProgress])
+
+  useEffect(() => {
     if (!showInfoOverlay) return
 
     const handleInfoOverlayKeyDown = (event: KeyboardEvent) => {
@@ -887,6 +1469,22 @@ export default function AstrologyCalculator() {
     window.addEventListener("keydown", handleGlobalKeyDown)
     return () => window.removeEventListener("keydown", handleGlobalKeyDown)
   }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const savedLanguage = window.localStorage.getItem("astro.log.io.language")
+    if (savedLanguage === "en" || savedLanguage === "es") {
+      setLanguage(savedLanguage)
+      return
+    }
+    const browserLanguage = window.navigator.language?.toLowerCase() || "en"
+    setLanguage(browserLanguage.startsWith("es") ? "es" : "en")
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.setItem("astro.log.io.language", language)
+  }, [language])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -950,6 +1548,10 @@ export default function AstrologyCalculator() {
         cancelAnimationFrame(animationFrameIdRef.current)
         animationFrameIdRef.current = null
       }
+      if (playbackProgressFrameRef.current !== null) {
+        cancelAnimationFrame(playbackProgressFrameRef.current)
+        playbackProgressFrameRef.current = null
+      }
       if (navigationStepTimeoutRef.current) {
         clearTimeout(navigationStepTimeoutRef.current)
         navigationStepTimeoutRef.current = null
@@ -974,6 +1576,14 @@ export default function AstrologyCalculator() {
       if (loadingIntroAdvanceTimeoutRef.current) {
         clearTimeout(loadingIntroAdvanceTimeoutRef.current)
         loadingIntroAdvanceTimeoutRef.current = null
+      }
+      if (loadingLanguageHintFadeTimeoutRef.current) {
+        clearTimeout(loadingLanguageHintFadeTimeoutRef.current)
+        loadingLanguageHintFadeTimeoutRef.current = null
+      }
+      if (loadingLanguageHintClearTimeoutRef.current) {
+        clearTimeout(loadingLanguageHintClearTimeoutRef.current)
+        loadingLanguageHintClearTimeoutRef.current = null
       }
     }
   }, [clearAspectTimers])
@@ -1035,7 +1645,8 @@ export default function AstrologyCalculator() {
     const trimmed = query.trim()
     if (!trimmed) return []
 
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=${count}&language=en&format=json`
+    const geocodeLanguage = language === "es" ? "es" : "en"
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=${count}&language=${geocodeLanguage}&format=json`
     const response = await fetch(url)
     if (!response.ok) return []
 
@@ -1048,10 +1659,10 @@ export default function AstrologyCalculator() {
         country: item.country,
         admin1: item.admin1,
         latitude: item.latitude,
-        longitude: item.longitude,
-        display: formatSuggestion(item.name, item.admin1, item.country),
+          longitude: item.longitude,
+          display: formatSuggestion(item.name, item.admin1, item.country),
       }))
-  }, [])
+  }, [language])
 
   const resolveLocationAndUpdateCoords = useCallback(
     async (rawLocation: string) => {
@@ -1094,7 +1705,8 @@ export default function AstrologyCalculator() {
 
   const reverseGeocodeLocation = useCallback(async (latitude: number, longitude: number): Promise<string | null> => {
     try {
-      const fallbackUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&localityLanguage=en`
+      const geocodeLanguage = language === "es" ? "es" : "en"
+      const fallbackUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&localityLanguage=${geocodeLanguage}`
       const fallbackResponse = await fetch(fallbackUrl)
       if (fallbackResponse.ok) {
         const fallbackPayload = await fallbackResponse.json()
@@ -1116,7 +1728,8 @@ export default function AstrologyCalculator() {
     }
 
     try {
-      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=en&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`
+      const geocodeLanguage = language === "es" ? "es" : "en"
+      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=${geocodeLanguage}&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`
       const nominatimResponse = await fetch(nominatimUrl)
       if (!nominatimResponse.ok) return null
       const nominatimPayload = await nominatimResponse.json()
@@ -1143,7 +1756,7 @@ export default function AstrologyCalculator() {
     } catch {
       return null
     }
-  }, [])
+  }, [language])
 
   const getCurrentPosition = useCallback(() => {
     return new Promise<GeolocationPosition>((resolve, reject) => {
@@ -1193,6 +1806,34 @@ export default function AstrologyCalculator() {
       animationFrameIdRef.current = null
     }
   }, [])
+
+  const cancelPlaybackProgressAnimation = useCallback(() => {
+    if (playbackProgressFrameRef.current !== null) {
+      cancelAnimationFrame(playbackProgressFrameRef.current)
+      playbackProgressFrameRef.current = null
+    }
+  }, [])
+
+  const startPlaybackProgressAnimation = useCallback(
+    (durationMs: number) => {
+      cancelPlaybackProgressAnimation()
+      setPlaybackProgress(0)
+      if (durationMs <= 0) return
+      const startMs = performance.now()
+      const tick = () => {
+        const now = performance.now()
+        const progress = Math.min(1, (now - startMs) / durationMs)
+        setPlaybackProgress(progress)
+        if (progress >= 1) {
+          playbackProgressFrameRef.current = null
+          return
+        }
+        playbackProgressFrameRef.current = requestAnimationFrame(tick)
+      }
+      playbackProgressFrameRef.current = requestAnimationFrame(tick)
+    },
+    [cancelPlaybackProgressAnimation],
+  )
 
   const detectPlanetUnderPointer = useCallback(
     (adjustedAngle: number, ascDegrees: number): string | null => {
@@ -1290,6 +1931,7 @@ export default function AstrologyCalculator() {
           setPointerRotation(state.pointerRotation)
           setDebugPointerAngle(Math.round(state.adjustedAngle))
           setCurrentPlanetUnderPointer(detectedPlanet)
+          setPlaybackProgress(totalDuration > 0 ? boundedElapsed / totalDuration : 0)
         }
 
         if (elapsed >= totalDuration) {
@@ -1300,6 +1942,7 @@ export default function AstrologyCalculator() {
           setPointerOpacityTransitionMs(0)
           setChartAspectsTransitionMs(0)
           setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
+          setPlaybackProgress(0)
           setIsLoopRunning(false)
           setIsPaused(false)
           setCurrentPlanetUnderPointer(null)
@@ -1503,6 +2146,7 @@ export default function AstrologyCalculator() {
     setIsExportingMp3(false)
     setPendingMp3Download(null)
     cancelAllNavigationSchedulers()
+    cancelPlaybackProgressAnimation()
     clearAspectTimers()
     loopStartTimeRef.current = 0
     loopElapsedBeforePauseMsRef.current = 0
@@ -1518,6 +2162,7 @@ export default function AstrologyCalculator() {
     setPointerOpacityTransitionMs(0)
     setChartAspectsTransitionMs(0)
     setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
+    setPlaybackProgress(0)
     setCurrentPlanetUnderPointer(null)
     setDebugPointerAngle(0)
     setStartButtonPhase("contracted")
@@ -1716,6 +2361,7 @@ export default function AstrologyCalculator() {
     const finishRoute = () => {
       setIsLoopRunning(false)
       setIsPaused(false)
+      setPlaybackProgress(0)
       setCurrentPlanetUnderPointer(null)
       setStartButtonPhase("contracted")
       loopElapsedBeforePauseMsRef.current = 0
@@ -1959,6 +2605,7 @@ export default function AstrologyCalculator() {
       if (navigationRunIdRef.current !== runId) return
       setIsLoopRunning(false)
       setIsPaused(false)
+      setPlaybackProgress(0)
       setCurrentPlanetUnderPointer(null)
       setStartButtonPhase("contracted")
       setActivePlanetAspectsMap({})
@@ -1971,6 +2618,7 @@ export default function AstrologyCalculator() {
     if (!horoscopeData) return
     setNavigationMode(mode)
     cancelAllNavigationSchedulers()
+    cancelPlaybackProgressAnimation()
     clearAspectTimers()
     stopAll()
     stopBackgroundSound()
@@ -1981,6 +2629,7 @@ export default function AstrologyCalculator() {
     setPointerOpacityTransitionMs(0)
     setChartAspectsTransitionMs(0)
     setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
+    setPlaybackProgress(0)
     setActivePlanetAspectsMap({})
     setIsLoopRunning(true)
     setIsPaused(false)
@@ -2000,11 +2649,19 @@ export default function AstrologyCalculator() {
     }
     if (mode === "astral_chord") {
       startAmbientBed({ playBackground: false, playElement: true })
+      startPlaybackProgressAnimation(
+        Math.max(
+          2000,
+          Math.max(audioFadeIn + audioFadeOut, dynAspectsFadeIn + dynAspectsSustain + dynAspectsFadeOut) * 1000 + 300,
+          CHORD_ASPECTS_FADE_IN_MS + CHORD_ASPECTS_HOLD_MS + CHORD_ASPECTS_FADE_OUT_MS + 300,
+        ),
+      )
       startAstralChordMode()
       return
     }
     if (mode === "sequential") {
       startAmbientBed({ playBackground: false, playElement: true, elementVolumeOverride: 1 })
+      startPlaybackProgressAnimation(Math.max(CHART_PLANET_HOLD_MS, buildSequentialRoute().length * CHART_PLANET_HOLD_MS))
       startNonRadialRoute(buildSequentialRoute(), {
         teleport: true,
         holdMs: CHART_PLANET_HOLD_MS,
@@ -2189,12 +2846,155 @@ export default function AstrologyCalculator() {
     return `ASTRO.LOG.IO_${yyyymmddhhmm}_${city}_${country}_${modeSuffix}.mp3`
   }, [formData.datetime, formData.location])
 
+  const buildSubjectJpgFileName = useCallback((): string => {
+    const datetime = formData.datetime.trim()
+    const datetimeMatch = datetime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+    const yyyymmddhhmm = datetimeMatch
+      ? `${datetimeMatch[1]}${datetimeMatch[2]}${datetimeMatch[3]}${datetimeMatch[4]}${datetimeMatch[5]}`
+      : "000000000000"
+
+    const locationParts = formData.location
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+    const rawCity = locationParts[0] || "CITY"
+    const rawCountry = locationParts.length > 1 ? locationParts[locationParts.length - 1] : "COUNTRY"
+    const city = sanitizeFileToken(rawCity, "CITY")
+    const country = sanitizeFileToken(rawCountry, "COUNTRY")
+    return `ASTRO.LOG.IO_${yyyymmddhhmm}_${city}_${country}_SNAPSHOT.jpg`
+  }, [formData.datetime, formData.location])
+
+  const resolveSvgAssetToDataUrl = useCallback(async (assetHref: string) => {
+    const absoluteHref = new URL(assetHref, window.location.origin).href
+    const cachedDataUrl = exportAssetDataUrlCacheRef.current.get(absoluteHref)
+    if (cachedDataUrl) return cachedDataUrl
+
+    const response = await fetch(absoluteHref)
+    if (!response.ok) {
+      throw new Error(`Asset fetch failed: ${absoluteHref}`)
+    }
+
+    const contentType = response.headers.get("content-type") || ""
+    let dataUrl = absoluteHref
+
+    if (contentType.includes("image/svg+xml") || absoluteHref.toLowerCase().endsWith(".svg")) {
+      const svgText = await response.text()
+      dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`
+    } else {
+      const blob = await response.blob()
+      dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : absoluteHref)
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(blob)
+      })
+    }
+
+    exportAssetDataUrlCacheRef.current.set(absoluteHref, dataUrl)
+    return dataUrl
+  }, [])
+
+  const downloadChartSnapshotJpg = useCallback(async () => {
+    if (!horoscopeData || !chartSvgRef.current || isExportingJpg) return
+
+    setError("")
+    setIsExportingJpg(true)
+    try {
+      const sourceSvg = chartSvgRef.current
+      const clone = sourceSvg.cloneNode(true) as SVGSVGElement
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg")
+      clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink")
+      clone.setAttribute("width", "1600")
+      clone.setAttribute("height", "1600")
+      clone.setAttribute("viewBox", "0 0 400 400")
+      clone.style.background = "#000000"
+      if (interfaceThemeFilter !== "none") {
+        clone.style.filter = interfaceThemeFilter
+      }
+
+      clone.querySelectorAll("[data-export-pointer='true']").forEach((node) => {
+        node.remove()
+      })
+
+      const originalNodes = Array.from(sourceSvg.querySelectorAll("*"))
+      const cloneNodes = Array.from(clone.querySelectorAll("*"))
+      for (const [index, originalNode] of originalNodes.entries()) {
+        const clonedNode = cloneNodes[index]
+        if (!(originalNode instanceof Element) || !(clonedNode instanceof Element)) continue
+
+        if (clonedNode.tagName.toLowerCase() === "text") {
+          const computed = window.getComputedStyle(originalNode)
+          clonedNode.setAttribute("fill", computed.fill || "#ffffff")
+          clonedNode.setAttribute("font-size", computed.fontSize || "8px")
+          clonedNode.setAttribute("font-family", computed.fontFamily || MONOTYPE_FONT_STACK)
+          clonedNode.setAttribute("font-weight", computed.fontWeight || "400")
+          clonedNode.setAttribute("letter-spacing", computed.letterSpacing || "0px")
+        }
+
+        if (clonedNode.tagName.toLowerCase() === "image") {
+          const href = clonedNode.getAttribute("href") || clonedNode.getAttributeNS("http://www.w3.org/1999/xlink", "href")
+          if (href) {
+            const resolvedHref = await resolveSvgAssetToDataUrl(href)
+            clonedNode.setAttribute("href", resolvedHref)
+            clonedNode.setAttributeNS("http://www.w3.org/1999/xlink", "href", resolvedHref)
+          }
+        }
+      }
+
+      const serializedSvg = new XMLSerializer().serializeToString(clone)
+      const svgBlob = new Blob([serializedSvg], { type: "image/svg+xml;charset=utf-8" })
+      const svgUrl = URL.createObjectURL(svgBlob)
+
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const nextImage = new Image()
+        nextImage.onload = () => resolve(nextImage)
+        nextImage.onerror = (event) => reject(event)
+        nextImage.src = svgUrl
+      })
+
+      const canvas = document.createElement("canvas")
+      canvas.width = 1600
+      canvas.height = 1600
+      const context = canvas.getContext("2d")
+      if (!context) {
+        URL.revokeObjectURL(svgUrl)
+        throw new Error("Canvas context unavailable")
+      }
+      context.fillStyle = "#000000"
+      context.fillRect(0, 0, canvas.width, canvas.height)
+      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(svgUrl)
+
+      const jpgBlob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/jpeg", 0.94)
+      })
+
+      if (!jpgBlob || jpgBlob.size === 0) {
+        throw new Error("Empty JPG export")
+      }
+
+      const anchor = document.createElement("a")
+      anchor.href = URL.createObjectURL(jpgBlob)
+      anchor.download = buildSubjectJpgFileName()
+      anchor.rel = "noopener"
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      setTimeout(() => URL.revokeObjectURL(anchor.href), 2000)
+    } catch (snapshotError) {
+      console.error("[v0] JPG snapshot export error:", snapshotError)
+      setError(language === "es" ? "Fallo la exportacion JPG." : "JPG export failed.")
+    } finally {
+      setIsExportingJpg(false)
+    }
+  }, [buildSubjectJpgFileName, horoscopeData, interfaceThemeFilter, isExportingJpg, language, resolveSvgAssetToDataUrl])
+
   const downloadNavigationModeMp3 = useCallback(
     async (mode: NavigationMode) => {
       if (!horoscopeData || isExportingMp3) return
       const plan = buildOfflineMp3Plan(mode)
       if (!plan || plan.events.length === 0) {
-        setError("Could not build the MP3 export plan.")
+        setError(language === "es" ? "No se pudo crear el plan de exportacion MP3." : "Could not build the MP3 export plan.")
         return
       }
 
@@ -2219,7 +3019,7 @@ export default function AstrologyCalculator() {
           try {
             fileHandle = await showSaveFilePicker({
               suggestedName: fileName,
-              types: [{ description: "MP3 Audio", accept: { "audio/mpeg": [".mp3"] } }],
+              types: [{ description: language === "es" ? "Audio MP3" : "MP3 Audio", accept: { "audio/mpeg": [".mp3"] } }],
             })
           } catch (pickerError: any) {
             if (pickerError?.name === "AbortError") {
@@ -2246,13 +3046,13 @@ export default function AstrologyCalculator() {
           reverbMixPercent: mode === "astral_chord" ? chordReverbMixPercent : reverbMixPercent,
         })
         if (!mp3Blob) {
-          setError("Could not render the MP3 file.")
+          setError(language === "es" ? "No se pudo renderizar el archivo MP3." : "Could not render the MP3 file.")
           setIsExportingMp3(false)
           setPendingMp3Download(null)
           return
         }
         if (mp3Blob.size === 0) {
-          setError("Empty MP3: audio render produced no data.")
+          setError(language === "es" ? "MP3 vacio: el render de audio no produjo datos." : "Empty MP3: audio render produced no data.")
           setIsExportingMp3(false)
           setPendingMp3Download(null)
           return
@@ -2286,14 +3086,18 @@ export default function AstrologyCalculator() {
           document.body.appendChild(anchor)
           anchor.click()
           document.body.removeChild(anchor)
-          setError("If browser auto-download is blocked, press SAVE MP3.")
+          setError(
+            language === "es"
+              ? "Si la descarga automatica del navegador esta bloqueada, presiona GUARDAR MP3."
+              : "If browser auto-download is blocked, press SAVE MP3.",
+          )
         } else {
           setError("")
         }
         setNavigationMode(mode)
       } catch (error) {
         console.error("[v0] Offline MP3 export error:", error)
-        setError("MP3 export failed.")
+        setError(language === "es" ? "Fallo la exportacion MP3." : "MP3 export failed.")
         setPendingMp3Download(null)
       } finally {
         setIsExportingMp3(false)
@@ -2303,6 +3107,7 @@ export default function AstrologyCalculator() {
       backgroundVolume,
       buildSubjectMp3FileName,
       buildOfflineMp3Plan,
+      language,
       horoscopeData,
       isExportingMp3,
       masterVolume,
@@ -2321,6 +3126,34 @@ export default function AstrologyCalculator() {
     if (!isLoopRunning && !isPaused) return
     startNavigationMode(mode)
   }
+
+  const stopCurrentPerformance = useCallback(() => {
+    cancelAllNavigationSchedulers()
+    cancelPlaybackProgressAnimation()
+    clearAspectTimers()
+    loopStartTimeRef.current = 0
+    loopElapsedBeforePauseMsRef.current = 0
+    lastUiCommitTimeRef.current = 0
+    if (startButtonPhaseTimeoutRef.current) {
+      clearTimeout(startButtonPhaseTimeoutRef.current)
+      startButtonPhaseTimeoutRef.current = null
+    }
+    setIsLoopRunning(false)
+    setIsPaused(false)
+    setPointerRotation(180)
+    setPointerOpacity(1)
+    setPointerOpacityTransitionMs(0)
+    setChartAspectsTransitionMs(0)
+    setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
+    setPlaybackProgress(0)
+    setCurrentPlanetUnderPointer(null)
+    setDebugPointerAngle(0)
+    setStartButtonPhase("contracted")
+    setActivePlanetAspectsMap({})
+    stopBackgroundSound()
+    stopElementBackground()
+    stopAll()
+  }, [cancelAllNavigationSchedulers, cancelPlaybackProgressAnimation, clearAspectTimers, stopAll, stopBackgroundSound, stopElementBackground])
 
   const clearMobileDownloadArm = useCallback(() => {
     if (mobileDownloadArmTimeoutRef.current) {
@@ -2423,16 +3256,29 @@ export default function AstrologyCalculator() {
     startNavigationMode(mode)
   }
 
-  const handleCalculate = async () => {
-    let trimmed = {
-      datetime: formData.datetime.trim(),
-      location: formData.location.trim(),
-      latitude: formData.latitude.trim(),
-      longitude: formData.longitude.trim(),
-    }
+  const handleCalculate = async (
+    startMode?: NavigationMode,
+    overridePayload?: SubjectFormData,
+    overridePreset?: SubjectPreset,
+  ) => {
+    pendingModeLaunchRef.current = startMode ?? null
+
+    let trimmed = overridePayload
+      ? {
+          datetime: overridePayload.datetime.trim(),
+          location: overridePayload.location.trim(),
+          latitude: overridePayload.latitude.trim(),
+          longitude: overridePayload.longitude.trim(),
+        }
+      : {
+          datetime: formData.datetime.trim(),
+          location: formData.location.trim(),
+          latitude: formData.latitude.trim(),
+          longitude: formData.longitude.trim(),
+        }
 
     let payload: SubjectFormData = trimmed
-    let presetToUse: SubjectPreset = selectedPreset
+    let presetToUse: SubjectPreset = overridePreset ?? selectedPreset
 
     if (Object.values(trimmed).every((value) => value === "")) {
       payload = PRESET_BA77_FORM
@@ -2456,7 +3302,12 @@ export default function AstrologyCalculator() {
 
       const isComplete = Object.values(trimmed).every((value) => value !== "")
       if (!isComplete) {
-        setError("Complete all fields, or leave all fields empty to load the 28/09/1977 preset.")
+        setError(
+          language === "es"
+            ? "Completa todos los campos o deja todos vacios para cargar el preset del 28/09/1977."
+            : "Complete all fields, or leave all fields empty to load the 28/09/1977 preset.",
+        )
+        pendingModeLaunchRef.current = null
         return
       }
       payload = trimmed
@@ -2467,7 +3318,12 @@ export default function AstrologyCalculator() {
     const longitude = Number.parseFloat(payload.longitude.replace(",", "."))
 
     if (!birthDate || !birthTime || Number.isNaN(latitude) || Number.isNaN(longitude)) {
-      setError("Invalid format. Check date/time, latitude and longitude.")
+      setError(
+        language === "es"
+          ? "Formato invalido. Revisa fecha/hora, latitud y longitud."
+          : "Invalid format. Check date/time, latitude and longitude.",
+      )
+      pendingModeLaunchRef.current = null
       return
     }
 
@@ -2504,7 +3360,12 @@ export default function AstrologyCalculator() {
       setShowChart(true)
       setShowSubject(false)
     } catch (err) {
-      setError("Could not calculate the astrological chart. Check the entered data.")
+      pendingModeLaunchRef.current = null
+      setError(
+        language === "es"
+          ? "No se pudo calcular la carta astrologica. Revisa los datos ingresados."
+          : "Could not calculate the astrological chart. Check the entered data.",
+      )
       console.error(err)
     } finally {
       setLoading(false)
@@ -2517,7 +3378,7 @@ export default function AstrologyCalculator() {
     setError("")
   }
 
-  const applyHereAndNow = async () => {
+  const applyHereAndNow = async (): Promise<SubjectFormData | null> => {
     const now = new Date()
     const nowDateTime = formatDateTimeLocalValue(now)
 
@@ -2535,9 +3396,13 @@ export default function AstrologyCalculator() {
       const latitude = position.coords.latitude
       const longitude = position.coords.longitude
       const resolvedLocation = await reverseGeocodeLocation(latitude, longitude)
-      const timezoneFallbackLocation = buildLocationFromTimeZone()
+      const timezoneFallbackLocation = buildLocationFromTimeZone(language)
       const locationLabel = sanitizeLocationLabel(
-        resolvedLocation || timezoneFallbackLocation || `Current location ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`,
+        resolvedLocation ||
+          timezoneFallbackLocation ||
+          (language === "es"
+            ? `Ubicacion actual ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`
+            : `Current location ${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`),
       )
 
       setFormData({
@@ -2547,9 +3412,21 @@ export default function AstrologyCalculator() {
         longitude: longitude.toFixed(4),
       })
 
-      if (!resolvedLocation) {
-        setError("City lookup was unavailable. A local fallback label was loaded; edit manually if needed.")
+      const payload = {
+        datetime: nowDateTime,
+        location: locationLabel,
+        latitude: latitude.toFixed(4),
+        longitude: longitude.toFixed(4),
       }
+
+      if (!resolvedLocation) {
+        setError(
+          language === "es"
+            ? "La busqueda de ciudad no estuvo disponible. Se cargo una etiqueta local de respaldo; puedes editarla manualmente."
+            : "City lookup was unavailable. A local fallback label was loaded; edit manually if needed.",
+        )
+      }
+      return payload
     } catch (geoError: any) {
       const denied = geoError?.code === 1
       setSelectedPreset("manual")
@@ -2561,9 +3438,14 @@ export default function AstrologyCalculator() {
       })
       setError(
         denied
-          ? "Geolocation permission was denied. Please enter location manually."
-          : "Geolocation is unavailable. Please enter location manually.",
+          ? language === "es"
+            ? "Se nego el permiso de geolocalizacion. Ingresa la ubicacion manualmente."
+            : "Geolocation permission was denied. Please enter location manually."
+          : language === "es"
+            ? "La geolocalizacion no esta disponible. Ingresa la ubicacion manualmente."
+            : "Geolocation is unavailable. Please enter location manually.",
       )
+      return null
     }
   }
 
@@ -2573,6 +3455,31 @@ export default function AstrologyCalculator() {
     formData.location.trim() !== "" &&
     formData.latitude.trim() !== "" &&
     formData.longitude.trim() !== ""
+
+  const launchModeFromSubject = useCallback(
+    async (mode: NavigationMode) => {
+      if (selectedPreset === "here_now" && !isManualSubjectReady) {
+        const payload = await applyHereAndNow()
+        if (!payload) {
+          pendingModeLaunchRef.current = null
+          return
+        }
+        await handleCalculate(mode, payload, "here_now")
+        return
+      }
+
+      await handleCalculate(mode)
+    },
+    [applyHereAndNow, handleCalculate, isManualSubjectReady, selectedPreset],
+  )
+
+  useEffect(() => {
+    if (!horoscopeData || showSubject) return
+    const pendingMode = pendingModeLaunchRef.current
+    if (!pendingMode) return
+    pendingModeLaunchRef.current = null
+    startNavigationMode(pendingMode)
+  }, [horoscopeData, showSubject])
 
   const pointerPassFadeMs = useMemo(() => {
     // Pointer hit zone is ±5° (10° total around each glyph).
@@ -2611,6 +3518,57 @@ export default function AstrologyCalculator() {
       adjustedPositions: Object.fromEntries(positions.map((p) => [p.name, p.adjustedDegrees])),
     }
   }, [horoscopeData])
+
+  const allChartAspectSegments = useMemo(() => {
+    if (!horoscopeData?.aspects?.length) return []
+
+    return horoscopeData.aspects.flatMap((aspect, index) => {
+      const planet1 = horoscopeData.planets.find((planet) => planet.name === aspect.point1.name)
+      const planet2 = horoscopeData.planets.find((planet) => planet.name === aspect.point2.name)
+
+      let pos1: { x: number; y: number } | null = null
+      let pos2: { x: number; y: number } | null = null
+
+      if (aspect.point1.name === "asc") {
+        const ascLong = horoscopeData.ascendant.ChartPosition?.Ecliptic?.DecimalDegrees
+        pos1 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(ascLong))
+      } else if (aspect.point1.name === "mc") {
+        const mcLong = horoscopeData.mc.ChartPosition?.Ecliptic?.DecimalDegrees
+        pos1 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(mcLong))
+      } else if (planet1) {
+        const degree = adjustedPositions[planet1.name] ?? planet1.ChartPosition.Ecliptic.DecimalDegrees
+        pos1 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(degree))
+      }
+
+      if (aspect.point2.name === "asc") {
+        const ascLong = horoscopeData.ascendant.ChartPosition?.Ecliptic?.DecimalDegrees
+        pos2 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(ascLong))
+      } else if (aspect.point2.name === "mc") {
+        const mcLong = horoscopeData.mc.ChartPosition?.Ecliptic?.DecimalDegrees
+        pos2 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(mcLong))
+      } else if (planet2) {
+        const degree = adjustedPositions[planet2.name] ?? planet2.ChartPosition.Ecliptic.DecimalDegrees
+        pos2 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(degree))
+      }
+
+      if (!pos1 || !pos2) return []
+      const trimmedSegment = trimLineSegment(pos1, pos2, 15, 15)
+      if (!trimmedSegment) return []
+
+      return [
+        {
+          key: `aspect-export-${index}`,
+          x1: trimmedSegment.x1,
+          y1: trimmedSegment.y1,
+          x2: trimmedSegment.x2,
+          y2: trimmedSegment.y2,
+          stroke: getMajorAspectStrokeColor(aspect.aspectType),
+          strokeWidth: 1,
+          opacity: MAX_ASPECT_LINE_OPACITY,
+        },
+      ]
+    })
+  }, [adjustToCanvasAngle, adjustedPositions, horoscopeData])
 
   const zodiacRingItems = useMemo(() => {
     const cusps = horoscopeData?.zodiacCusps
@@ -2814,7 +3772,7 @@ export default function AstrologyCalculator() {
 
   if (showLoadingIntroScreen) {
     const isFirstIntroParagraph = loadingIntroIndex <= 0
-    const isLastIntroParagraph = loadingIntroIndex >= LOADING_INTRO_PARAGRAPHS.length - 1
+    const isLastIntroParagraph = loadingIntroIndex >= loadingIntroParagraphs.length - 1
 
     return (
       <main
@@ -2853,7 +3811,7 @@ export default function AstrologyCalculator() {
                     whiteSpace: "pre-line",
                   }}
                 >
-                  {renderLoadingParagraph(loadingIntroIndex)}
+                  {loadingIntroParagraphs[loadingIntroIndex] ?? ""}
                 </p>
                 <div className="mt-8 w-full flex items-center justify-between">
                   <button
@@ -2875,6 +3833,84 @@ export default function AstrologyCalculator() {
                   </button>
                 </div>
               </div>
+              <div className="absolute bottom-[190px] md:bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+                <div
+                  className={`pointer-events-none min-h-[14px] font-mono text-[8px] md:text-[11px] uppercase tracking-[0.35em] text-white transition-opacity ${
+                    loadingLanguageHint ? "opacity-100" : "opacity-0"
+                  }`}
+                  style={{
+                    opacity: loadingLanguageHint ? (loadingLanguageHintFading ? 0 : 1) : 0,
+                    transitionDuration: loadingLanguageHintFading ? "3000ms" : "180ms",
+                  }}
+                >
+                  {loadingLanguageHint === "en" ? "ENG" : loadingLanguageHint === "es" ? "SPA" : ""}
+                </div>
+                <div className="flex items-center justify-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLanguage("es")
+                      showLoadingLanguageHint("es")
+                    }}
+                    onMouseEnter={() => showLoadingLanguageHint("es")}
+                    onFocus={() => showLoadingLanguageHint("es")}
+                    className={`flex h-[18px] w-[36px] md:h-[34px] md:w-[68px] items-center justify-center overflow-hidden border p-0 transform-gpu transition-all duration-200 hover:scale-[1.16] ${
+                      language === "es"
+                        ? "border-white/80 opacity-80"
+                        : "border-white/40 opacity-30 hover:border-white hover:opacity-100"
+                    }`}
+                    aria-label={language === "es" ? "Cambiar a espanol" : "Switch to Spanish"}
+                  >
+                    <svg className="h-full w-full" viewBox="0 0 28 14" fill="none" aria-hidden="true" preserveAspectRatio="none">
+                      <rect width="28" height="14" fill="#FFFFFF" />
+                      <rect width="28" height="3.5" fill="#050505" />
+                      <rect y="10.5" width="28" height="3.5" fill="#050505" />
+                      <g transform="translate(11.15 4.65)">
+                        <path d="M1.35 0.15L1.7 0.65H1L1.35 0.15ZM0.85 0.7H1.85V1.05H0.85V0.7Z" fill="#050505" />
+                        <rect x="0.55" y="1.1" width="1.6" height="2.4" rx="0.18" fill="#050505" />
+                        <path d="M1.35 1.1V3.5" stroke="#FFFFFF" strokeWidth="0.24" />
+                        <path d="M0.68 2.02H2.02" stroke="#FFFFFF" strokeWidth="0.24" />
+                      </g>
+                      <rect x="0.4" y="0.4" width="27.2" height="13.2" stroke="#8A8A8A" strokeWidth="0.25" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLanguage("en")
+                      showLoadingLanguageHint("en")
+                    }}
+                    onMouseEnter={() => showLoadingLanguageHint("en")}
+                    onFocus={() => showLoadingLanguageHint("en")}
+                    className={`flex h-[18px] w-[36px] md:h-[34px] md:w-[68px] items-center justify-center overflow-hidden border p-0 transform-gpu transition-all duration-200 hover:scale-[1.16] ${
+                      language === "en"
+                        ? "border-white/80 opacity-80"
+                        : "border-white/40 opacity-30 hover:border-white hover:opacity-100"
+                    }`}
+                    aria-label={language === "es" ? "Cambiar a ingles" : "Switch to English"}
+                  >
+                    <svg className="h-full w-full" viewBox="0 0 60 30" fill="none" aria-hidden="true" preserveAspectRatio="none">
+                      <rect width="60" height="30" fill="#141414" />
+                      <path d="M0 0H6L60 24V30H54L0 6V0Z" fill="#F2F2F2" />
+                      <path d="M60 0H54L0 24V30H6L60 6V0Z" fill="#F2F2F2" />
+                      <path d="M0 0H3L60 27V30H57L0 3V0Z" fill="#8F8F8F" />
+                      <path d="M60 0V3L3 30H0V27L57 0H60Z" fill="#8F8F8F" />
+                      <rect x="24" width="12" height="30" fill="#F2F2F2" />
+                      <rect y="9" width="60" height="12" fill="#F2F2F2" />
+                      <rect x="26" width="8" height="30" fill="#8F8F8F" />
+                      <rect y="11" width="60" height="8" fill="#8F8F8F" />
+                      <rect x="0.6" y="0.6" width="58.8" height="28.8" stroke="#8A8A8A" strokeWidth="0.6" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={skipLoadingIntro}
+                className="absolute bottom-[190px] right-1 md:bottom-3 md:right-0 font-mono text-[10px] md:text-[12px] uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors px-2 py-1"
+              >
+                SKIP
+              </button>
             </div>
           </div>
         </div>
@@ -2883,31 +3919,25 @@ export default function AstrologyCalculator() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-4 md:p-8" style={{ filter: interfaceThemeFilter }}>
-      <div className="max-w-[1400px] mx-auto">
-        <div className="relative mb-2 pb-0 md:mb-6 md:pb-3 md:border-b border-white flex items-center justify-between min-h-[52px] md:min-h-[84px] md:pr-[620px]">
-          <div className="relative">
-            <button
-              ref={desktopMenuButtonRef}
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="hidden md:flex md:w-14 md:h-14 items-center justify-center font-mono text-[22px] leading-none uppercase tracking-wider border border-white hover:bg-white hover:text-black transition-colors"
-            >
-              {menuOpen ? "✕" : "☰"}
-            </button>
-
+    <main className="min-h-screen bg-black text-white p-2 md:p-6" style={{ filter: interfaceThemeFilter }}>
+      <div className={`max-w-[1400px] mx-auto ${showSubject ? "pb-3 md:pb-[94px]" : "pb-[126px] md:pb-[94px]"}`}>
+        <div className="relative mb-1 pb-1 border-b border-white flex items-end justify-center gap-3 min-h-[34px] md:min-h-[52px]">
+          <div className="absolute left-0 top-full mt-[5px]">
             {menuOpen && (
               <div
                 ref={menuPanelRef}
-                className="fixed top-[52px] right-4 w-[calc(100vw-2rem)] max-w-[430px] mt-0 bg-black border border-white p-3 z-50 max-h-[85vh] overflow-y-auto md:absolute md:top-full md:left-0 md:right-auto md:mt-2 md:w-auto md:max-w-none md:z-10 md:scale-[2.3] md:origin-top-left"
+                className="absolute left-0 top-0 z-50 w-[min(92vw,540px)] md:w-[560px] bg-black border border-white px-5 py-5 text-white/88 max-h-[72vh] overflow-y-auto shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
               >
-                <div className="mb-2 flex items-center justify-between font-mono text-[7px] uppercase tracking-wide text-white/80">
-                  <span>Menu</span>
-                  <span>Advanced {advancedMenuEnabled ? "ON" : "OFF"} [O]</span>
+                <div className="mb-3 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.18em] text-white/88">
+                  <span>{ui.menu}</span>
+                  <span>
+                    {ui.advanced} {advancedMenuEnabled ? ui.on : ui.off} [O]
+                  </span>
                 </div>
 
                 <div className={advancedMenuEnabled ? "hidden" : "space-y-2"}>
                   <div className="grid grid-cols-2 gap-1">
-                    <label className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-wide cursor-pointer border border-white/60 px-1.5 py-1">
+                    <label className="flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.12em] cursor-pointer border border-white/60 px-2 py-1.5">
                       <input
                         type="checkbox"
                         checked={showSubject}
@@ -2920,27 +3950,27 @@ export default function AstrologyCalculator() {
                         }}
                         className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                       />
-                      Subject
+                      {ui.dataInput}
                     </label>
-                    <label className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-wide cursor-pointer border border-white/60 px-1.5 py-1">
+                    <label className="flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.12em] cursor-pointer border border-white/60 px-2 py-1.5">
                       <input
                         type="checkbox"
                         checked={showSignsRing}
                         onChange={(e) => setShowSignsRing(e.target.checked)}
                         className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                       />
-                      Signs
+                      {ui.signs}
                     </label>
-                    <label className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-wide cursor-pointer border border-white/60 px-1.5 py-1">
+                    <label className="flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.12em] cursor-pointer border border-white/60 px-2 py-1.5">
                       <input
                         type="checkbox"
                         checked={showHousesRing}
                         onChange={(e) => setShowHousesRing(e.target.checked)}
                         className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                       />
-                      Houses
+                      {ui.houses}
                     </label>
-                    <label className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-wide cursor-pointer border border-white/60 px-1.5 py-1">
+                    <label className="flex items-center gap-1.5 font-mono text-[12px] uppercase tracking-[0.12em] cursor-pointer border border-white/60 px-2 py-1.5">
                       <input
                         type="checkbox"
                         checked={showAngles}
@@ -2957,22 +3987,22 @@ export default function AstrologyCalculator() {
                     {NAVIGATION_MODES.map((mode) => (
                       <button
                         key={`minimal-nav-${mode}`}
-                        title={NAV_MODE_INSTRUCTION_BY_MODE[mode]}
+                        title={navModeInstructionByMode[mode]}
                         onClick={() => setNavigationModeFromMenu(mode)}
-                        className={`font-mono text-[8px] uppercase tracking-wide border px-1 py-1 transition-colors ${
+                        className={`font-mono text-[12px] uppercase tracking-[0.14em] border px-2 py-1.5 transition-colors ${
                           navigationMode === mode
                             ? "bg-white text-black border-white"
                             : "bg-transparent text-white border-gray-600 hover:border-white"
                         }`}
                       >
-                        {NAV_MODE_HINT_LABEL[mode]}
+                        {navModeHintLabel[mode]}
                       </button>
                     ))}
                     <button
                       onClick={resetToInitialState}
-                      className="font-mono text-[8px] uppercase tracking-wide border border-white px-1 py-1 hover:bg-white hover:text-black transition-colors"
+                      className="font-mono text-[12px] uppercase tracking-[0.14em] border border-white px-2 py-1.5 hover:bg-white hover:text-black transition-colors"
                     >
-                      Reset
+                      {ui.reset}
                     </button>
                   </div>
                   <button
@@ -2980,45 +4010,55 @@ export default function AstrologyCalculator() {
                       setMenuOpen(false)
                       openInfoOverlay()
                     }}
-                    className="mt-1 w-full font-mono text-[8px] uppercase tracking-wide border border-white px-1 py-1 hover:bg-white hover:text-black transition-colors"
+                    className="mt-1 w-full font-mono text-[12px] uppercase tracking-[0.14em] border border-white px-2 py-1.5 hover:bg-white hover:text-black transition-colors"
                   >
-                    Info
+                    {ui.info}
                   </button>
 
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="flex items-center gap-1">
-                    <label className="font-mono text-[10px] uppercase tracking-wide w-16 flex-shrink-0">Engine</label>
+                    <label className="font-mono text-[13px] uppercase tracking-[0.14em] w-20 flex-shrink-0">{ui.engine}</label>
                     <div className="relative flex-1">
                       <select
                         value={audioEngineMode}
                         onChange={(e) => setAudioEngineMode(e.target.value as AudioEngineMode)}
-                        className="w-full appearance-none bg-black border border-white text-white text-[10px] px-1.5 pr-6 py-1 font-mono uppercase tracking-wide focus:outline-none focus:border-white"
+                        className="w-full appearance-none bg-black border border-white text-white text-[13px] px-2 pr-7 py-1.5 font-mono uppercase tracking-[0.12em] focus:outline-none focus:border-white"
                       >
-                        {ENGINE_OPTIONS.map((option) => (
+                        {engineOptions.map((option) => (
                           <option key={`minimal-engine-${option.value}`} value={option.value}>
                             {option.label}
                           </option>
                         ))}
                       </select>
-                      <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/80 text-[9px]">▾</span>
+                      <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/80 text-[11px]">▾</span>
                     </div>
                   </div>
 
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[10px] uppercase tracking-wide">Interface</div>
+                    <div className="font-mono text-[13px] uppercase tracking-[0.14em]">{ui.interface}</div>
                     <div className="grid grid-cols-1 gap-1">
-                      {INTERFACE_THEME_OPTIONS.map((option) => (
+                      {interfaceThemeOptions.map((option) => (
                         <button
                           key={`minimal-interface-${option.value}`}
                           onClick={() => setInterfaceTheme(option.value)}
-                          className={`font-mono text-[10px] border px-1.5 py-1 transition-colors ${
-                            interfaceTheme === option.value
-                              ? "bg-white text-black border-white"
-                              : "bg-transparent text-white border-gray-600 hover:border-white"
-                          }`}
+                          className="font-mono text-[12px] border px-2 py-1.5 transition-opacity hover:opacity-100"
+                          style={{
+                            color:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeText
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].text,
+                            borderColor:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].border,
+                            backgroundColor:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].hover,
+                          }}
                         >
                           {option.label}
                         </button>
@@ -3027,7 +4067,7 @@ export default function AstrologyCalculator() {
                   </div>
                 </div>
 
-                <div className={advancedMenuEnabled ? "space-y-1" : "hidden"}>
+                <div className={advancedMenuEnabled ? "space-y-1 scale-[1.18] origin-top-left pr-6 pb-6" : "hidden"}>
                   <button
                     onClick={() => {
                       setShowSubject(false)
@@ -3042,7 +4082,7 @@ export default function AstrologyCalculator() {
                     }}
                     className="w-full text-left font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400 border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
                   >
-                    Minimal
+                    {ui.minimal}
                   </button>
                   <div className="border-t border-gray-600 my-1"></div>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
@@ -3058,7 +4098,7 @@ export default function AstrologyCalculator() {
                       }}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Subject
+                    {ui.dataInput}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3067,7 +4107,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowPlanets(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Planets
+                    {ui.planets}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3076,7 +4116,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowAspects(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Aspects
+                    {ui.aspects}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3088,7 +4128,7 @@ export default function AstrologyCalculator() {
                       }}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    DynAspects
+                    {ui.dynAspects}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3097,7 +4137,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowChart(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Chart
+                    {ui.chart}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3106,7 +4146,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowMatrix(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Matrix
+                    {ui.matrix}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3115,7 +4155,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowCircle(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Circle
+                    {ui.circle}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3124,7 +4164,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowSignsRing(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Signs Ring
+                    {ui.signsRing}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3133,7 +4173,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowHousesRing(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Houses Ring
+                    {ui.housesRing}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3142,7 +4182,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowDegrees(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Degrees
+                    {ui.degrees}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3160,7 +4200,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowAstroChart(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    AstroChart
+                    {ui.astroChart}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[7.5px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3169,7 +4209,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowPointerInfo(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Pointer Info
+                    {ui.pointerInfo}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[8.4px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3178,7 +4218,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowAspectIndicator(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Aspect Box
+                    {ui.aspectBox}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[8.4px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3187,7 +4227,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setModalEnabled(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Modal
+                    {ui.mode}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[8.4px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3196,7 +4236,7 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowVuMeter(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    VU
+                    {ui.vu}
                   </label>
                   <label className="flex items-center gap-2 font-mono text-[8.4px] uppercase tracking-wide cursor-pointer hover:text-gray-400">
                     <input
@@ -3205,23 +4245,33 @@ export default function AstrologyCalculator() {
                       onChange={(e) => setShowModeInfo(e.target.checked)}
                       className="w-3 h-3 appearance-none border border-white checked:bg-white checked:border-white cursor-pointer"
                     />
-                    Mode Info
+                    {ui.modeInfo}
                   </label>
 
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[8.4px] uppercase tracking-wide">Interface</div>
+                    <div className="font-mono text-[8.4px] uppercase tracking-wide">{ui.interface}</div>
                     <div className="grid grid-cols-1 gap-1">
-                      {INTERFACE_THEME_OPTIONS.map((option) => (
+                      {interfaceThemeOptions.map((option) => (
                         <button
                           key={`advanced-interface-${option.value}`}
                           onClick={() => setInterfaceTheme(option.value)}
-                          className={`font-mono text-[8.5px] border px-1.5 py-1 transition-colors ${
-                            interfaceTheme === option.value
-                              ? "bg-white text-black border-white"
-                              : "bg-transparent text-white border-gray-600 hover:border-white"
-                          }`}
+                          className="font-mono text-[8.5px] border px-1.5 py-1 transition-opacity hover:opacity-100"
+                          style={{
+                            color:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeText
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].text,
+                            borderColor:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].border,
+                            backgroundColor:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].hover,
+                          }}
                         >
                           {option.label}
                         </button>
@@ -3232,12 +4282,12 @@ export default function AstrologyCalculator() {
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[7.5px] uppercase tracking-wide">Navigation</div>
+                    <div className="font-mono text-[7.5px] uppercase tracking-wide">{ui.navigation}</div>
                     <div className="grid grid-cols-2 gap-1">
                       {NAVIGATION_MODES.map((mode) => (
                         <button
                           key={mode}
-                          title={NAV_MODE_INSTRUCTION_BY_MODE[mode]}
+                          title={navModeInstructionByMode[mode]}
                           onClick={() => setNavigationModeFromMenu(mode)}
                           className={`font-mono text-[7px] uppercase tracking-wide border px-1 py-0.5 transition-colors ${
                             navigationMode === mode
@@ -3245,7 +4295,7 @@ export default function AstrologyCalculator() {
                               : "bg-transparent text-white border-gray-600 hover:border-white"
                           }`}
                         >
-                          {NAV_MODE_HINT_LABEL[mode]}
+                          {navModeHintLabel[mode]}
                         </button>
                       ))}
                     </div>
@@ -3253,7 +4303,7 @@ export default function AstrologyCalculator() {
                       onClick={resetToInitialState}
                       className="w-full font-mono text-[7px] uppercase tracking-wide border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
                     >
-                      Reset
+                      {ui.reset}
                     </button>
                     <button
                       onClick={() => {
@@ -3262,7 +4312,7 @@ export default function AstrologyCalculator() {
                       }}
                       className="w-full font-mono text-[7px] uppercase tracking-wide border border-white px-2 py-1 hover:bg-white hover:text-black transition-colors"
                     >
-                      Info
+                      {ui.info}
                     </button>
                   </div>
 
@@ -3270,7 +4320,7 @@ export default function AstrologyCalculator() {
 
                   {/* LOOP Duration Control */}
                   <div className="flex items-center gap-1 py-1 px-2">
-                    <div className="font-mono text-[7.5px] uppercase tracking-wide whitespace-nowrap">Loop</div>
+                    <div className="font-mono text-[7.5px] uppercase tracking-wide whitespace-nowrap">{ui.loop}</div>
                     <button
                       onClick={() => setLoopDuration(Math.max(60, loopDuration - 5))}
                       className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 text-[6.5px]"
@@ -3289,17 +4339,17 @@ export default function AstrologyCalculator() {
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[7.5px] uppercase tracking-wide">Audio Envelope</div>
+                    <div className="font-mono text-[7.5px] uppercase tracking-wide">{ui.audioEnvelope}</div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[9px] uppercase tracking-wide w-16 flex-shrink-0">Engine</label>
+                      <label className="font-mono text-[9px] uppercase tracking-wide w-16 flex-shrink-0">{ui.engine}</label>
                       <div className="relative w-36">
                         <select
                           value={audioEngineMode}
                           onChange={(e) => setAudioEngineMode(e.target.value as AudioEngineMode)}
                           className="w-full appearance-none bg-black border border-white text-white text-[9px] px-1.5 pr-6 py-1 font-mono uppercase tracking-wide focus:outline-none focus:border-white"
                         >
-                          {ENGINE_OPTIONS.map((option) => (
+                          {engineOptions.map((option) => (
                             <option key={`advanced-engine-${option.value}`} value={option.value}>
                               {option.label}
                             </option>
@@ -3307,11 +4357,11 @@ export default function AstrologyCalculator() {
                         </select>
                         <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white/80 text-[8px]">▾</span>
                       </div>
-                      <span className="font-mono text-[8px] w-8 text-right uppercase">Mode</span>
+                      <span className="font-mono text-[8px] w-8 text-right uppercase">{ui.mode}</span>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">Fade In</label>
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">{ui.fadeIn}</label>
                       <input
                         type="range"
                         min="0"
@@ -3325,7 +4375,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Fade Out
+                        {ui.fadeOut}
                       </label>
                       <input
                         type="range"
@@ -3339,7 +4389,7 @@ export default function AstrologyCalculator() {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">BG Vol</label>
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">{ui.bgVol}</label>
                       <input
                         type="range"
                         min="0"
@@ -3353,7 +4403,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Element
+                        {ui.element}
                       </label>
                       <input
                         type="range"
@@ -3368,7 +4418,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Aspect Vol
+                        {ui.aspectVol}
                       </label>
                       <input
                         type="range"
@@ -3384,7 +4434,7 @@ export default function AstrologyCalculator() {
                     {/* MASTER VOLUME CONTROL */}
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Master Vol
+                        {ui.masterVol}
                       </label>
                       <input
                         type="range"
@@ -3399,7 +4449,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Reverb
+                        {ui.reverb}
                       </label>
                       <input
                         type="range"
@@ -3414,7 +4464,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Chord RVB
+                        {ui.chordReverb}
                       </label>
                       <input
                         type="range"
@@ -3429,7 +4479,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Synth Vol
+                        {ui.synthVol}
                       </label>
                       <input
                         type="range"
@@ -3444,7 +4494,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Tuning
+                        {ui.tuning}
                       </label>
                       <input
                         type="range"
@@ -3464,10 +4514,10 @@ export default function AstrologyCalculator() {
                   <div className="border-t border-gray-600 my-1"></div>
 
                   <div className="space-y-1">
-                    <div className="font-mono text-[7.5px] uppercase tracking-wide">Dynamic Aspects</div>
+                    <div className="font-mono text-[7.5px] uppercase tracking-wide">{ui.dynamicAspects}</div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">Fade In</label>
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">{ui.fadeIn}</label>
                       <input
                         type="range"
                         min="0"
@@ -3480,7 +4530,7 @@ export default function AstrologyCalculator() {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">Sustain</label>
+                      <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">{ui.sustain}</label>
                       <input
                         type="range"
                         min="0"
@@ -3494,7 +4544,7 @@ export default function AstrologyCalculator() {
 
                     <div className="flex items-center gap-1">
                       <label className="font-mono text-[7.5px] uppercase tracking-wide w-12 flex-shrink-0">
-                        Fade Out
+                        {ui.fadeOut}
                       </label>
                       <input
                         type="range"
@@ -3510,10 +4560,10 @@ export default function AstrologyCalculator() {
 
                   {showVuMeter && (
                     <div className="space-y-1">
-                    <div className="font-mono text-[7.5px] uppercase tracking-wide">VU Meter</div>
+                    <div className="font-mono text-[7.5px] uppercase tracking-wide">{ui.vuMeter}</div>
                     <div className="border border-white/50 bg-black p-1 space-y-1">
                       <div className="flex items-center justify-between text-[6.5px] font-mono uppercase tracking-wide">
-                        <span>Pre</span>
+                        <span>{ui.pre}</span>
                         <span>
                           L {percentToDb(peakLevelLeftPre).toFixed(1)} dB / R {percentToDb(peakLevelRightPre).toFixed(1)} dB
                         </span>
@@ -3544,7 +4594,7 @@ export default function AstrologyCalculator() {
                       </div>
 
                       <div className="flex items-center justify-between text-[6.5px] font-mono uppercase tracking-wide pt-1">
-                        <span>Post</span>
+                        <span>{ui.post}</span>
                         <span>
                           L {percentToDb(peakLevelLeftPost).toFixed(1)} dB / R {percentToDb(peakLevelRightPost).toFixed(1)} dB
                         </span>
@@ -3575,7 +4625,7 @@ export default function AstrologyCalculator() {
                       </div>
 
                       <div className="flex items-center justify-between text-[6.5px] font-mono uppercase tracking-wide pt-1">
-                        <span>Comp</span>
+                        <span>{ui.comp}</span>
                         <span>{compressionReductionDb.toFixed(1)} dB</span>
                       </div>
                       <div className="relative h-2 overflow-hidden border-t border-white/20">
@@ -3591,59 +4641,112 @@ export default function AstrologyCalculator() {
               </div>
             )}
           </div>
-
-          <h1 className="hidden md:block text-[18px] md:text-[26px] font-mono fixed md:absolute top-1 md:top-auto left-1/2 transform -translate-x-1/2 z-[60] md:z-auto pointer-events-none">
+          <h1 className="font-mono text-[17px] md:text-[31px] uppercase tracking-[0.2em] text-white text-center whitespace-nowrap">
             ASTRO.LOG.IO
           </h1>
-          {showModeInfo && (
-            <div className="absolute left-14 md:left-20 top-1/2 -translate-y-1/2 font-mono text-[12px] md:text-[14px] uppercase tracking-widest text-white/85">
-              {modalEnabled ? `Mode: ${currentModeLabel}` : "Mode: OFF"}
+          {horoscopeData && !showSubject && (
+            <div className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-30 shrink-0 md:absolute md:right-0 md:bottom-0 md:z-auto">
+              <div
+                className={`border px-2 py-1 md:px-2.5 md:py-1.5 text-right font-mono text-[8px] md:text-[11px] uppercase tracking-[0.08em] md:tracking-wide leading-tight transition-all duration-200 ${
+                  isSubjectBoxHovered ? "border-white bg-white text-black" : "border-white/70 bg-black/75 text-white/80"
+                }`}
+                style={{
+                  touchAction: "manipulation",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+                onPointerDown={(event) => {
+                  if (event.pointerType === "touch") {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }
+                }}
+                onPointerEnter={() => setIsSubjectBoxHovered(true)}
+                onPointerLeave={() => setIsSubjectBoxHovered(false)}
+                onTouchStart={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  if (subjectHoverTouchTimeoutRef.current) {
+                    clearTimeout(subjectHoverTouchTimeoutRef.current)
+                    subjectHoverTouchTimeoutRef.current = null
+                  }
+                  setIsSubjectBoxHovered(true)
+                  subjectHoverTouchTimeoutRef.current = setTimeout(() => {
+                    setIsSubjectBoxHovered(false)
+                    subjectHoverTouchTimeoutRef.current = null
+                  }, TOP_PANEL_HINT_MS)
+                }}
+                onTouchCancel={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  if (subjectHoverTouchTimeoutRef.current) {
+                    clearTimeout(subjectHoverTouchTimeoutRef.current)
+                    subjectHoverTouchTimeoutRef.current = null
+                  }
+                  setIsSubjectBoxHovered(false)
+                }}
+              >
+                <div>
+                  {formData.datetime ? new Date(formData.datetime).toLocaleDateString(localeCode) : ui.noDate}
+                  {" "}
+                  {formData.datetime
+                    ? new Date(formData.datetime).toLocaleTimeString(localeCode, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : ui.noTime}
+                </div>
+                <div>{subjectLocationLines.city}, {subjectLocationLines.country}</div>
+              </div>
             </div>
           )}
-
-          {/* START button - Moved to within the chart's rendering logic */}
         </div>
 
         {showSubject && (
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              <button
-                onClick={setManualMode}
-                className={`px-5 py-2 text-[14px] md:text-[18px] font-mono border transition-colors ${
-                  selectedPreset === "manual"
-                    ? "bg-white text-black border-white"
-                    : "bg-transparent text-white border-gray-600 hover:border-white"
-                }`}
-              >
-                MANUAL
-              </button>
+          <div className="space-y-2 md:space-y-3">
+            <div className="mb-1.5 grid grid-cols-2 gap-1 md:mb-2 md:flex md:flex-wrap md:gap-1.5">
               <button
                 onClick={() => {
                   void applyHereAndNow()
                 }}
-                className={`px-5 py-2 text-[14px] md:text-[18px] font-mono border transition-colors ${
+                className={`w-full px-2.5 py-1.5 text-[10px] leading-tight md:px-5 md:py-2 md:text-[18px] font-mono font-bold border transition-colors ${
                   selectedPreset === "here_now"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white border-gray-600 hover:border-white"
                 }`}
               >
-                HERE &amp; NOW
+                {ui.hereNow}
+              </button>
+              <button
+                onClick={setManualMode}
+                className={`w-full px-2.5 py-1.5 text-[10px] leading-tight md:px-5 md:py-2 md:text-[18px] font-mono font-bold border transition-colors ${
+                  selectedPreset === "manual"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white border-gray-600 hover:border-white"
+                }`}
+              >
+                {ui.dateTimePlaceInput}
               </button>
             </div>
 
             {(selectedPreset === "manual" || selectedPreset === "here_now") && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2 md:gap-3">
                 <div>
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Date &amp; Time</label>
+                  <label className="mb-0.5 block font-mono text-[10px] text-gray-300 md:mb-1 md:text-[18px]">
+                    {ui.dateTime}
+                  </label>
                   <input
                     type="datetime-local"
                     value={formData.datetime}
                     onChange={(e) => setFormData({ ...formData, datetime: e.target.value })}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 p-1.5 text-[12px] text-white md:p-2 md:text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
                 <div className="relative">
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Location</label>
+                  <label className="mb-0.5 block font-mono text-[10px] text-gray-300 md:mb-1 md:text-[18px]">
+                    {ui.location}
+                  </label>
                   <input
                     type="text"
                     value={formData.location}
@@ -3658,11 +4761,11 @@ export default function AstrologyCalculator() {
                         void resolveLocationAndUpdateCoords(formData.location)
                       }
                     }}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
-                    placeholder="City, Country"
+                    className="w-full bg-black border border-gray-500 p-1.5 text-[12px] text-white md:p-2 md:text-[20px] font-mono focus:border-white focus:outline-none"
+                    placeholder={ui.cityCountryPlaceholder}
                   />
                   {isResolvingLocation && (
-                    <div className="mt-1 text-[10px] md:text-[12px] font-mono text-white/70">Resolving location...</div>
+                    <div className="mt-1 text-[9px] md:text-[12px] font-mono text-white/70">{ui.resolvingLocation}</div>
                   )}
                   {locationSuggestions.length > 0 && (
                     <div className="absolute z-20 mt-1 w-full border border-gray-500 bg-black max-h-44 overflow-y-auto">
@@ -3670,7 +4773,7 @@ export default function AstrologyCalculator() {
                         <button
                           key={`${suggestion.display}-${index}`}
                           type="button"
-                          className="w-full text-left px-2 py-2 text-[12px] md:text-[15px] font-mono text-white hover:bg-white hover:text-black transition-colors border-b border-gray-700 last:border-b-0"
+                          className="w-full text-left border-b border-gray-700 px-2 py-1.5 text-[10px] md:text-[15px] font-mono text-white hover:bg-white hover:text-black transition-colors last:border-b-0"
                           onClick={() => {
                             setFormData((prev) => ({
                               ...prev,
@@ -3688,46 +4791,121 @@ export default function AstrologyCalculator() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Latitude</label>
+                  <label className="mb-0.5 block font-mono text-[10px] text-gray-300 md:mb-1 md:text-[18px]">
+                    {ui.latitude}
+                  </label>
                   <input
                     type="number"
                     step="0.0001"
                     value={formData.latitude}
                     onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 p-1.5 text-[12px] text-white md:p-2 md:text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[14px] md:text-[18px] text-gray-300 mb-1 font-mono">Longitude</label>
+                  <label className="mb-0.5 block font-mono text-[10px] text-gray-300 md:mb-1 md:text-[18px]">
+                    {ui.longitude}
+                  </label>
                   <input
                     type="number"
                     step="0.0001"
                     value={formData.longitude}
                     onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                    className="w-full bg-black border border-gray-500 text-white p-2 text-[16px] md:text-[20px] font-mono focus:border-white focus:outline-none"
+                    className="w-full bg-black border border-gray-500 p-1.5 text-[12px] text-white md:p-2 md:text-[20px] font-mono focus:border-white focus:outline-none"
                   />
                 </div>
               </div>
             )}
 
-            <button
-              onClick={handleCalculate}
-              disabled={loading}
-              className={`mt-8 block w-full mx-auto bg-white text-black py-2 text-[15px] md:text-[18px] font-mono text-center hover:bg-gray-200 transition-colors disabled:opacity-50 ${
-                isManualSubjectReady ? "send-minimal-ready" : ""
-              }`}
-            >
-              {loading ? "..." : "SEND"}
-            </button>
+            <div className="mt-4 grid grid-cols-1 gap-1.5 md:mt-8 md:grid-cols-3 md:gap-2">
+              {TOP_PANEL_MODE_ORDER.map((mode) => {
+                const modeHoverKey = `subject-mode:${mode}`
+                const playHoverKey = `subject-play:${mode}`
+                const downloadHoverKey = `subject-download:${mode}`
+                const isHovered =
+                  topPanelHoverKey === modeHoverKey ||
+                  topPanelHoverKey === playHoverKey ||
+                  topPanelHoverKey === downloadHoverKey
+                const tooltipText =
+                  topPanelHoverKey === playHoverKey
+                    ? navModeActionLabel[mode]
+                    : topPanelHoverKey === downloadHoverKey
+                      ? TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT
+                      : topPanelHoverKey === modeHoverKey
+                        ? navModeInstructionByMode[mode]
+                        : null
+
+                return (
+                  <div key={`subject-launch-${mode}`} className="relative">
+                    <div
+                      className={`relative flex h-[38px] md:h-[42px] overflow-hidden border transition-colors ${
+                        isHovered ? "border-white bg-white/20 text-white" : "border-white/50 bg-transparent text-white/60"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={() => {
+                          showTopPanelHint(playHoverKey)
+                          void launchModeFromSubject(mode)
+                        }}
+                        onMouseEnter={() => showTopPanelHint(playHoverKey)}
+                        onFocus={() => showTopPanelHint(playHoverKey)}
+                        className="flex h-full w-[24%] min-w-[28px] items-center justify-center border-r border-white/30 transition-colors hover:bg-white/12"
+                        title={navModeActionLabel[mode]}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path d="M6 4 L16 10 L6 16 Z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={() => {
+                          showTopPanelHint(modeHoverKey)
+                          void launchModeFromSubject(mode)
+                        }}
+                        onMouseEnter={() => showTopPanelHint(modeHoverKey)}
+                        onFocus={() => showTopPanelHint(modeHoverKey)}
+                        className="flex-1 px-1.5 md:px-2 font-mono font-bold text-[9px] md:text-[12px] leading-none uppercase tracking-[0.1em] md:tracking-[0.12em] transition-colors hover:bg-white/12"
+                      >
+                        {navModeHintLabel[mode]}
+                      </button>
+                      <button
+                        type="button"
+                        disabled
+                        onMouseEnter={() => showTopPanelHint(downloadHoverKey)}
+                        onFocus={() => showTopPanelHint(downloadHoverKey)}
+                        className="flex h-full w-[24%] min-w-[28px] items-center justify-center border-l border-white/20 text-white/20 cursor-not-allowed"
+                        title={TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.45" aria-hidden="true">
+                          <path d="M3 8.8V12.4H13V8.8" />
+                          <path d="M8 2.8V9.1" />
+                          <path d="M5.9 7L8 9.1L10.1 7" />
+                        </svg>
+                      </button>
+                      <span
+                        className={`pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-[160px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)] whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                          tooltipText ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        {tooltipText || ""}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
         {horoscopeData && (
-          <div className="space-y-8">
+          <div className="space-y-2 md:space-y-3">
             {showChart && (
-              <div className="mb-8 flex justify-center" style={{ transform: "translateY(-10px)" }}>
-                <div className="relative w-full max-w-[400px] aspect-square md:w-[min(90vh,90vw)] md:h-[min(90vh,90vw)] md:max-w-none md:aspect-auto">
-                  <svg viewBox="0 0 400 400" className="w-full h-full scale-90 origin-center">
+              <div className="mt-4 md:mt-0 mb-0 md:mb-1 flex justify-center md:[transform:translateY(-4px)]">
+                <div className="relative w-full max-w-[324px] aspect-square md:w-[min(74vh,86vw)] md:h-[min(74vh,86vw)] md:max-w-none md:aspect-auto">
+                  <svg ref={chartSvgRef} viewBox="0 0 400 400" className="w-full h-full scale-90 origin-center">
                     <defs>
                       <filter id="glyph-halo-only" x="-200%" y="-200%" width="400%" height="400%">
                         <feGaussianBlur in="SourceAlpha" stdDeviation="1.8" result="halo-blur" />
@@ -3815,7 +4993,7 @@ export default function AstrologyCalculator() {
                                   className="fill-white text-[7px]"
                                   style={{ opacity: 0.3, fontFamily: MONOTYPE_FONT_STACK }}
                                 >
-                                  {sign.label.slice(0, 3).toUpperCase()}
+                                  {getLocalizedSignLabel(sign.label, language).slice(0, 3).toUpperCase()}
                                 </text>
                               )}
                             </g>
@@ -3864,7 +5042,8 @@ export default function AstrologyCalculator() {
                       const adjustedDegrees = adjustedPositions[planet.name] ?? originalDegrees
                       const position = polarToCartesian(200, 200, 180, adjustToCanvasAngle(adjustedDegrees))
                       const glyphSrc = PLANET_GLYPH_SVGS[planet.name]
-                      const glyphFallback = PLANET_GLYPH_FALLBACK_LABELS[planet.name] || planet.label
+                      const glyphFallback =
+                        PLANET_GLYPH_FALLBACK_LABELS[planet.name] || getLocalizedPlanetLabel(planet.name || planet.label, language)
                       // Added hover detection for glyphs
                       const isHovered = hoveredGlyph === planet.name
                       const isPressed = pressedGlyph === planet.name
@@ -3899,6 +5078,7 @@ export default function AstrologyCalculator() {
                       return (
                         <g
                           key={planet.name}
+                          data-export-planet-glyph="true"
                           style={{
                             cursor: "pointer",
                             transformBox: "fill-box",
@@ -4105,60 +5285,19 @@ export default function AstrologyCalculator() {
                       )}
 
                     {showAspectGraph &&
-                      horoscopeData.aspects.map((aspect, index) => {
-                        // Get positions for both planets
-                        const planet1 = horoscopeData.planets.find((p) => p.name === aspect.point1.name)
-                        const planet2 = horoscopeData.planets.find((p) => p.name === aspect.point2.name)
-
-                        // Handle ASC and MC
-                        let pos1, pos2
-
-                        if (aspect.point1.name === "asc") {
-                          const ascLong = horoscopeData.ascendant.ChartPosition?.Ecliptic?.DecimalDegrees
-                          pos1 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(ascLong))
-                        } else if (aspect.point1.name === "mc") {
-                          const mcLong = horoscopeData.mc.ChartPosition?.Ecliptic?.DecimalDegrees
-                          pos1 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(mcLong))
-                        } else if (planet1) {
-                          const degree =
-                            adjustedPositions[planet1.name] ?? planet1.ChartPosition.Ecliptic.DecimalDegrees
-                          pos1 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(degree))
-                        }
-
-                        if (aspect.point2.name === "asc") {
-                          const ascLong = horoscopeData.ascendant.ChartPosition?.Ecliptic?.DecimalDegrees
-                          pos2 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(ascLong))
-                        } else if (aspect.point2.name === "mc") {
-                          const mcLong = horoscopeData.mc.ChartPosition?.Ecliptic?.DecimalDegrees
-                          pos2 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(mcLong))
-                        } else if (planet2) {
-                          const degree =
-                            adjustedPositions[planet2.name] ?? planet2.ChartPosition.Ecliptic.DecimalDegrees
-                          pos2 = polarToCartesian(200, 200, 180, adjustToCanvasAngle(degree))
-                        }
-
-                        if (!pos1 || !pos2) return null
-                        const trimmedSegment = trimLineSegment(pos1, pos2, 15, 15)
-                        if (!trimmedSegment) return null
-
-                        // Determine color; all aspect lines use 1px width.
-                        const stroke = getMajorAspectStrokeColor(aspect.aspectType)
-                        const strokeWidth = 1
-
-                        return (
-                          <g key={index} style={{ pointerEvents: "none" }}>
-                            <line
-                              x1={trimmedSegment.x1}
-                              y1={trimmedSegment.y1}
-                              x2={trimmedSegment.x2}
-                              y2={trimmedSegment.y2}
-                              stroke={stroke}
-                              strokeWidth={strokeWidth}
-                              opacity={MAX_ASPECT_LINE_OPACITY}
-                            />
-                          </g>
-                        )
-                      })}
+                      allChartAspectSegments.map((segment) => (
+                        <g key={segment.key} data-export-static-aspects="true" style={{ pointerEvents: "none" }}>
+                          <line
+                            x1={segment.x1}
+                            y1={segment.y1}
+                            x2={segment.x2}
+                            y2={segment.y2}
+                            stroke={segment.stroke}
+                            strokeWidth={segment.strokeWidth}
+                            opacity={segment.opacity}
+                          />
+                        </g>
+                      ))}
 
                     {showPointer && (
                       <>
@@ -4211,51 +5350,9 @@ export default function AstrologyCalculator() {
                           />
                         </g>
 
-                        {/* Animated pointer - rotates clockwise from ASC (180°) */}
-                        {shouldShowIdlePointer && (
-                          <circle
-                            cx="20"
-                            cy="200"
-                            r="14"
-                            fill="white"
-                            fillOpacity={ORBIT_POINTER_FILL_OPACITY}
-                            stroke="white"
-                            strokeWidth="1"
-                            opacity="1"
-                            style={{ pointerEvents: "none" }}
-                          />
-                        )}
-
-                        {/* Update pointer visibility - only show when loop is running */}
-                        {shouldShowChordCenterPointer && (
-                          <circle
-                            cx={EARTH_CENTER_X}
-                            cy={EARTH_CENTER_Y}
-                            r={CHORD_POINTER_RADIUS}
-                            fill="white"
-                            fillOpacity={CHORD_POINTER_FILL_OPACITY}
-                            stroke="white"
-                            strokeWidth="1.25"
-                            opacity={pointerOpacity}
-                            style={{
-                              pointerEvents: "none",
-                              transition:
-                                pointerOpacityTransitionMs > 0
-                                  ? `opacity ${pointerOpacityTransitionMs}ms linear`
-                                  : "none",
-                            }}
-                          />
-                        )}
-
-                        {shouldShowOrbitPointer && (
-                          <g
-                            style={{
-                              transform: `rotate(${pointerRotation}deg)`,
-                              transformOrigin: "200px 200px",
-                              transition: "none", // Remove transition for smooth animation
-                              opacity: navigationMode === "astral_chord" ? 0 : 1,
-                            }}
-                          >
+                        <g data-export-pointer="true">
+                          {/* Animated pointer - rotates clockwise from ASC (180°) */}
+                          {shouldShowIdlePointer && (
                             <circle
                               cx="20"
                               cy="200"
@@ -4264,6 +5361,21 @@ export default function AstrologyCalculator() {
                               fillOpacity={ORBIT_POINTER_FILL_OPACITY}
                               stroke="white"
                               strokeWidth="1"
+                              opacity="1"
+                              style={{ pointerEvents: "none" }}
+                            />
+                          )}
+
+                          {/* Update pointer visibility - only show when loop is running */}
+                          {shouldShowChordCenterPointer && (
+                            <circle
+                              cx={EARTH_CENTER_X}
+                              cy={EARTH_CENTER_Y}
+                              r={CHORD_POINTER_RADIUS}
+                              fill="white"
+                              fillOpacity={CHORD_POINTER_FILL_OPACITY}
+                              stroke="white"
+                              strokeWidth="1.25"
                               opacity={pointerOpacity}
                               style={{
                                 pointerEvents: "none",
@@ -4273,8 +5385,37 @@ export default function AstrologyCalculator() {
                                     : "none",
                               }}
                             />
-                          </g>
-                        )}
+                          )}
+
+                          {shouldShowOrbitPointer && (
+                            <g
+                              style={{
+                                transform: `rotate(${pointerRotation}deg)`,
+                                transformOrigin: "200px 200px",
+                                transition: "none",
+                                opacity: navigationMode === "astral_chord" ? 0 : 1,
+                              }}
+                            >
+                              <circle
+                                cx="20"
+                                cy="200"
+                                r="14"
+                                fill="white"
+                                fillOpacity={ORBIT_POINTER_FILL_OPACITY}
+                                stroke="white"
+                                strokeWidth="1"
+                                opacity={pointerOpacity}
+                                style={{
+                                  pointerEvents: "none",
+                                  transition:
+                                    pointerOpacityTransitionMs > 0
+                                      ? `opacity ${pointerOpacityTransitionMs}ms linear`
+                                      : "none",
+                                }}
+                              />
+                            </g>
+                          )}
+                        </g>
                       </>
                     )}
 
@@ -4314,7 +5455,7 @@ export default function AstrologyCalculator() {
                           let aspectOpacity = Math.min(data.opacity, MAX_ASPECT_LINE_OPACITY)
 
                           return (
-                            <g key={`aspect-${planetName}-${index}`} style={{ pointerEvents: "none" }}>
+                            <g key={`aspect-${planetName}-${index}`} data-export-dynamic-aspects="true" style={{ pointerEvents: "none" }}>
                               <line
                                 x1={trimmedSegment.x1}
                                 y1={trimmedSegment.y1}
@@ -4337,113 +5478,6 @@ export default function AstrologyCalculator() {
                         }),
                       )}
                   </svg>
-                  <div className="fixed bottom-0 pb-[calc(env(safe-area-inset-bottom)*0.4)] translate-y-[100px] md:translate-y-0 md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
-                    <div className="relative mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-                      <div
-                        className={`pointer-events-auto origin-bottom-right border px-2 py-1.5 md:px-2.5 md:py-2 text-right font-mono text-[8px] md:text-[13px] uppercase tracking-wide leading-tight transition-all duration-200 ${
-                          isSubjectBoxHovered
-                            ? "scale-[1] md:scale-100 border-white bg-white text-black"
-                            : "scale-[0.66] md:scale-100 border-white/70 bg-black/75 text-white/80"
-                        }`}
-                        style={{
-                          touchAction: "manipulation",
-                          userSelect: "none",
-                          WebkitUserSelect: "none",
-                          WebkitTapHighlightColor: "transparent",
-                        }}
-                        onPointerDown={(event) => {
-                          if (event.pointerType === "touch") {
-                            event.preventDefault()
-                            event.stopPropagation()
-                          }
-                        }}
-                        onPointerEnter={() => setIsSubjectBoxHovered(true)}
-                        onPointerLeave={() => setIsSubjectBoxHovered(false)}
-                        onTouchStart={(event) => {
-                          event.preventDefault()
-                          event.stopPropagation()
-                          if (subjectHoverTouchTimeoutRef.current) {
-                            clearTimeout(subjectHoverTouchTimeoutRef.current)
-                            subjectHoverTouchTimeoutRef.current = null
-                          }
-                          setIsSubjectBoxHovered(true)
-                          subjectHoverTouchTimeoutRef.current = setTimeout(() => {
-                            setIsSubjectBoxHovered(false)
-                            subjectHoverTouchTimeoutRef.current = null
-                          }, TOP_PANEL_HINT_MS)
-                        }}
-                        onTouchEnd={(event) => {
-                          event.preventDefault()
-                          event.stopPropagation()
-                          // Keep subject hover visible for a short readable window on touch devices.
-                        }}
-                        onTouchCancel={(event) => {
-                          event.preventDefault()
-                          event.stopPropagation()
-                          if (subjectHoverTouchTimeoutRef.current) {
-                            clearTimeout(subjectHoverTouchTimeoutRef.current)
-                            subjectHoverTouchTimeoutRef.current = null
-                          }
-                          setIsSubjectBoxHovered(false)
-                        }}
-                      >
-                        <div>
-                          {formData.datetime ? new Date(formData.datetime).toLocaleDateString("en-US") : "No Date"}
-                        </div>
-                        <div>
-                          {formData.datetime
-                            ? new Date(formData.datetime).toLocaleTimeString("en-US", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "No Time"}
-                        </div>
-                        <div>{subjectLocationLines.city}</div>
-                        <div>{subjectLocationLines.country}</div>
-                      </div>
-                      <div
-                        className={`pointer-events-none absolute right-4 md:right-8 bottom-[74px] md:bottom-[76px] origin-bottom-right border border-white/75 bg-black/88 px-2.5 py-2 md:px-3 md:py-2.5 text-right font-mono uppercase tracking-wide leading-tight transition-opacity duration-500 ${
-                          isSubjectBoxHovered ? "opacity-100" : "opacity-0"
-                        }`}
-                      >
-                        <div className="text-[9px] md:text-[14px]">
-                          {formData.datetime ? new Date(formData.datetime).toLocaleDateString("en-US") : "No Date"}
-                        </div>
-                        <div className="text-[9px] md:text-[14px]">
-                          {formData.datetime
-                            ? new Date(formData.datetime).toLocaleTimeString("en-US", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "No Time"}
-                        </div>
-                        <div className="text-[9px] md:text-[14px]">{subjectLocationLines.city}</div>
-                        <div className="text-[9px] md:text-[14px]">{subjectLocationLines.country}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="fixed bottom-0 pb-[calc(env(safe-area-inset-bottom)*0.4)] translate-y-[100px] md:translate-y-0 md:bottom-[86px] md:pb-0 inset-x-0 z-30 pointer-events-none">
-                    <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-start">
-                      <button
-                        type="button"
-                        onClick={handlePlaybackTogglePress}
-                        className={`pointer-events-auto flex items-center justify-center border border-white/80 bg-black/75 text-white/90 hover:bg-white hover:text-black transition-colors ${
-                          !isPlaybackActive ? "play-idle-pulse" : ""
-                        } origin-bottom-left scale-[0.66] md:scale-100 w-12 h-12 md:w-14 md:h-14`}
-                        title={isPlaybackActive ? "Stop" : "Play"}
-                      >
-                        {isPlaybackActive ? (
-                          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <rect x="5" y="5" width="10" height="10" />
-                          </svg>
-                        ) : (
-                          <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path d="M6 4 L16 10 L6 16 Z" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}
@@ -4452,15 +5486,15 @@ export default function AstrologyCalculator() {
               <div className="">
                 <div className="bg-white text-black p-3 font-mono flex items-center justify-between">
                   <div>
-                    <h2 className="text-[10px] uppercase tracking-wider">Astrological Data</h2>
+                    <h2 className="text-[10px] uppercase tracking-wider">{ui.astrologicalData}</h2>
                     <p className="text-[9px] mt-1 opacity-60">
-                      ASC: {horoscopeData.ascendant.sign.label}{" "}
+                      ASC: {getLocalizedSignLabel(horoscopeData.ascendant.sign.label, language)}{" "}
                       {horoscopeData.ascendant.ChartPosition.Ecliptic.ArcDegreesFormatted30}
                     </p>
                   </div>
                   <div className="text-right text-[9px] opacity-60">
                     <div>{sanitizeLocationLabel(formData.location)}</div>
-                    <div>{new Date(formData.datetime).toLocaleString("en-US")}</div>
+                    <div>{new Date(formData.datetime).toLocaleString(localeCode)}</div>
                   </div>
                 </div>
 
@@ -4469,24 +5503,24 @@ export default function AstrologyCalculator() {
                     <thead>
                       <tr className="bg-gray-800">
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Glyph
+                          {ui.glyph}
                         </th>
                         <th className="text-right p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Ecliptic (°)
+                          {ui.ecliptic}
                         </th>
                         <th className="text-left p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Sign
+                          {ui.sign}
                         </th>
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          House
+                          {ui.house}
                         </th>
                         <th className="text-left p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Position
+                          {ui.position}
                         </th>
                         <th className="text-right p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Horizon (°)
+                          {ui.horizon}
                         </th>
-                        <th className="text-center p-2 font-normal uppercase tracking-wide">Retrograde</th>
+                        <th className="text-center p-2 font-normal uppercase tracking-wide">{ui.retrograde}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -4496,7 +5530,7 @@ export default function AstrologyCalculator() {
                             {PLANET_GLYPH_SVGS[planet.name] ? (
                               <img
                                 src={PLANET_GLYPH_SVGS[planet.name]}
-                                alt={planet.label}
+                                alt={getLocalizedPlanetLabel(planet.name || planet.label, language)}
                                 className="inline-block w-5 h-5 mx-auto align-middle select-none"
                                 draggable={false}
                               />
@@ -4507,14 +5541,14 @@ export default function AstrologyCalculator() {
                                   WebkitTextStroke: "0.3px white",
                                 }}
                               >
-                                {PLANET_GLYPH_FALLBACK_LABELS[planet.name] || planet.label}
+                                {PLANET_GLYPH_FALLBACK_LABELS[planet.name] || getLocalizedPlanetLabel(planet.name || planet.label, language)}
                               </span>
                             )}
                           </td>
                           <td className="p-2 border-r border-gray-700 text-right tabular-nums">
                             {planet.ChartPosition.Ecliptic.DecimalDegrees.toFixed(4)}
                           </td>
-                          <td className="p-2 border-r border-gray-700">{planet.Sign.label}</td>
+                          <td className="p-2 border-r border-gray-700">{getLocalizedSignLabel(planet.Sign.label, language)}</td>
                           <td className="p-2 border-r border-gray-700 text-center">{planet.House}</td>
                           <td className="p-2 border-r border-gray-700">
                             {planet.ChartPosition.Ecliptic.ArcDegreesFormatted30}
@@ -4539,7 +5573,7 @@ export default function AstrologyCalculator() {
                         <td className="p-2 border-r border-gray-700 text-right tabular-nums">
                           {horoscopeData.ascendant.ChartPosition.Ecliptic.DecimalDegrees.toFixed(4)}
                         </td>
-                        <td className="p-2 border-r border-gray-700">{horoscopeData.ascendant.sign.label}</td>
+                        <td className="p-2 border-r border-gray-700">{getLocalizedSignLabel(horoscopeData.ascendant.sign.label, language)}</td>
                         <td className="p-2 border-r border-gray-700 text-center">1</td>
                         <td className="p-2 border-r border-gray-700">
                           {horoscopeData.ascendant.ChartPosition.Ecliptic.ArcDegreesFormatted30}
@@ -4561,7 +5595,7 @@ export default function AstrologyCalculator() {
                         <td className="p-2 border-r border-gray-700 text-right tabular-nums">
                           {horoscopeData.mc.ChartPosition.Ecliptic.DecimalDegrees.toFixed(4)}
                         </td>
-                        <td className="p-2 border-r border-gray-700">{horoscopeData.mc.Sign.label}</td>
+                        <td className="p-2 border-r border-gray-700">{getLocalizedSignLabel(horoscopeData.mc.Sign.label, language)}</td>
                         <td className="p-2 border-r border-gray-700 text-center">10</td>
                         <td className="p-2 border-r border-gray-700">
                           {horoscopeData.mc.ChartPosition.Ecliptic.ArcDegreesFormatted30}
@@ -4579,12 +5613,12 @@ export default function AstrologyCalculator() {
               <div className="">
                 <div className="bg-white text-black p-3 font-mono flex items-center justify-between">
                   <div>
-                    <h2 className="text-[10px] uppercase tracking-wider">Astrological Aspects</h2>
-                    <p className="text-[9px] mt-1 opacity-60">Conjunction, Opposition, Trine, Square, Sextile</p>
+                    <h2 className="text-[10px] uppercase tracking-wider">{ui.astrologicalAspects}</h2>
+                    <p className="text-[9px] mt-1 opacity-60">{ui.majorAspects}</p>
                   </div>
                   <div className="text-right text-[9px] opacity-60">
                     <div>
-                      Total:{" "}
+                      {ui.total}:{" "}
                       {
                         horoscopeData.aspects.filter((a) => {
                           const mainPlanets = [
@@ -4613,18 +5647,18 @@ export default function AstrologyCalculator() {
                     <thead>
                       <tr className="bg-gray-800">
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Planet 1
+                          {ui.planet1}
                         </th>
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Aspect
+                          {ui.aspect}
                         </th>
                         <th className="text-center p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Planet 2
+                          {ui.planet2}
                         </th>
                         <th className="text-right p-2 font-normal uppercase tracking-wide border-r border-gray-600">
-                          Angle (°)
+                          {ui.angle}
                         </th>
-                        <th className="text-right p-2 font-normal uppercase tracking-wide">Orb (°)</th>
+                        <th className="text-right p-2 font-normal uppercase tracking-wide">{ui.orb}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -4666,7 +5700,7 @@ export default function AstrologyCalculator() {
                                 {PLANET_GLYPH_SVGS[aspect.point1.name] ? (
                                   <img
                                     src={PLANET_GLYPH_SVGS[aspect.point1.name]}
-                                    alt={aspect.point1.label}
+                                    alt={getLocalizedPlanetLabel(aspect.point1.name || aspect.point1.label, language)}
                                     className="inline-block w-5 h-5 mx-auto align-middle select-none"
                                     draggable={false}
                                   />
@@ -4678,12 +5712,13 @@ export default function AstrologyCalculator() {
                                       WebkitTextStroke: "0.3px white",
                                     }}
                                   >
-                                    {PLANET_GLYPH_FALLBACK_LABELS[aspect.point1.name] || aspect.point1.label}
+                                    {PLANET_GLYPH_FALLBACK_LABELS[aspect.point1.name] ||
+                                      getLocalizedPlanetLabel(aspect.point1.name || aspect.point1.label, language)}
                                   </span>
                                 )}
                               </td>
                               <td className="p-2 border-r border-gray-700 text-center">
-                                <span className="text-lg" title={getMajorAspectLabel(aspect.aspectType)}>
+                                <span className="text-lg" title={getMajorAspectLabel(aspect.aspectType, language)}>
                                   {aspectSymbol}
                                 </span>
                               </td>
@@ -4691,7 +5726,7 @@ export default function AstrologyCalculator() {
                                 {PLANET_GLYPH_SVGS[aspect.point2.name] ? (
                                   <img
                                     src={PLANET_GLYPH_SVGS[aspect.point2.name]}
-                                    alt={aspect.point2.label}
+                                    alt={getLocalizedPlanetLabel(aspect.point2.name || aspect.point2.label, language)}
                                     className="inline-block w-5 h-5 mx-auto align-middle select-none"
                                     draggable={false}
                                   />
@@ -4703,7 +5738,8 @@ export default function AstrologyCalculator() {
                                       WebkitTextStroke: "0.3px white",
                                     }}
                                   >
-                                    {PLANET_GLYPH_FALLBACK_LABELS[aspect.point2.name] || aspect.point2.label}
+                                    {PLANET_GLYPH_FALLBACK_LABELS[aspect.point2.name] ||
+                                      getLocalizedPlanetLabel(aspect.point2.name || aspect.point2.label, language)}
                                   </span>
                                 )}
                               </td>
@@ -4736,7 +5772,7 @@ export default function AstrologyCalculator() {
                       }}
                     >
                       <h2 className="text-[10px] uppercase tracking-wider mb-1">
-                        Aspects of {planetName.toUpperCase()}
+                        {ui.aspectsOf} {getLocalizedPlanetLabel(planetName, language).toUpperCase()}
                       </h2>
                       {aspects.map((aspect, index) => {
                         const aspectKey = getMajorAspectKey(aspect.aspectType)
@@ -4769,27 +5805,32 @@ export default function AstrologyCalculator() {
                               {PLANET_GLYPH_SVGS[aspect.point1.name] ? (
                                 <img
                                   src={PLANET_GLYPH_SVGS[aspect.point1.name]}
-                                  alt={aspect.point1.label}
+                                  alt={getLocalizedPlanetLabel(aspect.point1.name || aspect.point1.label, language)}
                                   className="w-3.5 h-3.5 select-none"
                                   draggable={false}
                                 />
                               ) : (
-                                PLANET_GLYPH_FALLBACK_LABELS[aspect.point1.name] || aspect.point1.label
+                                PLANET_GLYPH_FALLBACK_LABELS[aspect.point1.name] ||
+                                getLocalizedPlanetLabel(aspect.point1.name || aspect.point1.label, language)
                               )}
                             </span>
-                            <span className={`text-lg ${aspectColor} ${brightness}`} title={getMajorAspectLabel(aspect.aspectType)}>
+                            <span
+                              className={`text-lg ${aspectColor} ${brightness}`}
+                              title={getMajorAspectLabel(aspect.aspectType, language)}
+                            >
                               {aspectSymbol}
                             </span>
                             <span className="inline-flex items-center justify-center min-w-[14px]">
                               {PLANET_GLYPH_SVGS[aspect.point2.name] ? (
                                 <img
                                   src={PLANET_GLYPH_SVGS[aspect.point2.name]}
-                                  alt={aspect.point2.label}
+                                  alt={getLocalizedPlanetLabel(aspect.point2.name || aspect.point2.label, language)}
                                   className="w-3.5 h-3.5 select-none"
                                   draggable={false}
                                 />
                               ) : (
-                                PLANET_GLYPH_FALLBACK_LABELS[aspect.point2.name] || aspect.point2.label
+                                PLANET_GLYPH_FALLBACK_LABELS[aspect.point2.name] ||
+                                getLocalizedPlanetLabel(aspect.point2.name || aspect.point2.label, language)
                               )}
                             </span>
                             <span className="text-gray-400 text-xs">{aspect.angle.toFixed(1)}°</span>
@@ -4804,160 +5845,270 @@ export default function AstrologyCalculator() {
         )}
       </div>
 
-      <div className="fixed top-[50px] inset-x-0 z-[35] pointer-events-none md:hidden">
-        <div className="mx-auto w-full max-w-[calc(1400px+2rem)] px-4">
-          <div className="border-b border-white/90" />
-        </div>
-      </div>
-
-      <div className="fixed top-[5px] md:top-2 inset-x-0 z-40 pointer-events-none">
-        <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8 flex justify-end">
-          <div className="pointer-events-auto w-full max-w-[430px] h-[38px] md:h-auto md:w-full md:max-w-[560px]">
-            <div className="grid grid-cols-5 md:grid-cols-4 gap-0.5 h-full items-stretch content-stretch md:gap-1.5 md:h-auto">
-              <div className="relative p-0 md:hidden">
-                <button
-                  ref={mobileMenuButtonRef}
-                  onClick={() => setMenuOpen((prev) => !prev)}
-                  className={`flex w-full h-[36px] translate-y-[5px] items-center justify-center border px-0.5 py-0 transition-colors ${
-                    menuOpen
-                      ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
+      {horoscopeData && !showSubject && (
+        <div className="fixed bottom-0 inset-x-0 z-40 pointer-events-none">
+          <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8">
+            <div className="pb-[calc(env(safe-area-inset-bottom)+8px)]">
+              <div className="relative mb-[6px] border-b border-white/90">
+                <span
+                  className={`absolute bottom-[-1px] h-[10px] w-px bg-white transition-opacity duration-200 ${
+                    isPlaybackActive ? "opacity-100" : "opacity-0"
                   }`}
-                >
-                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-                    <path d="M2.5 5H13.5" />
-                    <path d="M2.5 8H13.5" />
-                    <path d="M2.5 11H13.5" />
-                  </svg>
-                </button>
+                  style={{ left: `${Math.max(0, Math.min(100, playbackProgress * 100))}%` }}
+                />
               </div>
-              {TOP_PANEL_MODE_ORDER.map((mode) => {
-                const isActiveMode = navigationMode === mode
-                const modeHoverKey = `mode:${mode}`
-                const downloadHoverKey = `download:${mode}`
-                const isModeHoverActive = topPanelHoverKey === modeHoverKey
-                const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
-                const isModeButtonActive = isActiveMode || isModeHoverActive
-                const tooltipViewportClass =
-                  "fixed left-1/2 -translate-x-1/2 top-[90px] md:top-[164px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
-                return (
-                  <div
-                    key={`top-nav-${mode}`}
-                    className="relative p-0 md:p-0.5 md:px-1 md:py-1"
+              <div className="grid grid-cols-4 gap-0.5 items-stretch content-stretch md:grid-cols-8 md:gap-1.5 pointer-events-auto">
+                <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                  <button
+                    ref={(node) => {
+                      mobileMenuButtonRef.current = node
+                      desktopMenuButtonRef.current = node
+                    }}
+                    onClick={() => setMenuOpen((prev) => !prev)}
+                    onMouseEnter={() => showTopPanelHint("menu")}
+                    onFocus={() => showTopPanelHint("menu")}
+                    className={`flex w-full h-[34px] md:h-[42px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                      menuOpen
+                        ? "border-white/80 bg-white/20 text-white"
+                        : "border-white/50 bg-transparent text-white/80 hover:border-white/80 hover:bg-white/20 hover:text-white"
+                    }`}
                   >
-                    <div className="relative">
-                      <button
-                        onClick={() => {
-                          showTopPanelHint(modeHoverKey)
-                          setNavigationModeFromMenu(mode)
-                        }}
-                        onMouseEnter={() => showTopPanelHint(modeHoverKey)}
-                        onFocus={() => showTopPanelHint(modeHoverKey)}
-                        className={`w-full h-[19px] md:h-auto font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
-                          isModeButtonActive
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+                      <path d="M2.5 5H13.5" />
+                      <path d="M2.5 8H13.5" />
+                      <path d="M2.5 11H13.5" />
+                    </svg>
+                  </button>
+                  <span
+                    className={`pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-[126px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)] whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                      topPanelHoverKey === "menu" ? "opacity-100" : "opacity-0"
+                    }`}
+                  >
+                    {TOP_PANEL_MENU_TOOLTIP_TEXT}
+                  </span>
+                </div>
+                {TOP_PANEL_MODE_ORDER.map((mode) => {
+                  const isActiveMode = navigationMode === mode
+                  const isModePlaybackActive = isPlaybackActive && isActiveMode
+                  const modeHoverKey = `mode:${mode}`
+                  const playHoverKey = `play:${mode}`
+                  const downloadHoverKey = `download:${mode}`
+                  const isModeHoverActive = topPanelHoverKey === modeHoverKey
+                  const isPlayHoverActive = topPanelHoverKey === playHoverKey
+                  const isDownloadHoverActive = topPanelHoverKey === downloadHoverKey
+                  const isModeHovering = isModeHoverActive || isPlayHoverActive || isDownloadHoverActive
+                  const playTooltipText = isModePlaybackActive ? ui.stop : navModeActionLabel[mode]
+                  const tooltipViewportClass =
+                    "fixed left-1/2 -translate-x-1/2 bottom-[126px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)]"
+                  const tooltipText = isPlayHoverActive
+                    ? playTooltipText
+                    : isDownloadHoverActive
+                      ? TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT
+                      : isModeHoverActive
+                        ? navModeInstructionByMode[mode]
+                        : null
+
+                  return (
+                    <div key={`top-nav-${mode}`} className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                      <div
+                        className={`relative flex h-[34px] md:h-[42px] overflow-hidden border transition-colors ${
+                          isModePlaybackActive
                             ? "border-white bg-white/80 text-black"
-                            : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
+                            : isModeHovering
+                              ? "border-white/80 bg-white/20 text-white"
+                              : "border-white/50 bg-transparent text-white/80"
                         }`}
                       >
-                        {NAV_MODE_HINT_LABEL[mode]}
-                      </button>
-                      <span
-                        className={`pointer-events-none ${tooltipViewportClass} whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
-                          isModeHoverActive ? "opacity-100" : "opacity-0"
-                        }`}
-                      >
-                        {NAV_MODE_INSTRUCTION_BY_MODE[mode]}
-                      </span>
-                      <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-500 ${
-                          isModeHoverActive ? "opacity-100" : "opacity-0"
-                        }`}
-                      />
+                        <button
+                          onClick={() => {
+                            showTopPanelHint(playHoverKey)
+                            if (isModePlaybackActive) {
+                              stopCurrentPerformance()
+                              return
+                            }
+                            if (horoscopeData) {
+                              startNavigationMode(mode)
+                            } else {
+                              setNavigationMode(mode)
+                            }
+                          }}
+                          onMouseEnter={() => showTopPanelHint(playHoverKey)}
+                          onFocus={() => showTopPanelHint(playHoverKey)}
+                          className={`flex h-full w-[22%] min-w-[18px] items-center justify-center border-r px-0.5 transition-colors ${
+                            isModePlaybackActive ? "border-black/25" : "border-white/30 hover:bg-white/12 hover:text-white"
+                          }`}
+                          title={playTooltipText}
+                        >
+                          {isModePlaybackActive ? (
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <rect x="5" y="5" width="10" height="10" />
+                            </svg>
+                          ) : (
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <path d="M6 4 L16 10 L6 16 Z" />
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            showTopPanelHint(modeHoverKey)
+                            if (horoscopeData) {
+                              startNavigationMode(mode)
+                            } else {
+                              setNavigationMode(mode)
+                            }
+                          }}
+                          onMouseEnter={() => showTopPanelHint(modeHoverKey)}
+                          onFocus={() => showTopPanelHint(modeHoverKey)}
+                          className={`flex-1 px-0.5 font-mono font-bold text-[4.8px] md:text-[11px] leading-none uppercase tracking-[0.09em] transition-colors ${
+                            isModePlaybackActive ? "text-black" : "hover:bg-white/12 hover:text-white"
+                          }`}
+                        >
+                          {navModeHintLabel[mode]}
+                        </button>
+                        <button
+                          onClick={() => handleDownloadButtonPress(mode)}
+                          onMouseEnter={() => showTopPanelHint(downloadHoverKey)}
+                          onFocus={() => showTopPanelHint(downloadHoverKey)}
+                          disabled={!horoscopeData || isExportingMp3}
+                          className={`flex h-full w-[22%] min-w-[18px] items-center justify-center border-l transition-colors ${
+                            !horoscopeData || isExportingMp3
+                              ? "border-white/20 text-white/20 cursor-not-allowed"
+                              : isModePlaybackActive
+                                ? "border-black/25 text-black"
+                                : "border-white/30 hover:bg-white/12 hover:text-white"
+                          }`}
+                          title={TOP_PANEL_DOWNLOAD_TOOLTIP_TEXT}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.65"
+                            aria-hidden="true"
+                          >
+                            <path d="M3 8.8V12.4H13V8.8" />
+                            <path d="M8 2.8V9.1" />
+                            <path d="M5.9 7L8 9.1L10.1 7" />
+                          </svg>
+                        </button>
+                        <span
+                          className={`pointer-events-none ${tooltipViewportClass} whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                            tooltipText ? "opacity-100" : "opacity-0"
+                          }`}
+                        >
+                          {tooltipText || ""}
+                        </span>
+                      </div>
                     </div>
-                    <div className="relative mt-0 md:mt-1">
-                      <button
-                        onClick={() => handleDownloadButtonPress(mode)}
-                        onMouseEnter={() => showTopPanelHint(downloadHoverKey)}
-                        onFocus={() => showTopPanelHint(downloadHoverKey)}
-                        disabled={!horoscopeData || isExportingMp3}
-                        className={`flex w-full h-[19px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
-                          !horoscopeData || isExportingMp3
-                            ? "border-white/25 bg-transparent text-white/25 cursor-not-allowed"
-                            : isDownloadHoverActive
-                              ? "border-white bg-white/80 text-black"
-                              : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
-                        }`}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.55">
-                          <path d="M3 8.5V12.5H13V8.5" />
-                          <path d="M8 2.5V9" />
-                          <path d="M5.8 6.8L8 9L10.2 6.8" />
-                        </svg>
-                      </button>
-                      <span
-                        className={`pointer-events-none ${tooltipViewportClass} whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 font-mono text-[7px] md:text-[16px] text-left text-white transition-opacity duration-500 ${
-                          isDownloadHoverActive ? "opacity-100" : "opacity-0"
-                        }`}
-                      >
-                        {DOWNLOAD_TOOLTIP_TEXT}
-                      </span>
-                      <span
-                        className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+12px)] h-[28px] md:h-[128px] w-px bg-white/75 transition-opacity duration-500 ${
-                          isDownloadHoverActive ? "opacity-100" : "opacity-0"
-                        }`}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-              <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
-                <button
-                  onClick={resetToInitialState}
-                  onMouseEnter={() => setTopPanelHoverKey("reset:main")}
-                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                  onFocus={() => setTopPanelHoverKey("reset:main")}
-                  onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
-                  className={`w-full h-[19px] md:h-auto font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
-                    topPanelHoverKey === "reset:main"
-                      ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
-                  }`}
-                >
-                  RESET
-                </button>
-                <button
-                  onClick={openInfoOverlay}
-                  onMouseEnter={() => setTopPanelHoverKey("reset:info")}
-                  onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                  onFocus={() => setTopPanelHoverKey("reset:info")}
-                  onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
-                  className={`mt-0 md:mt-1 flex w-full h-[19px] md:h-auto items-center justify-center border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors font-mono font-bold text-[6px] md:text-[12px] leading-none uppercase tracking-wide ${
-                    topPanelHoverKey === "reset:info"
-                      ? "border-white bg-white/80 text-black"
-                      : "border-white/50 bg-transparent text-white/50 hover:border-white hover:bg-white/80 hover:text-black"
-                  }`}
-                >
-                  INFO
-                </button>
+                  )
+                })}
+                <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                  <button
+                    onClick={() => {
+                      showTopPanelHint("photo:single")
+                      void downloadChartSnapshotJpg()
+                    }}
+                    onMouseEnter={() => showTopPanelHint("photo:single")}
+                    onFocus={() => showTopPanelHint("photo:single")}
+                    disabled={!horoscopeData || isExportingJpg}
+                    className={`flex w-full h-[34px] md:h-[42px] items-center justify-center border px-0.5 py-0 transition-colors ${
+                      !horoscopeData || isExportingJpg
+                        ? "border-white/20 bg-transparent text-white/20 cursor-not-allowed"
+                        : topPanelHoverKey === "photo:single"
+                          ? "border-white/80 bg-white/20 text-white"
+                          : "border-white/50 bg-transparent text-white/80 hover:border-white/80 hover:bg-white/20 hover:text-white"
+                    }`}
+                    title={photoTooltipText}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 18 18"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      aria-hidden="true"
+                    >
+                      <rect x="2.3" y="4.4" width="13.4" height="9.2" rx="1.4" />
+                      <path d="M5.5 4.4L6.8 2.9H11.2L12.5 4.4" />
+                      <circle cx="9" cy="9" r="2.5" />
+                    </svg>
+                  </button>
+                  <span
+                    className={`pointer-events-none fixed left-1/2 -translate-x-1/2 bottom-[126px] md:bottom-[106px] z-[60] inline-block w-fit max-w-[calc(100vw-20px)] whitespace-normal md:whitespace-nowrap border border-white/75 bg-black/88 px-1.5 md:px-3 py-1.5 md:py-2 text-left font-mono text-[7px] md:text-[16px] normal-case leading-tight text-white transition-opacity duration-500 ${
+                      topPanelHoverKey === "photo:single" ? "opacity-100" : "opacity-0"
+                    }`}
+                  >
+                    {photoTooltipText}
+                  </span>
+                </div>
+                <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                  <button
+                    onClick={openInfoOverlay}
+                    onMouseEnter={() => setTopPanelHoverKey("reset:info")}
+                    onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
+                    onFocus={() => setTopPanelHoverKey("reset:info")}
+                    onBlur={() => setTopPanelHoverKey((current) => (current === "reset:info" ? null : current))}
+                    className={`w-full h-[34px] md:h-[42px] font-mono font-bold text-[5.1px] md:text-[11px] leading-none uppercase tracking-[0.11em] border px-[4px] py-0 md:px-[10px] md:py-1 transition-colors ${
+                      topPanelHoverKey === "reset:info"
+                        ? "border-white/80 bg-white/20 text-white"
+                        : "border-white/50 bg-transparent text-white/80 hover:border-white/80 hover:bg-white/20 hover:text-white"
+                    }`}
+                  >
+                    {ui.info}
+                  </button>
+                </div>
+                <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                  <button
+                    onClick={resetToInitialState}
+                    onMouseEnter={() => setTopPanelHoverKey("reset:main")}
+                    onMouseLeave={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
+                    onFocus={() => setTopPanelHoverKey("reset:main")}
+                    onBlur={() => setTopPanelHoverKey((current) => (current === "reset:main" ? null : current))}
+                    className={`w-full h-[34px] md:h-[42px] font-mono font-bold text-[5.3px] md:text-[11px] leading-none uppercase tracking-[0.11em] border px-0.5 py-0 md:px-1.5 md:py-1 transition-colors ${
+                      topPanelHoverKey === "reset:main"
+                        ? "border-white/80 bg-white/20 text-white"
+                        : "border-white/50 bg-transparent text-white/80 hover:border-white/80 hover:bg-white/20 hover:text-white"
+                    }`}
+                  >
+                    {ui.reset}
+                  </button>
+                </div>
+                <div className="relative p-0 md:p-0.5 md:px-1 md:py-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopCurrentPerformance()
+                      setShowSubject(true)
+                      setMenuOpen(false)
+                    }}
+                    className="w-full h-[34px] md:h-[42px] border border-white/50 bg-transparent px-0.5 py-0 font-mono font-bold text-[4.6px] md:text-[10px] uppercase tracking-[0.09em] leading-none text-white/80 transition-colors hover:border-white/80 hover:bg-white/20 hover:text-white"
+                  >
+                    {ui.dataInput}
+                  </button>
+                </div>
               </div>
+              {isExportingMp3 && (
+                <div className="mt-1.5 text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide text-white/70">
+                  {ui.renderMp3}
+                </div>
+              )}
+              {pendingMp3Download && !isExportingMp3 && (
+                <a
+                  href={pendingMp3Download.url}
+                  download={pendingMp3Download.fileName}
+                  className="mt-1.5 block w-full text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors pointer-events-auto"
+                >
+                  {ui.saveMp3}
+                </a>
+              )}
             </div>
-            {isExportingMp3 && (
-              <div className="mt-1.5 text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide text-white/70">
-                RENDER MP3...
-              </div>
-            )}
-            {pendingMp3Download && !isExportingMp3 && (
-              <a
-                href={pendingMp3Download.url}
-                download={pendingMp3Download.fileName}
-                className="mt-1.5 block w-full text-center font-mono text-[7px] md:text-[11px] uppercase tracking-wide border border-white px-3 py-1.5 hover:bg-white hover:text-black transition-colors"
-              >
-                SAVE MP3
-              </a>
-            )}
           </div>
         </div>
-      </div>
+      )}
 
       {showInfoOverlay && (
         <div className="fixed inset-0 z-50 bg-black/92">
@@ -4967,7 +6118,7 @@ export default function AstrologyCalculator() {
                 onClick={retreatInfoParagraph}
                 className="absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
                 style={{ fontFamily: MONOTYPE_FONT_STACK }}
-                aria-label="Previous info page"
+                aria-label={language === "es" ? "Parrafo anterior" : "Previous info page"}
               >
                 {"<"}
               </button>
@@ -4975,17 +6126,17 @@ export default function AstrologyCalculator() {
                 onClick={advanceInfoParagraph}
                 className="absolute -right-3 md:-right-5 top-1/2 -translate-y-1/2 font-mono text-[26px] md:text-[34px] leading-none text-white/50 hover:text-white transition-colors"
                 style={{ fontFamily: MONOTYPE_FONT_STACK }}
-                aria-label="Next info page"
+                aria-label={language === "es" ? "Parrafo siguiente" : "Next info page"}
               >
                 {">"}
               </button>
               <div
                 className="flex-1 font-mono text-[10px] md:text-[24px] leading-[1.58] text-white/88 whitespace-pre-line text-left"
               >
-                {renderInfoParagraph(infoParagraphIndex)}
+                {renderInfoParagraph(language, infoParagraphs, infoParagraphIndex)}
               </div>
               <div className="mt-5 flex items-center justify-center gap-2.5">
-                {INFO_PARAGRAPHS.map((_, index) => {
+                {infoParagraphs.map((_, index) => {
                   const isActive = index === infoParagraphIndex
                   return (
                     <button
@@ -4993,7 +6144,7 @@ export default function AstrologyCalculator() {
                       type="button"
                       onClick={() => setInfoParagraphIndex(index)}
                       className="group/dot p-0.5"
-                      aria-label={`Go to paragraph ${index + 1}`}
+                      aria-label={language === "es" ? `Ir al parrafo ${index + 1}` : `Go to paragraph ${index + 1}`}
                     >
                       <span
                         className={`block h-2.5 w-2.5 rounded-full border border-white/80 transition-opacity duration-200 group-hover/dot:opacity-100 ${
@@ -5009,7 +6160,7 @@ export default function AstrologyCalculator() {
                   onClick={closeInfoOverlay}
                   className="border border-white/70 px-2 py-1 font-mono text-[10px] md:text-[12px] uppercase tracking-wide text-white/85 hover:bg-white hover:text-black transition-colors"
                 >
-                  CLOSE
+                  {ui.close}
                 </button>
               </div>
             </div>

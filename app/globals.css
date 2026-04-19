@@ -513,6 +513,32 @@
   text-shadow: 0 0 10px var(--phosphor-shadow);
 }
 
+.playback-ui-shell {
+  transition:
+    opacity 520ms ease,
+    transform 520ms ease,
+    filter 520ms ease;
+  will-change: opacity, transform, filter;
+}
+
+.playback-ui-shell--visible {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+
+.playback-ui-shell--hidden {
+  opacity: 0;
+  transform: translateY(10px);
+  filter: blur(6px);
+  user-select: none;
+}
+
+.playback-ui-shell--hidden,
+.playback-ui-shell--hidden * {
+  pointer-events: none !important;
+}
+
 .crt-scan-overlay {
   animation: crt-scan-drift 4.8s ease-in-out infinite, crt-flicker-soft 2.9s steps(2, end) infinite;
   will-change: transform, opacity;

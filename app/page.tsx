@@ -106,7 +106,6 @@ type InterfaceTheme =
   | "amber_phosphor"
   | "mystical_purpura"
   | "inverted"
-type PhosphorTheme = "phosphor_green" | "amber_phosphor"
 type NavigationMode = "astral_chord" | "radial" | "sequential"
 type SubjectPreset = "manual" | "here_now" | "ba" | "cairo" | "ba77"
 type MajorAspectKey = "conjunction" | "opposition" | "trine" | "square" | "sextile"
@@ -137,6 +136,8 @@ const CHORD_POINTER_RADIUS = 16
 const CHORD_ASPECTS_FADE_IN_MS = 14000
 const CHORD_ASPECTS_HOLD_MS = 5000
 const CHORD_ASPECTS_FADE_OUT_MS = 10000
+const PLAYBACK_UI_INITIAL_HIDE_DELAY_MS = 1200
+const PLAYBACK_UI_AUTO_HIDE_DELAY_MS = 2200
 const TOP_PANEL_HINT_MS = 4000
 const BUILD_MARK = "V09"
 
@@ -222,7 +223,7 @@ type ThemeSwatch = {
   activeShadow: string
 }
 
-type PhosphorThemeVisual = {
+type ThemeMotionVisual = {
   filter: string
   overlayTone: string
   bloomTone: string
@@ -292,7 +293,43 @@ const INTERFACE_THEME_SWATCH_BY_THEME: Record<InterfaceTheme, ThemeSwatch> = {
   },
 }
 
-const PHOSPHOR_THEME_VISUALS: Record<PhosphorTheme, PhosphorThemeVisual> = {
+const THEME_MOTION_VISUALS: Record<InterfaceTheme, ThemeMotionVisual> = {
+  white: {
+    filter: "none",
+    overlayTone: "rgba(255,255,255,0.08)",
+    bloomTone: "rgba(255,255,255,0.06)",
+    shellStyle: {
+      "--phosphor-bg-top": "#020202",
+      "--phosphor-bg-mid": "#0a0a0a",
+      "--phosphor-bg-bottom": "#020202",
+      "--phosphor-aura": "rgba(255,255,255,0.1)",
+      "--phosphor-top-glow": "rgba(255,255,255,0.06)",
+      "--phosphor-grid": "rgba(255,255,255,0.05)",
+      "--phosphor-grid-soft": "rgba(255,255,255,0.04)",
+      "--phosphor-scanline": "rgba(255,255,255,0.06)",
+      "--phosphor-shadow": "rgba(255,255,255,0.18)",
+      "--phosphor-vignette": "rgba(0,0,0,0.28)",
+      "--phosphor-frame": "rgba(255,255,255,0.1)",
+    } as CSSProperties,
+  },
+  neon_blue: {
+    filter: "sepia(1) saturate(8.8) hue-rotate(163deg) brightness(0.88) contrast(1.18)",
+    overlayTone: "rgba(104,235,255,0.11)",
+    bloomTone: "rgba(128,232,255,0.1)",
+    shellStyle: {
+      "--phosphor-bg-top": "#01070c",
+      "--phosphor-bg-mid": "#041620",
+      "--phosphor-bg-bottom": "#01070c",
+      "--phosphor-aura": "rgba(24,117,156,0.16)",
+      "--phosphor-top-glow": "rgba(84,214,255,0.1)",
+      "--phosphor-grid": "rgba(143,230,255,0.05)",
+      "--phosphor-grid-soft": "rgba(143,230,255,0.04)",
+      "--phosphor-scanline": "rgba(143,230,255,0.06)",
+      "--phosphor-shadow": "rgba(143,230,255,0.2)",
+      "--phosphor-vignette": "rgba(0,0,0,0.3)",
+      "--phosphor-frame": "rgba(143,230,255,0.12)",
+    } as CSSProperties,
+  },
   phosphor_green: {
     filter: "sepia(1) saturate(7.85) hue-rotate(63deg) brightness(0.86) contrast(1.18)",
     overlayTone: "rgba(135,255,168,0.12)",
@@ -327,6 +364,42 @@ const PHOSPHOR_THEME_VISUALS: Record<PhosphorTheme, PhosphorThemeVisual> = {
       "--phosphor-shadow": "rgba(255,186,94,0.2)",
       "--phosphor-vignette": "rgba(0,0,0,0.3)",
       "--phosphor-frame": "rgba(255,190,94,0.11)",
+    } as CSSProperties,
+  },
+  mystical_purpura: {
+    filter: "sepia(1) saturate(8.15) hue-rotate(218deg) brightness(0.9) contrast(1.18)",
+    overlayTone: "rgba(222,166,255,0.1)",
+    bloomTone: "rgba(215,150,255,0.095)",
+    shellStyle: {
+      "--phosphor-bg-top": "#08030d",
+      "--phosphor-bg-mid": "#17081d",
+      "--phosphor-bg-bottom": "#08030d",
+      "--phosphor-aura": "rgba(124,42,160,0.16)",
+      "--phosphor-top-glow": "rgba(210,134,255,0.11)",
+      "--phosphor-grid": "rgba(220,167,255,0.05)",
+      "--phosphor-grid-soft": "rgba(220,167,255,0.04)",
+      "--phosphor-scanline": "rgba(220,167,255,0.055)",
+      "--phosphor-shadow": "rgba(220,167,255,0.22)",
+      "--phosphor-vignette": "rgba(0,0,0,0.32)",
+      "--phosphor-frame": "rgba(220,167,255,0.11)",
+    } as CSSProperties,
+  },
+  inverted: {
+    filter: "invert(1)",
+    overlayTone: "rgba(255,255,255,0.035)",
+    bloomTone: "rgba(255,255,255,0.03)",
+    shellStyle: {
+      "--phosphor-bg-top": "#f1f1f1",
+      "--phosphor-bg-mid": "#e6e6e6",
+      "--phosphor-bg-bottom": "#f4f4f4",
+      "--phosphor-aura": "rgba(255,255,255,0.32)",
+      "--phosphor-top-glow": "rgba(255,255,255,0.22)",
+      "--phosphor-grid": "rgba(255,255,255,0.08)",
+      "--phosphor-grid-soft": "rgba(255,255,255,0.06)",
+      "--phosphor-scanline": "rgba(255,255,255,0.08)",
+      "--phosphor-shadow": "rgba(255,255,255,0.22)",
+      "--phosphor-vignette": "rgba(0,0,0,0.12)",
+      "--phosphor-frame": "rgba(255,255,255,0.2)",
     } as CSSProperties,
   },
 }
@@ -1003,6 +1076,7 @@ export default function AstrologyCalculator() {
   const [glyphHoverOpacity, setGlyphHoverOpacity] = useState(0)
   const [showAspectIndicator, setShowAspectIndicator] = useState(false) // Declared showAspectIndicator
   const [playbackProgress, setPlaybackProgress] = useState(0)
+  const [playbackUiVisible, setPlaybackUiVisible] = useState(true)
   const aspectClickTimersRef = useRef<Record<string, NodeJS.Timeout[]>>({})
   const affectedScaleTimersRef = useRef<Record<string, { start: NodeJS.Timeout | null; end: NodeJS.Timeout | null }>>(
     {},
@@ -1010,6 +1084,8 @@ export default function AstrologyCalculator() {
   const glyphScaleTriggerLockRef = useRef<Record<string, number>>({})
   const pressedGlyphReleaseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const interactivePreviewClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const playbackUiHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const playbackUiVisibleRef = useRef(true)
   const skipNextAutoCalculateRef = useRef(false)
   const pendingModeLaunchRef = useRef<NavigationMode | null>(null)
   const playbackProgressFrameRef = useRef<number | null>(null)
@@ -1238,7 +1314,7 @@ export default function AstrologyCalculator() {
   }, [formData.location, ui.noCity, ui.noCountry])
 
   const effectiveMasterVolume = navigationMode === "astral_chord" ? masterVolume * 0.6 : masterVolume
-  const themePulseEnabled = interfaceTheme !== "white"
+  const themeMotionEnabled = Boolean(THEME_MOTION_VISUALS[interfaceTheme])
   const earthCenterTwinkleTiming = useMemo(() => getThemeTwinkleTiming("earth-center"), [])
 
   // Added hook for planet audio
@@ -1289,35 +1365,20 @@ export default function AstrologyCalculator() {
   const totalLoadingIntroDurationMs = loadingIntroParagraphs.length * LOADING_SUBTITLE_STEP_MS
   const showLoadingIntroScreen =
     !loadingIntroSkipped && (loadingProgress < 100 || !loadingIntroCompleted || !loadingIntroExitReady)
-  const activePhosphorTheme: PhosphorTheme | null =
-    interfaceTheme === "phosphor_green" || interfaceTheme === "amber_phosphor" ? interfaceTheme : null
-  const activePhosphorVisual = activePhosphorTheme ? PHOSPHOR_THEME_VISUALS[activePhosphorTheme] : null
-  const phosphorThemeDataAttr =
-    activePhosphorTheme === "phosphor_green" ? "green" : activePhosphorTheme === "amber_phosphor" ? "amber" : undefined
+  const activeThemeVisual = THEME_MOTION_VISUALS[interfaceTheme]
+  const themeMotionDataAttr = interfaceTheme
   const interfaceThemeFilter = useMemo(() => {
-    if (activePhosphorVisual) {
-      return activePhosphorVisual.filter
-    }
-    if (interfaceTheme === "neon_blue") {
-      return "sepia(1) saturate(8.5) hue-rotate(163deg) brightness(1.04) contrast(1.07)"
-    }
-    if (interfaceTheme === "mystical_purpura") {
-      return "sepia(1) saturate(8.1) hue-rotate(218deg) brightness(1.03) contrast(1.08)"
-    }
-    if (interfaceTheme === "inverted") {
-      return "invert(1)"
-    }
-    return "none"
-  }, [activePhosphorVisual, interfaceTheme])
-  const isCrtPhosphorTheme = Boolean(activePhosphorVisual)
-  const crtOverlayTone = activePhosphorVisual?.overlayTone ?? "rgba(255,255,255,0.1)"
-  const crtBloomTone = activePhosphorVisual?.bloomTone ?? "rgba(255,255,255,0.08)"
-  const phosphorShellStyle = activePhosphorVisual?.shellStyle
+    return activeThemeVisual.filter
+  }, [activeThemeVisual])
+  const isThemeMotionActive = Boolean(activeThemeVisual)
+  const crtOverlayTone = activeThemeVisual.overlayTone
+  const crtBloomTone = activeThemeVisual.bloomTone
+  const phosphorShellStyle = activeThemeVisual.shellStyle
   const contentToneStyle = useMemo(
     () => ({ filter: interfaceThemeFilter }) satisfies CSSProperties,
     [interfaceThemeFilter],
   )
-  const phosphorThemeOverlays = isCrtPhosphorTheme ? (
+  const themeMotionOverlays = isThemeMotionActive ? (
     <>
       <div
         aria-hidden="true"
@@ -3605,6 +3666,62 @@ export default function AstrologyCalculator() {
     showPointer &&
     (isLoopRunning || (!isLoopRunning && navigationMode === "sequential"))
   const isPlaybackActive = isLoopRunning && !isPaused
+  const isPlaybackUiHidden = isPlaybackActive && !playbackUiVisible
+  const playbackUiShellClassName = `playback-ui-shell ${
+    isPlaybackUiHidden ? "playback-ui-shell--hidden" : "playback-ui-shell--visible"
+  }`
+
+  useEffect(() => {
+    playbackUiVisibleRef.current = playbackUiVisible
+  }, [playbackUiVisible])
+
+  const clearPlaybackUiHideTimeout = useCallback(() => {
+    if (playbackUiHideTimeoutRef.current) {
+      clearTimeout(playbackUiHideTimeoutRef.current)
+      playbackUiHideTimeoutRef.current = null
+    }
+  }, [])
+
+  const schedulePlaybackUiHide = useCallback(
+    (delayMs: number) => {
+      clearPlaybackUiHideTimeout()
+      if (!isPlaybackActive) return
+      playbackUiHideTimeoutRef.current = setTimeout(() => {
+        setPlaybackUiVisible(false)
+        playbackUiHideTimeoutRef.current = null
+      }, delayMs)
+    },
+    [clearPlaybackUiHideTimeout, isPlaybackActive],
+  )
+
+  useEffect(() => {
+    if (!isPlaybackActive) {
+      clearPlaybackUiHideTimeout()
+      setPlaybackUiVisible(true)
+      return
+    }
+
+    setPlaybackUiVisible(true)
+    schedulePlaybackUiHide(PLAYBACK_UI_INITIAL_HIDE_DELAY_MS)
+
+    const revealPlaybackUi = () => {
+      if (!playbackUiVisibleRef.current) {
+        setPlaybackUiVisible(true)
+      }
+      schedulePlaybackUiHide(PLAYBACK_UI_AUTO_HIDE_DELAY_MS)
+    }
+
+    window.addEventListener("pointermove", revealPlaybackUi, { passive: true })
+    window.addEventListener("pointerdown", revealPlaybackUi, { passive: true })
+    window.addEventListener("touchstart", revealPlaybackUi, { passive: true })
+
+    return () => {
+      clearPlaybackUiHideTimeout()
+      window.removeEventListener("pointermove", revealPlaybackUi)
+      window.removeEventListener("pointerdown", revealPlaybackUi)
+      window.removeEventListener("touchstart", revealPlaybackUi)
+    }
+  }, [clearPlaybackUiHideTimeout, isPlaybackActive, schedulePlaybackUiHide])
 
   const ascDegrees = horoscopeData?.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
   const chartRotation = 180 - ascDegrees
@@ -3887,12 +4004,12 @@ export default function AstrologyCalculator() {
     return (
       <main
         className={`min-h-screen bg-black text-white flex items-start justify-center p-4 pt-8 md:pt-10 relative ${
-          isCrtPhosphorTheme ? "astro-phosphor-shell astro-phosphor-shell--active" : ""
+          isThemeMotionActive ? "astro-phosphor-shell astro-phosphor-shell--active" : ""
         }`}
         style={phosphorShellStyle}
-        data-phosphor-theme={phosphorThemeDataAttr}
+        data-phosphor-theme={themeMotionDataAttr}
       >
-        {phosphorThemeOverlays}
+        {themeMotionOverlays}
         <div className="relative z-10 w-full max-w-3xl astro-phosphor-content" style={contentToneStyle}>
           <div className="mb-8 min-h-[420px]">
             <div className="w-full text-center pt-1">
@@ -4040,19 +4157,19 @@ export default function AstrologyCalculator() {
   return (
     <main
       className={`relative min-h-screen overflow-x-hidden bg-black p-2 text-white md:p-6 ${
-        isCrtPhosphorTheme ? "astro-phosphor-shell astro-phosphor-shell--active" : ""
+        isThemeMotionActive ? "astro-phosphor-shell astro-phosphor-shell--active" : ""
       }`}
       style={phosphorShellStyle}
-      data-phosphor-theme={phosphorThemeDataAttr}
+      data-phosphor-theme={themeMotionDataAttr}
     >
-      {phosphorThemeOverlays}
+      {themeMotionOverlays}
       <div
         className={`relative z-10 mx-auto max-w-[1400px] astro-phosphor-content ${
           showSubject ? "pb-3 md:pb-[94px]" : "pb-[126px] md:pb-[94px]"
         }`}
         style={contentToneStyle}
       >
-        <div className="relative mb-1 pb-1 border-b border-white flex items-end justify-center gap-3 min-h-[34px] md:min-h-[52px]">
+        <div className={`${playbackUiShellClassName} relative mb-1 pb-1 border-b border-white flex items-end justify-center gap-3 min-h-[34px] md:min-h-[52px]`}>
           <div className="absolute left-0 top-full mt-[5px]">
             {menuOpen && (
               <div
@@ -4780,11 +4897,13 @@ export default function AstrologyCalculator() {
               </div>
             )}
           </div>
-          <h1 className="font-mono text-[17px] md:text-[31px] uppercase tracking-[0.2em] text-white text-center whitespace-nowrap">
+          <h1
+            className={`${playbackUiShellClassName} font-mono text-[17px] md:text-[31px] uppercase tracking-[0.2em] text-white text-center whitespace-nowrap`}
+          >
             ASTRO.LOG.IO
           </h1>
           {horoscopeData && !showSubject && (
-            <div className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-30 shrink-0 md:absolute md:right-0 md:bottom-0 md:z-auto">
+            <div className={`${playbackUiShellClassName} fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-30 shrink-0 md:absolute md:right-0 md:bottom-0 md:z-auto`}>
               <div
                 className={`border px-2 py-1 md:px-2.5 md:py-1.5 text-right font-mono text-[8px] md:text-[11px] uppercase tracking-[0.08em] md:tracking-wide leading-tight transition-all duration-200 ${
                   isSubjectBoxHovered ? "border-white bg-white text-black" : "border-white/70 bg-black/75 text-white/80"
@@ -4843,7 +4962,7 @@ export default function AstrologyCalculator() {
         </div>
 
         {showSubject && (
-          <div className="space-y-2 md:space-y-3">
+          <div className={`${playbackUiShellClassName} space-y-2 md:space-y-3`}>
             <div className="mb-1.5 grid grid-cols-2 gap-1 md:mb-2 md:flex md:flex-wrap md:gap-1.5">
               <button
                 onClick={() => {
@@ -5204,7 +5323,7 @@ export default function AstrologyCalculator() {
                       const glyphGlowTiming = getGlyphGlowTiming(planet.name)
                       const glyphTwinkleTiming = getThemeTwinkleTiming(`planet-${planet.name}`)
                       const glyphGlowAnimation = `planet-glyph-glow ${glyphGlowTiming.durationSec}s ease-in-out ${glyphGlowTiming.delaySec}s infinite alternate`
-                      const themeGlyphPulseAnimation = themePulseEnabled
+                      const themeGlyphPulseAnimation = themeMotionEnabled
                         ? `theme-star-pulse-subtle 5s ease-in-out infinite, subtle-star-glitch-30 ${glyphTwinkleTiming.durationSec}s steps(2, end) ${glyphTwinkleTiming.delaySec}s infinite`
                         : undefined
                       const glyphCoreFilter = "drop-shadow(0 0 1.6px rgba(255,255,255,0.58))"
@@ -5443,9 +5562,11 @@ export default function AstrologyCalculator() {
                         {/* Earth center control (single mode trigger) */}
                         <g
                           style={{
-                            animation: themePulseEnabled
+                            animation: themeMotionEnabled
                               ? `theme-star-pulse-subtle 5s ease-in-out infinite, subtle-star-glitch-soft ${earthCenterTwinkleTiming.durationSec}s steps(2, end) ${earthCenterTwinkleTiming.delaySec}s infinite`
                               : undefined,
+                            filter: "drop-shadow(0 0 5px rgba(255,255,255,0.34))",
+                            transformOrigin: `${EARTH_CENTER_X}px ${EARTH_CENTER_Y}px`,
                           }}
                         >
                           <circle
@@ -5622,7 +5743,7 @@ export default function AstrologyCalculator() {
             )}
 
             {showPlanets && (
-              <div className="">
+              <div className={playbackUiShellClassName}>
                 <div className="bg-white text-black p-3 font-mono flex items-center justify-between">
                   <div>
                     <h2 className="text-[10px] uppercase tracking-wider">{ui.astrologicalData}</h2>
@@ -5749,7 +5870,7 @@ export default function AstrologyCalculator() {
             )}
 
             {showAspects && horoscopeData.aspects.length > 0 && (
-              <div className="">
+              <div className={playbackUiShellClassName}>
                 <div className="bg-white text-black p-3 font-mono flex items-center justify-between">
                   <div>
                     <h2 className="text-[10px] uppercase tracking-wider">{ui.astrologicalAspects}</h2>
@@ -5898,7 +6019,7 @@ export default function AstrologyCalculator() {
             {/* Aspect Box: Rendered based on showAspectBox state */}
             {showAspectBox && (
               <div
-                className="absolute bottom-4 left-4 bg-black/30 backdrop-blur-sm border border-white/20 rounded-lg p-2 max-w-xs"
+                className={`${playbackUiShellClassName} absolute bottom-4 left-4 bg-black/30 backdrop-blur-sm border border-white/20 rounded-lg p-2 max-w-xs`}
                 style={{ pointerEvents: "auto" }}
               >
                 {Object.entries(activePlanetAspectsMap).length > 0 &&
@@ -5985,7 +6106,7 @@ export default function AstrologyCalculator() {
       </div>
 
       {horoscopeData && !showSubject && (
-        <div className="fixed bottom-0 inset-x-0 z-40 pointer-events-none">
+        <div className={`${playbackUiShellClassName} fixed bottom-0 inset-x-0 z-40 pointer-events-none`}>
           <div className="mx-auto w-full max-w-[calc(1400px+2rem)] md:max-w-[calc(1400px+4rem)] px-4 md:px-8">
             <div className="pb-[calc(env(safe-area-inset-bottom)+8px)]">
               <div className="relative mb-[6px] border-b border-white/90">

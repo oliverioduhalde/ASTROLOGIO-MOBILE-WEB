@@ -383,63 +383,82 @@
   0% {
     transform: translate3d(0, 0, 0);
   }
-  33% {
-    transform: translate3d(0, -0.35px, 0);
+  22% {
+    transform: translate3d(0, -0.18px, 0);
   }
-  66% {
-    transform: translate3d(0, 0.25px, 0);
+  48% {
+    transform: translate3d(0, -0.08px, 0);
+  }
+  74% {
+    transform: translate3d(0, 0.16px, 0);
   }
   100% {
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0.08px, 0);
   }
 }
 
 @keyframes crt-flicker-soft {
   0%,
   100% {
-    opacity: 0.12;
+    opacity: 0.118;
   }
-  17% {
-    opacity: 0.105;
+  16% {
+    opacity: 0.108;
   }
-  39% {
-    opacity: 0.14;
+  35% {
+    opacity: 0.128;
   }
-  58% {
-    opacity: 0.11;
+  57% {
+    opacity: 0.112;
   }
-  81% {
-    opacity: 0.13;
+  76% {
+    opacity: 0.124;
   }
 }
 
 @keyframes astro-phosphor-screen-drift {
   0% {
-    transform: translateY(-2%);
+    transform: translate3d(0, -1.2%, 0);
+    opacity: 0.18;
+  }
+  24% {
+    transform: translate3d(0, -0.45%, 0);
+    opacity: 0.22;
+  }
+  51% {
+    transform: translate3d(0, 0.35%, 0);
+    opacity: 0.26;
+  }
+  77% {
+    transform: translate3d(0, 0.95%, 0);
+    opacity: 0.21;
   }
   100% {
-    transform: translateY(2%);
+    transform: translate3d(0, -1.2%, 0);
+    opacity: 0.18;
   }
 }
 
 @keyframes astro-phosphor-grid-glitch {
-  0%,
-  82%,
-  100% {
-    transform: translateX(0);
-    opacity: 0.2;
-  }
-  84% {
-    transform: translateX(0.45%);
-    opacity: 0.42;
-  }
-  86% {
-    transform: translateX(-0.45%);
+  0% {
+    transform: translate3d(-0.08%, 0, 0);
     opacity: 0.16;
   }
-  88% {
-    transform: translateX(0.2%);
-    opacity: 0.34;
+  21% {
+    transform: translate3d(0.06%, 0, 0);
+    opacity: 0.18;
+  }
+  47% {
+    transform: translate3d(0.12%, 0, 0);
+    opacity: 0.22;
+  }
+  69% {
+    transform: translate3d(-0.04%, 0, 0);
+    opacity: 0.19;
+  }
+  100% {
+    transform: translate3d(-0.08%, 0, 0);
+    opacity: 0.16;
   }
 }
 
@@ -503,8 +522,8 @@
     linear-gradient(90deg, transparent 0, var(--phosphor-grid) 49%, transparent 100%),
     linear-gradient(180deg, transparent 0, var(--phosphor-grid-soft) 48%, transparent 100%);
   background-size: 100% 100%, 100% 18%;
-  opacity: 0.22;
-  animation: astro-phosphor-screen-drift 9s linear infinite;
+  opacity: 0.2;
+  animation: astro-phosphor-screen-drift 15s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
 }
@@ -540,7 +559,7 @@
 }
 
 .crt-scan-overlay {
-  animation: crt-scan-drift 4.8s ease-in-out infinite, crt-flicker-soft 2.9s steps(2, end) infinite;
+  animation: crt-scan-drift 6.8s ease-in-out infinite, crt-flicker-soft 3.8s linear infinite;
   will-change: transform, opacity;
 }
 
@@ -548,7 +567,7 @@
   background:
     linear-gradient(90deg, transparent 0, var(--phosphor-grid) 18%, transparent 36%, var(--phosphor-grid) 56%, transparent 78%, var(--phosphor-grid) 100%);
   mix-blend-mode: screen;
-  animation: astro-phosphor-grid-glitch 4.5s steps(2, end) infinite;
+  animation: astro-phosphor-grid-glitch 11s ease-in-out infinite;
   will-change: transform, opacity;
 }
 

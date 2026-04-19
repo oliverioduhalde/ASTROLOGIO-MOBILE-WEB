@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef, useCallback, type CSSProperties } from "react"
+import { createPortal } from "react-dom"
 import { calculateCustomHoroscope, type HoroscopeData } from "@/lib/astrology"
 import { GlyphAnimationManager } from "@/lib/glyph-animation"
 import { usePlanetAudio, type OfflineMp3AspectEvent, type OfflineMp3PlanetEvent } from "@/lib/use-planet-audio"
@@ -1014,10 +1015,12 @@ export default function AstrologyCalculator() {
   const mobileDownloadArmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const topPanelHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuPanelRef = useRef<HTMLDivElement | null>(null)
+  const menuPanelAnchorRef = useRef<HTMLDivElement | null>(null)
   const chartSvgRef = useRef<SVGSVGElement | null>(null)
   const exportAssetDataUrlCacheRef = useRef<Map<string, string>>(new Map())
   const desktopMenuButtonRef = useRef<HTMLButtonElement | null>(null)
   const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [menuPanelPosition, setMenuPanelPosition] = useState<{ top: number; left: number } | null>(null)
   const [isSidereal, setIsSidereal] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<SubjectPreset>("here_now")
   const [formData, setFormData] = useState<SubjectFormData>(EMPTY_SUBJECT_FORM)
@@ -1657,6 +1660,27 @@ export default function AstrologyCalculator() {
     window.localStorage.setItem("astro.log.io.language", language)
   }, [language])
 
+  const updateMenuPanelPosition = useCallback(() => {
+    if (typeof window === "undefined") return
+    const anchorRect = menuPanelAnchorRef.current?.getBoundingClientRect()
+    if (!anchorRect) {
+      setMenuPanelPosition(null)
+      return
+    }
+
+    const panelWidth = window.innerWidth >= 768 ? 560 : Math.min(window.innerWidth * 0.92, 540)
+    const viewportPadding = 12
+    const left = Math.min(
+      Math.max(viewportPadding, anchorRect.left),
+      Math.max(viewportPadding, window.innerWidth - panelWidth - viewportPadding),
+    )
+
+    setMenuPanelPosition({
+      top: Math.max(viewportPadding, anchorRect.top),
+      left,
+    })
+  }, [])
+
   useEffect(() => {
     if (!menuOpen) return
 
@@ -1674,6 +1698,23 @@ export default function AstrologyCalculator() {
       window.removeEventListener("pointerdown", handlePointerDownOutsideMenu)
     }
   }, [menuOpen])
+
+  useEffect(() => {
+    if (!menuOpen) {
+      setMenuPanelPosition(null)
+      return
+    }
+
+    updateMenuPanelPosition()
+
+    window.addEventListener("resize", updateMenuPanelPosition)
+    window.addEventListener("scroll", updateMenuPanelPosition, true)
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPanelPosition)
+      window.removeEventListener("scroll", updateMenuPanelPosition, true)
+    }
+  }, [menuOpen, updateMenuPanelPosition])
 
   const clearAspectTimers = useCallback(() => {
     Object.values(aspectClickTimersRef.current).forEach((timers) => {
@@ -4170,12 +4211,17 @@ export default function AstrologyCalculator() {
         style={contentToneStyle}
       >
         <div className={`${playbackUiShellClassName} relative mb-1 pb-1 border-b border-white flex items-end justify-center gap-3 min-h-[34px] md:min-h-[52px]`}>
-          <div className="absolute left-0 top-full mt-[5px]">
-            {menuOpen && (
-              <div
-                ref={menuPanelRef}
-                className="absolute left-0 top-0 z-50 w-[min(92vw,540px)] md:w-[560px] bg-black border border-white px-5 py-5 text-white/88 max-h-[72vh] overflow-y-auto shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
-              >
+          <div ref={menuPanelAnchorRef} className="absolute left-0 top-full mt-[5px]" aria-hidden="true">
+            {menuOpen && menuPanelPosition && typeof document !== "undefined"
+              ? createPortal(
+                  <div
+                    ref={menuPanelRef}
+                    className="fixed z-[70] w-[min(92vw,540px)] md:w-[560px] bg-black border border-white px-5 py-5 text-white/88 max-h-[72vh] overflow-y-auto shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
+                    style={{
+                      top: menuPanelPosition.top,
+                      left: menuPanelPosition.left,
+                    }}
+                  >
                 <div className="mb-3 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.18em] text-white/88">
                   <span>{ui.menu}</span>
                   <span>
@@ -4894,8 +4940,10 @@ export default function AstrologyCalculator() {
                   </div>
                   )}
                 </div>
-              </div>
-            )}
+                  </div>,
+                  document.body,
+                )
+              : null}
           </div>
           <h1
             className={`${playbackUiShellClassName} font-mono text-[17px] md:text-[31px] uppercase tracking-[0.2em] text-white text-center whitespace-nowrap`}

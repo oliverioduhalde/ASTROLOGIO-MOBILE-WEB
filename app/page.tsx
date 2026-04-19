@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback, type CSSProperties } from "react"
 import { calculateCustomHoroscope, type HoroscopeData } from "@/lib/astrology"
 import { GlyphAnimationManager } from "@/lib/glyph-animation"
 import { usePlanetAudio, type OfflineMp3AspectEvent, type OfflineMp3PlanetEvent } from "@/lib/use-planet-audio"
@@ -106,6 +106,7 @@ type InterfaceTheme =
   | "amber_phosphor"
   | "mystical_purpura"
   | "inverted"
+type PhosphorTheme = "phosphor_green" | "amber_phosphor"
 type NavigationMode = "astral_chord" | "radial" | "sequential"
 type SubjectPreset = "manual" | "here_now" | "ba" | "cairo" | "ba77"
 type MajorAspectKey = "conjunction" | "opposition" | "trine" | "square" | "sextile"
@@ -210,16 +211,34 @@ const INTERFACE_THEME_OPTIONS_BY_LANGUAGE: Record<Language, Array<{ value: Inter
     { value: "inverted", label: "Invertido" },
   ],
 }
-const INTERFACE_THEME_SWATCH_BY_THEME: Record<
-  InterfaceTheme,
-  { text: string; border: string; hover: string; activeBg: string; activeText: string }
-> = {
+type ThemeSwatch = {
+  text: string
+  border: string
+  hover: string
+  activeBg: string
+  activeText: string
+  activeBorder: string
+  shadow: string
+  activeShadow: string
+}
+
+type PhosphorThemeVisual = {
+  filter: string
+  overlayTone: string
+  bloomTone: string
+  shellStyle: CSSProperties
+}
+
+const INTERFACE_THEME_SWATCH_BY_THEME: Record<InterfaceTheme, ThemeSwatch> = {
   white: {
     text: "rgba(255,255,255,0.92)",
     border: "rgba(255,255,255,0.55)",
     hover: "rgba(255,255,255,0.2)",
     activeBg: "rgba(255,255,255,0.82)",
     activeText: "#050505",
+    activeBorder: "rgba(255,255,255,0.96)",
+    shadow: "none",
+    activeShadow: "0 0 0 1px rgba(255,255,255,0.14)",
   },
   neon_blue: {
     text: "#8fe6ff",
@@ -227,20 +246,29 @@ const INTERFACE_THEME_SWATCH_BY_THEME: Record<
     hover: "rgba(143,230,255,0.16)",
     activeBg: "rgba(143,230,255,0.82)",
     activeText: "#02151d",
+    activeBorder: "rgba(143,230,255,0.96)",
+    shadow: "none",
+    activeShadow: "0 0 0 1px rgba(143,230,255,0.18)",
   },
   phosphor_green: {
-    text: "#a2ff8c",
-    border: "rgba(162,255,140,0.72)",
-    hover: "rgba(162,255,140,0.16)",
-    activeBg: "rgba(162,255,140,0.82)",
-    activeText: "#071603",
+    text: "#9effb6",
+    border: "rgba(97,255,141,0.34)",
+    hover: "rgba(7,31,15,0.92)",
+    activeBg: "rgba(15,60,28,0.96)",
+    activeText: "#d7ffe2",
+    activeBorder: "rgba(176,255,196,0.9)",
+    shadow: "0 0 0 1px rgba(97,255,141,0.06), inset 0 0 10px rgba(97,255,141,0.05)",
+    activeShadow: "0 0 20px rgba(97,255,141,0.16), inset 0 0 18px rgba(97,255,141,0.12)",
   },
   amber_phosphor: {
-    text: "#ffd07a",
-    border: "rgba(255,208,122,0.72)",
-    hover: "rgba(255,208,122,0.18)",
-    activeBg: "rgba(255,208,122,0.84)",
-    activeText: "#1a1000",
+    text: "#ffd28a",
+    border: "rgba(255,190,94,0.34)",
+    hover: "rgba(49,29,7,0.92)",
+    activeBg: "rgba(96,58,14,0.96)",
+    activeText: "#fff0cf",
+    activeBorder: "rgba(255,217,152,0.86)",
+    shadow: "0 0 0 1px rgba(255,190,94,0.05), inset 0 0 10px rgba(255,190,94,0.05)",
+    activeShadow: "0 0 20px rgba(255,181,92,0.14), inset 0 0 18px rgba(255,181,92,0.1)",
   },
   mystical_purpura: {
     text: "#dca7ff",
@@ -248,6 +276,9 @@ const INTERFACE_THEME_SWATCH_BY_THEME: Record<
     hover: "rgba(220,167,255,0.18)",
     activeBg: "rgba(220,167,255,0.84)",
     activeText: "#16051f",
+    activeBorder: "rgba(220,167,255,0.96)",
+    shadow: "none",
+    activeShadow: "0 0 0 1px rgba(220,167,255,0.18)",
   },
   inverted: {
     text: "#050505",
@@ -255,6 +286,48 @@ const INTERFACE_THEME_SWATCH_BY_THEME: Record<
     hover: "rgba(255,255,255,0.16)",
     activeBg: "rgba(255,255,255,0.96)",
     activeText: "#050505",
+    activeBorder: "rgba(255,255,255,0.96)",
+    shadow: "none",
+    activeShadow: "0 0 0 1px rgba(255,255,255,0.12)",
+  },
+}
+
+const PHOSPHOR_THEME_VISUALS: Record<PhosphorTheme, PhosphorThemeVisual> = {
+  phosphor_green: {
+    filter: "sepia(1) saturate(7.85) hue-rotate(63deg) brightness(0.86) contrast(1.18)",
+    overlayTone: "rgba(135,255,168,0.12)",
+    bloomTone: "rgba(138,255,173,0.11)",
+    shellStyle: {
+      "--phosphor-bg-top": "#020903",
+      "--phosphor-bg-mid": "#06160a",
+      "--phosphor-bg-bottom": "#020903",
+      "--phosphor-aura": "rgba(24,92,46,0.16)",
+      "--phosphor-top-glow": "rgba(68,224,113,0.1)",
+      "--phosphor-grid": "rgba(158,255,182,0.05)",
+      "--phosphor-grid-soft": "rgba(158,255,182,0.04)",
+      "--phosphor-scanline": "rgba(158,255,182,0.06)",
+      "--phosphor-shadow": "rgba(97,255,141,0.22)",
+      "--phosphor-vignette": "rgba(0,0,0,0.28)",
+      "--phosphor-frame": "rgba(97,255,141,0.12)",
+    } as CSSProperties,
+  },
+  amber_phosphor: {
+    filter: "sepia(1) saturate(7.15) hue-rotate(350deg) brightness(0.84) contrast(1.17)",
+    overlayTone: "rgba(255,181,92,0.1)",
+    bloomTone: "rgba(255,170,72,0.095)",
+    shellStyle: {
+      "--phosphor-bg-top": "#090502",
+      "--phosphor-bg-mid": "#170c04",
+      "--phosphor-bg-bottom": "#090502",
+      "--phosphor-aura": "rgba(128,68,18,0.16)",
+      "--phosphor-top-glow": "rgba(255,168,74,0.1)",
+      "--phosphor-grid": "rgba(255,214,156,0.05)",
+      "--phosphor-grid-soft": "rgba(255,214,156,0.04)",
+      "--phosphor-scanline": "rgba(255,214,156,0.055)",
+      "--phosphor-shadow": "rgba(255,186,94,0.2)",
+      "--phosphor-vignette": "rgba(0,0,0,0.3)",
+      "--phosphor-frame": "rgba(255,190,94,0.11)",
+    } as CSSProperties,
   },
 }
 // Zodiac SVG set sourced from Tabler Icons (MIT).
@@ -1216,15 +1289,17 @@ export default function AstrologyCalculator() {
   const totalLoadingIntroDurationMs = loadingIntroParagraphs.length * LOADING_SUBTITLE_STEP_MS
   const showLoadingIntroScreen =
     !loadingIntroSkipped && (loadingProgress < 100 || !loadingIntroCompleted || !loadingIntroExitReady)
+  const activePhosphorTheme: PhosphorTheme | null =
+    interfaceTheme === "phosphor_green" || interfaceTheme === "amber_phosphor" ? interfaceTheme : null
+  const activePhosphorVisual = activePhosphorTheme ? PHOSPHOR_THEME_VISUALS[activePhosphorTheme] : null
+  const phosphorThemeDataAttr =
+    activePhosphorTheme === "phosphor_green" ? "green" : activePhosphorTheme === "amber_phosphor" ? "amber" : undefined
   const interfaceThemeFilter = useMemo(() => {
+    if (activePhosphorVisual) {
+      return activePhosphorVisual.filter
+    }
     if (interfaceTheme === "neon_blue") {
       return "sepia(1) saturate(8.5) hue-rotate(163deg) brightness(1.04) contrast(1.07)"
-    }
-    if (interfaceTheme === "phosphor_green") {
-      return "sepia(1) saturate(7.35) hue-rotate(66deg) brightness(0.96) contrast(1.06)"
-    }
-    if (interfaceTheme === "amber_phosphor") {
-      return "sepia(1) saturate(6.4) hue-rotate(344deg) brightness(0.88) contrast(1.04)"
     }
     if (interfaceTheme === "mystical_purpura") {
       return "sepia(1) saturate(8.1) hue-rotate(218deg) brightness(1.03) contrast(1.08)"
@@ -1233,10 +1308,41 @@ export default function AstrologyCalculator() {
       return "invert(1)"
     }
     return "none"
-  }, [interfaceTheme])
-  const isCrtPhosphorTheme = interfaceTheme === "phosphor_green" || interfaceTheme === "amber_phosphor"
-  const crtOverlayTone = interfaceTheme === "phosphor_green" ? "rgba(135,255,168,0.12)" : "rgba(255,181,92,0.1)"
-  const crtBloomTone = interfaceTheme === "phosphor_green" ? "rgba(138,255,173,0.09)" : "rgba(255,170,72,0.075)"
+  }, [activePhosphorVisual, interfaceTheme])
+  const isCrtPhosphorTheme = Boolean(activePhosphorVisual)
+  const crtOverlayTone = activePhosphorVisual?.overlayTone ?? "rgba(255,255,255,0.1)"
+  const crtBloomTone = activePhosphorVisual?.bloomTone ?? "rgba(255,255,255,0.08)"
+  const phosphorShellStyle = activePhosphorVisual?.shellStyle
+  const contentToneStyle = useMemo(
+    () => ({ filter: interfaceThemeFilter }) satisfies CSSProperties,
+    [interfaceThemeFilter],
+  )
+  const phosphorThemeOverlays = isCrtPhosphorTheme ? (
+    <>
+      <div
+        aria-hidden="true"
+        className="crt-scan-overlay pointer-events-none fixed inset-0 z-0 opacity-100"
+        style={{
+          backgroundImage: [
+            `radial-gradient(circle at 50% 50%, ${crtBloomTone} 0%, rgba(0,0,0,0) 62%)`,
+            "repeating-linear-gradient(to bottom, rgba(255,255,255,0.055) 0px, rgba(255,255,255,0.055) 1px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 4px)",
+          ].join(", "),
+          backgroundBlendMode: "screen",
+          mixBlendMode: "screen",
+        }}
+      />
+      <div aria-hidden="true" className="crt-grid-overlay pointer-events-none fixed inset-0 z-0 opacity-100" />
+      <div
+        aria-hidden="true"
+        className="crt-phosphor-overlay pointer-events-none fixed inset-0 z-0 opacity-100"
+        style={{
+          background: `linear-gradient(180deg, rgba(0,0,0,0.06) 0%, ${crtOverlayTone} 48%, rgba(0,0,0,0.12) 100%)`,
+          mixBlendMode: "screen",
+        }}
+      />
+      <div aria-hidden="true" className="crt-vignette-overlay pointer-events-none fixed inset-0 z-0" />
+    </>
+  ) : null
   const loadingDisplayProgressTarget = useMemo(() => {
     // Keep bar proportional to actual loading while preserving intro timeline as minimum floor.
     const proportionalLoad = Math.max(0, Math.min(100, loadingProgress))
@@ -3780,10 +3886,14 @@ export default function AstrologyCalculator() {
 
     return (
       <main
-        className="min-h-screen bg-black text-white flex items-start justify-center p-4 pt-8 md:pt-10 relative"
-        style={{ filter: interfaceThemeFilter }}
+        className={`min-h-screen bg-black text-white flex items-start justify-center p-4 pt-8 md:pt-10 relative ${
+          isCrtPhosphorTheme ? "astro-phosphor-shell astro-phosphor-shell--active" : ""
+        }`}
+        style={phosphorShellStyle}
+        data-phosphor-theme={phosphorThemeDataAttr}
       >
-        <div className="w-full max-w-3xl">
+        {phosphorThemeOverlays}
+        <div className="relative z-10 w-full max-w-3xl astro-phosphor-content" style={contentToneStyle}>
           <div className="mb-8 min-h-[420px]">
             <div className="w-full text-center pt-1">
               <h1 className="font-mono text-xl md:text-4xl uppercase tracking-widest text-center">
@@ -3928,40 +4038,20 @@ export default function AstrologyCalculator() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-black p-2 text-white md:p-6" style={{ filter: interfaceThemeFilter }}>
-      {isCrtPhosphorTheme && (
-        <>
-          <div
-            aria-hidden="true"
-            className="crt-scan-overlay pointer-events-none fixed inset-0 z-0 opacity-100"
-            style={{
-              backgroundImage: [
-                `radial-gradient(circle at 50% 50%, ${crtBloomTone} 0%, rgba(0,0,0,0) 62%)`,
-                "repeating-linear-gradient(to bottom, rgba(255,255,255,0.055) 0px, rgba(255,255,255,0.055) 1px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 4px)",
-              ].join(", "),
-              backgroundBlendMode: "screen",
-              mixBlendMode: "screen",
-            }}
-          />
-          <div
-            aria-hidden="true"
-            className="crt-phosphor-overlay pointer-events-none fixed inset-0 z-0 opacity-100"
-            style={{
-              background: `linear-gradient(180deg, rgba(0,0,0,0.06) 0%, ${crtOverlayTone} 48%, rgba(0,0,0,0.12) 100%)`,
-              mixBlendMode: "screen",
-            }}
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-0 z-0"
-            style={{
-              background:
-                "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 54%, rgba(0,0,0,0.2) 100%)",
-            }}
-          />
-        </>
-      )}
-      <div className={`relative z-10 mx-auto max-w-[1400px] ${showSubject ? "pb-3 md:pb-[94px]" : "pb-[126px] md:pb-[94px]"}`}>
+    <main
+      className={`relative min-h-screen overflow-x-hidden bg-black p-2 text-white md:p-6 ${
+        isCrtPhosphorTheme ? "astro-phosphor-shell astro-phosphor-shell--active" : ""
+      }`}
+      style={phosphorShellStyle}
+      data-phosphor-theme={phosphorThemeDataAttr}
+    >
+      {phosphorThemeOverlays}
+      <div
+        className={`relative z-10 mx-auto max-w-[1400px] astro-phosphor-content ${
+          showSubject ? "pb-3 md:pb-[94px]" : "pb-[126px] md:pb-[94px]"
+        }`}
+        style={contentToneStyle}
+      >
         <div className="relative mb-1 pb-1 border-b border-white flex items-end justify-center gap-3 min-h-[34px] md:min-h-[52px]">
           <div className="absolute left-0 top-full mt-[5px]">
             {menuOpen && (
@@ -4093,12 +4183,16 @@ export default function AstrologyCalculator() {
                                 : INTERFACE_THEME_SWATCH_BY_THEME[option.value].text,
                             borderColor:
                               interfaceTheme === option.value
-                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBorder
                                 : INTERFACE_THEME_SWATCH_BY_THEME[option.value].border,
                             backgroundColor:
                               interfaceTheme === option.value
                                 ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
                                 : INTERFACE_THEME_SWATCH_BY_THEME[option.value].hover,
+                            boxShadow:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeShadow
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].shadow,
                           }}
                         >
                           {option.label}
@@ -4306,12 +4400,16 @@ export default function AstrologyCalculator() {
                                 : INTERFACE_THEME_SWATCH_BY_THEME[option.value].text,
                             borderColor:
                               interfaceTheme === option.value
-                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBorder
                                 : INTERFACE_THEME_SWATCH_BY_THEME[option.value].border,
                             backgroundColor:
                               interfaceTheme === option.value
                                 ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeBg
                                 : INTERFACE_THEME_SWATCH_BY_THEME[option.value].hover,
+                            boxShadow:
+                              interfaceTheme === option.value
+                                ? INTERFACE_THEME_SWATCH_BY_THEME[option.value].activeShadow
+                                : INTERFACE_THEME_SWATCH_BY_THEME[option.value].shadow,
                           }}
                         >
                           {option.label}

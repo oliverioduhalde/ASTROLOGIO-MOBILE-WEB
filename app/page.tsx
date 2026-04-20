@@ -112,6 +112,32 @@ type SubjectPreset = "manual" | "here_now" | "ba" | "cairo" | "ba77"
 type MajorAspectKey = "conjunction" | "opposition" | "trine" | "square" | "sextile"
 type Language = "en" | "es"
 
+type NavigationPlaybackTimelineItem = {
+  name: string
+  angle: number
+  startSec: number
+}
+
+type NavigationPlaybackPlan = {
+  audioOptions: {
+    events: OfflineMp3PlanetEvent[]
+    durationSec: number
+    masterVolumePercent: number
+    tuningCents?: number
+    modalEnabled?: boolean
+    modalSunSignIndex?: number | null
+    includeBackground?: boolean
+    backgroundVolumePercent?: number
+    includeElement?: boolean
+    elementName?: "fire" | "earth" | "air" | "water"
+    elementVolumePercent?: number
+    isChordMode?: boolean
+    reverbMixPercent?: number
+  }
+  durationSec: number
+  timeline: NavigationPlaybackTimelineItem[]
+}
+
 const SEQUENTIAL_PLANET_ORDER = [
   "sun",
   "moon",
@@ -140,7 +166,7 @@ const CHORD_ASPECTS_FADE_OUT_MS = 10000
 const PLAYBACK_UI_INITIAL_HIDE_DELAY_MS = 1200
 const PLAYBACK_UI_AUTO_HIDE_DELAY_MS = 2200
 const TOP_PANEL_HINT_MS = 4000
-const BUILD_MARK = "V09"
+const BUILD_MARK = "V10"
 
 const NAV_MODE_HINT_LABEL_BY_LANGUAGE: Record<Language, Record<NavigationMode, string>> = {
   en: {
@@ -850,6 +876,16 @@ function getLocalizedSignLabel(signLabel: string, language: Language): string {
   return SIGN_LABEL_BY_KEY_BY_LANGUAGE[language][signKey] || signLabel
 }
 
+function hashStringToUnitInterval(seed: string): number {
+  let hash = 2166136261
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+
+  return ((hash >>> 0) % 1000000) / 1000000
+}
+
 function getGlyphGlowTiming(glyphName: string) {
   let hash = 0
   for (let i = 0; i < glyphName.length; i += 1) {
@@ -1034,6 +1070,7 @@ export default function AstrologyCalculator() {
   const [horoscopeData, setHoroscopeData] = useState<HoroscopeData | null>(null)
   const [error, setError] = useState<string>("")
   const [loading, setLoading] = useState(false)
+  const [isPreparingPlaybackAudio, setIsPreparingPlaybackAudio] = useState(false)
 
   const [loopDuration, setLoopDuration] = useState(180)
   const [isLoopRunning, setIsLoopRunning] = useState(false)
@@ -1096,6 +1133,7 @@ export default function AstrologyCalculator() {
   const interactivePreviewClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const playbackUiHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const playbackUiVisibleRef = useRef(true)
+  const playbackPreparationRequestIdRef = useRef(0)
   const skipNextAutoCalculateRef = useRef(false)
   const pendingModeLaunchRef = useRef<NavigationMode | null>(null)
   const playbackProgressFrameRef = useRef<number | null>(null)
@@ -1331,6 +1369,9 @@ export default function AstrologyCalculator() {
   const {
     playPlanetSound,
     stopAll,
+    prepareOfflinePlayback,
+    startOfflinePlayback,
+    getOfflinePlaybackElapsedSec,
     playBackgroundSound,
     stopBackgroundSound,
     prepareOrbitalStarBackground,
@@ -2150,12 +2191,13 @@ export default function AstrologyCalculator() {
   )
 
   const beginPointerLoop = useCallback(
-    (initialElapsedMs: number) => {
+    (initialElapsedMs: number, options?: { mutePlanetAudio?: boolean }) => {
       if (!horoscopeData) return
 
       const ascDegrees = horoscopeData.ascendant?.ChartPosition?.Ecliptic?.DecimalDegrees ?? 0
       const totalDuration = loopDuration * 1000
       const uiCommitIntervalMs = 66
+      const mutePlanetAudio = options?.mutePlanetAudio ?? false
 
       loopStartTimeRef.current = performance.now() - Math.max(0, initialElapsedMs)
       lastUiCommitTimeRef.current = 0
@@ -2167,7 +2209,7 @@ export default function AstrologyCalculator() {
         const state = calculatePointerState(boundedElapsed, totalDuration, ascDegrees)
         const detectedPlanet = detectPlanetUnderPointer(state.adjustedAngle, ascDegrees)
 
-        if (detectedPlanet && detectedPlanet !== lastPlayedPlanetRef.current) {
+        if (!mutePlanetAudio && detectedPlanet && detectedPlanet !== lastPlayedPlanetRef.current) {
           triggerPlanetAudioAtPointer(detectedPlanet, state.adjustedAngle)
           lastPlayedPlanetRef.current = detectedPlanet
         } else if (!detectedPlanet) {
@@ -2391,6 +2433,8 @@ export default function AstrologyCalculator() {
   }, [pendingMp3Download])
 
   const resetToInitialState = () => {
+    playbackPreparationRequestIdRef.current += 1
+    setIsPreparingPlaybackAudio(false)
     setIsExportingMp3(false)
     setPendingMp3Download(null)
     cancelAllNavigationSchedulers()
@@ -2768,9 +2812,97 @@ export default function AstrologyCalculator() {
     scheduleNextAdvance()
   }
 
-  const startAstralChordMode = () => {
+  const startSequentialVisualMode = (timeline: NavigationPlaybackTimelineItem[]) => {
+    if (timeline.length === 0) {
+      setIsLoopRunning(false)
+      setStartButtonPhase("contracted")
+      return
+    }
+
+    const runId = navigationRunIdRef.current
+    const baseHalfFadeMs = Math.max(0, Math.floor(NON_RADIAL_CROSSFADE_MS / 2))
+    const halfFadeMs = Math.max(0, Math.floor(baseHalfFadeMs * NON_RADIAL_FADE_SLOWDOWN_MULTIPLIER))
+    const fadeInMs = Math.max(0, Math.floor(baseHalfFadeMs * NON_RADIAL_FADE_SLOWDOWN_MULTIPLIER))
+
+    const teleportTransition = (
+      currentStep: NavigationPlaybackTimelineItem,
+      nextStep: NavigationPlaybackTimelineItem,
+    ) => {
+      if (halfFadeMs === 0) {
+        setPointerOpacity(0)
+        triggerChartPlanetAspects(currentStep.name, { targetOpacity: 0, transitionMs: 0 })
+        setPointerAngle(nextStep.angle, nextStep.name)
+        triggerChartPlanetAspects(nextStep.name, { targetOpacity: MAX_ASPECT_LINE_OPACITY, transitionMs: 0 })
+        setPointerOpacity(1)
+        return
+      }
+
+      setPointerOpacityTransitionMs(halfFadeMs)
+      setPointerOpacity(0)
+      triggerChartPlanetAspects(currentStep.name, { targetOpacity: 0, transitionMs: halfFadeMs })
+
+      const fadeOutTimer = setTimeout(() => {
+        if (navigationRunIdRef.current !== runId) return
+        setPointerAngle(nextStep.angle, nextStep.name)
+        triggerChartPlanetAspects(nextStep.name, { targetOpacity: 0, transitionMs: 0 })
+        setPointerOpacityTransitionMs(fadeInMs)
+        setPointerOpacity(1)
+
+        const fadeInTimer = setTimeout(() => {
+          if (navigationRunIdRef.current !== runId) return
+          triggerChartPlanetAspects(nextStep.name, {
+            targetOpacity: MAX_ASPECT_LINE_OPACITY,
+            transitionMs: fadeInMs,
+          })
+          setPointerOpacityTransitionMs(0)
+        }, 0)
+        navigationTimeoutsRef.current.push(fadeInTimer)
+      }, halfFadeMs)
+      navigationTimeoutsRef.current.push(fadeOutTimer)
+    }
+
+    setPointerOpacity(1)
+    setPointerOpacityTransitionMs(0)
+    setChartAspectsTransitionMs(0)
+    setPointerAngle(timeline[0].angle, timeline[0].name)
+    triggerChartPlanetAspects(timeline[0].name, { targetOpacity: MAX_ASPECT_LINE_OPACITY, transitionMs: 0 })
+    lastPlayedPlanetRef.current = timeline[0].name
+
+    for (let index = 1; index < timeline.length; index += 1) {
+      const currentStep = timeline[index - 1]
+      const nextStep = timeline[index]
+      const transitionStartMs = Math.max(0, nextStep.startSec * 1000 - halfFadeMs)
+      const timer = setTimeout(() => {
+        if (navigationRunIdRef.current !== runId) return
+        teleportTransition(currentStep, nextStep)
+        lastPlayedPlanetRef.current = nextStep.name
+      }, transitionStartMs)
+      navigationTimeoutsRef.current.push(timer)
+    }
+
+    const finalStartSec = timeline[timeline.length - 1]?.startSec ?? 0
+    const finishTimer = setTimeout(() => {
+      if (navigationRunIdRef.current !== runId) return
+      setIsLoopRunning(false)
+      setIsPaused(false)
+      setPlaybackProgress(0)
+      setCurrentPlanetUnderPointer(null)
+      setStartButtonPhase("contracted")
+      setActivePlanetAspectsMap({})
+      setPointerOpacity(1)
+      setPointerOpacityTransitionMs(0)
+      setChartAspectsTransitionMs(0)
+    }, Math.max(2000, finalStartSec * 1000 + fadeInMs + 800))
+    navigationTimeoutsRef.current.push(finishTimer)
+  }
+
+  const startAstralChordMode = (
+    timeline?: NavigationPlaybackTimelineItem[],
+    options?: { mutePlanetAudio?: boolean },
+  ) => {
     if (!horoscopeData?.planets) return
     const runId = navigationRunIdRef.current
+    const mutePlanetAudio = options?.mutePlanetAudio ?? false
     const allMajorAspects =
       horoscopeData.aspects?.filter(
         (aspect) =>
@@ -2833,22 +2965,37 @@ export default function AstrologyCalculator() {
       setActivePlanetAspectsMap({})
     }
 
-    const route = buildSequentialRoute().filter((name, index, arr) => index === arr.indexOf(name))
+    const routeTimeline =
+      timeline && timeline.length > 0
+        ? timeline
+        : buildSequentialRoute()
+            .filter((name, index, arr) => index === arr.indexOf(name))
+            .map((planetName, index) => {
+              const angle = getPlanetDialAngle(planetName)
+              if (angle === null) return null
+              return {
+                name: planetName,
+                angle,
+                startSec: index * 0.02,
+              }
+            })
+            .filter((item): item is NavigationPlaybackTimelineItem => item !== null)
     setCurrentPlanetUnderPointer(null)
 
-    route.forEach((planetName, index) => {
-      const angle = getPlanetDialAngle(planetName)
-      if (angle === null) return
+    routeTimeline.forEach((item) => {
       const timer = setTimeout(() => {
         if (navigationRunIdRef.current !== runId) return
-        setCurrentPlanetUnderPointer(planetName)
-        triggerPlanetAudioAtPointer(planetName, angle, { aspectsPoint1Only: false, forceChordProfile: true })
-      }, index * 20)
+        setCurrentPlanetUnderPointer(item.name)
+        if (!mutePlanetAudio) {
+          triggerPlanetAudioAtPointer(item.name, item.angle, { aspectsPoint1Only: false, forceChordProfile: true })
+        }
+      }, item.startSec * 1000)
       navigationTimeoutsRef.current.push(timer)
     })
 
     const totalDurationSec = Math.max(audioFadeIn + audioFadeOut, dynAspectsFadeIn + dynAspectsSustain + dynAspectsFadeOut)
     const chordVisualDurationMs = CHORD_ASPECTS_FADE_IN_MS + CHORD_ASPECTS_HOLD_MS + CHORD_ASPECTS_FADE_OUT_MS + 300
+    const finalRouteStartSec = routeTimeline.length > 0 ? routeTimeline[routeTimeline.length - 1].startSec : 0
     const finishTimer = setTimeout(() => {
       if (navigationRunIdRef.current !== runId) return
       setIsLoopRunning(false)
@@ -2858,12 +3005,13 @@ export default function AstrologyCalculator() {
       setStartButtonPhase("contracted")
       setActivePlanetAspectsMap({})
       setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
-    }, Math.max(2000, totalDurationSec * 1000 + 300, chordVisualDurationMs))
+    }, Math.max(2000, totalDurationSec * 1000 + 300, chordVisualDurationMs, finalRouteStartSec * 1000 + 400))
     navigationTimeoutsRef.current.push(finishTimer)
   }
 
-  const startNavigationMode = (mode: NavigationMode) => {
+  const startNavigationMode = async (mode: NavigationMode) => {
     if (!horoscopeData) return
+
     setNavigationMode(mode)
     cancelAllNavigationSchedulers()
     cancelPlaybackProgressAnimation()
@@ -2879,8 +3027,27 @@ export default function AstrologyCalculator() {
     setChordAspectsTransitionMs(CHORD_ASPECTS_FADE_IN_MS)
     setPlaybackProgress(0)
     setActivePlanetAspectsMap({})
-    setIsLoopRunning(true)
+    setIsLoopRunning(false)
     setIsPaused(false)
+    setStartButtonPhase("contracted")
+
+    const runId = navigationRunIdRef.current
+    const preparationRequestId = playbackPreparationRequestIdRef.current + 1
+    playbackPreparationRequestIdRef.current = preparationRequestId
+    setIsPreparingPlaybackAudio(true)
+
+    const playbackPlan = buildNavigationPlaybackPlan(mode)
+    const preparedPlayback = playbackPlan ? await prepareOfflinePlayback(playbackPlan.audioOptions) : null
+
+    if (
+      navigationRunIdRef.current !== runId ||
+      playbackPreparationRequestIdRef.current !== preparationRequestId
+    ) {
+      return
+    }
+
+    setIsPreparingPlaybackAudio(false)
+    setIsLoopRunning(true)
     setStartButtonPhase("expanding")
 
     if (startButtonPhaseTimeoutRef.current) {
@@ -2889,6 +3056,37 @@ export default function AstrologyCalculator() {
     startButtonPhaseTimeoutRef.current = setTimeout(() => {
       setStartButtonPhase("stable")
     }, 15000)
+
+    if (playbackPlan && preparedPlayback) {
+      await startOfflinePlayback(playbackPlan.audioOptions, 0)
+      if (
+        navigationRunIdRef.current !== runId ||
+        playbackPreparationRequestIdRef.current !== preparationRequestId
+      ) {
+        return
+      }
+
+      if (mode === "radial") {
+        beginPointerLoop(0, { mutePlanetAudio: true })
+        return
+      }
+
+      if (mode === "astral_chord") {
+        startPlaybackProgressAnimation(
+          Math.max(
+            2000,
+            playbackPlan.durationSec * 1000,
+            CHORD_ASPECTS_FADE_IN_MS + CHORD_ASPECTS_HOLD_MS + CHORD_ASPECTS_FADE_OUT_MS + 300,
+          ),
+        )
+        startAstralChordMode(playbackPlan.timeline, { mutePlanetAudio: true })
+        return
+      }
+
+      startPlaybackProgressAnimation(Math.max(CHART_PLANET_HOLD_MS, playbackPlan.durationSec * 1000))
+      startSequentialVisualMode(playbackPlan.timeline)
+      return
+    }
 
     if (mode === "radial") {
       startAmbientBed({ playBackground: true, playElement: true })
@@ -2924,10 +3122,7 @@ export default function AstrologyCalculator() {
         infractionProbability: NON_RADIAL_INFRACTION_PROBABILITY,
         infractionJitterMs: NON_RADIAL_INFRACTION_JITTER_MS,
       })
-      return
     }
-    startAmbientBed({ playBackground: true, playElement: true })
-    beginPointerLoop(0)
   }
 
   const buildOfflineMp3Plan = useCallback(
@@ -2940,6 +3135,7 @@ export default function AstrologyCalculator() {
           includeBackground: boolean
           includeElement: boolean
           elementVolumePercent: number
+          timeline: NavigationPlaybackTimelineItem[]
         }
       | null => {
       if (!horoscopeData?.planets) return null
@@ -2998,6 +3194,11 @@ export default function AstrologyCalculator() {
           .map((planetName, index) => buildPlanetEvent(planetName, index * 0.02))
           .filter((event): event is OfflineMp3PlanetEvent => event !== null)
         if (events.length === 0) return null
+        const timeline = events.map((event) => ({
+          name: event.planetName,
+          angle: event.angleDeg,
+          startSec: event.startSec,
+        }))
         const chordDurationSec = Math.max(audioFadeIn + audioFadeOut, dynAspectsFadeIn + dynAspectsSustain + dynAspectsFadeOut)
         return {
           events,
@@ -3005,6 +3206,7 @@ export default function AstrologyCalculator() {
           includeBackground: false,
           includeElement: true,
           elementVolumePercent: elementSoundVolume,
+          timeline,
         }
       }
 
@@ -3013,19 +3215,35 @@ export default function AstrologyCalculator() {
         if (route.length === 0) return null
 
         const events: OfflineMp3PlanetEvent[] = []
+        const timeline: NavigationPlaybackTimelineItem[] = []
         let cursorSec = 0
         const firstEvent = buildPlanetEvent(route[0], cursorSec)
-        if (firstEvent) events.push(firstEvent)
+        if (firstEvent) {
+          events.push(firstEvent)
+          timeline.push({
+            name: firstEvent.planetName,
+            angle: firstEvent.angleDeg,
+            startSec: firstEvent.startSec,
+          })
+        }
 
         for (let i = 1; i < route.length; i++) {
-          const useInfraction = Math.random() < NON_RADIAL_INFRACTION_PROBABILITY
+          const seed = [route[i], i, formData.datetime, formData.latitude, formData.longitude, formData.location].join("|")
+          const useInfraction = hashStringToUnitInterval(`${seed}|infraction`) < NON_RADIAL_INFRACTION_PROBABILITY
           const jitterRangeMs = useInfraction ? NON_RADIAL_INFRACTION_JITTER_MS : NON_RADIAL_JITTER_MS
-          const randomOffsetMs = jitterRangeMs > 0 ? (Math.random() * 2 - 1) * jitterRangeMs : 0
+          const randomOffsetMs = jitterRangeMs > 0 ? (hashStringToUnitInterval(`${seed}|jitter`) * 2 - 1) * jitterRangeMs : 0
           const stepHoldMs = Math.max(0, CHART_PLANET_HOLD_MS + randomOffsetMs)
           cursorSec += stepHoldMs / 1000
 
           const event = buildPlanetEvent(route[i], cursorSec)
-          if (event) events.push(event)
+          if (event) {
+            events.push(event)
+            timeline.push({
+              name: event.planetName,
+              angle: event.angleDeg,
+              startSec: event.startSec,
+            })
+          }
         }
 
         if (events.length === 0) return null
@@ -3036,6 +3254,7 @@ export default function AstrologyCalculator() {
           includeBackground: false,
           includeElement: true,
           elementVolumePercent: 1,
+          timeline,
         }
       }
 
@@ -3051,12 +3270,18 @@ export default function AstrologyCalculator() {
         .sort((a, b) => a.startSec - b.startSec)
 
       if (radialEvents.length === 0) return null
+      const timeline = radialEvents.map((event) => ({
+        name: event.planetName,
+        angle: event.angleDeg,
+        startSec: event.startSec,
+      }))
       return {
         events: radialEvents,
         durationSec: Math.max(12, loopDuration + Math.max(audioFadeOut, dynAspectsFadeOut) + 2),
         includeBackground: true,
         includeElement: true,
         elementVolumePercent: elementSoundVolume,
+        timeline,
       }
     },
     [
@@ -3068,12 +3293,80 @@ export default function AstrologyCalculator() {
       dynAspectsFadeOut,
       dynAspectsSustain,
       elementSoundVolume,
+      formData.datetime,
+      formData.latitude,
+      formData.location,
+      formData.longitude,
       getPlanetDialAngle,
       horoscopeData?.aspects,
       horoscopeData?.planets,
       loopDuration,
     ],
   )
+
+  const buildNavigationPlaybackPlan = useCallback(
+    (mode: NavigationMode): NavigationPlaybackPlan | null => {
+      if (!horoscopeData?.planets) return null
+
+      const plan = buildOfflineMp3Plan(mode)
+      if (!plan || plan.events.length === 0) return null
+
+      const sunDegrees = horoscopeData.planets.find((planet) => planet.name === "sun")?.ChartPosition?.Ecliptic?.DecimalDegrees
+      const sunElement = typeof sunDegrees === "number" ? getElementFromDegrees(sunDegrees) : "fire"
+
+      return {
+        durationSec: plan.durationSec,
+        timeline: plan.timeline,
+        audioOptions: {
+          events: plan.events,
+          durationSec: plan.durationSec,
+          masterVolumePercent: mode === "astral_chord" ? masterVolume * 0.6 : masterVolume,
+          tuningCents,
+          modalEnabled,
+          modalSunSignIndex,
+          includeBackground: plan.includeBackground,
+          backgroundVolumePercent: backgroundVolume,
+          includeElement: plan.includeElement,
+          elementName: sunElement,
+          elementVolumePercent: plan.elementVolumePercent,
+          isChordMode: mode === "astral_chord",
+          reverbMixPercent: mode === "astral_chord" ? chordReverbMixPercent : reverbMixPercent,
+        },
+      }
+    },
+    [
+      backgroundVolume,
+      buildOfflineMp3Plan,
+      chordReverbMixPercent,
+      horoscopeData?.planets,
+      masterVolume,
+      modalEnabled,
+      modalSunSignIndex,
+      reverbMixPercent,
+      tuningCents,
+    ],
+  )
+
+  const prepareNavigationModePlayback = useCallback(
+    async (mode: NavigationMode) => {
+      const plan = buildNavigationPlaybackPlan(mode)
+      if (!plan) return null
+      return await prepareOfflinePlayback(plan.audioOptions)
+    },
+    [buildNavigationPlaybackPlan, prepareOfflinePlayback],
+  )
+
+  useEffect(() => {
+    if (!horoscopeData || showSubject) return
+
+    const timeoutId = setTimeout(() => {
+      void prepareNavigationModePlayback(navigationMode)
+    }, 180)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [horoscopeData, navigationMode, prepareNavigationModePlayback, showSubject])
 
   const buildSubjectMp3FileName = useCallback((mode: NavigationMode): string => {
     const datetime = formData.datetime.trim()
@@ -3388,6 +3681,8 @@ export default function AstrologyCalculator() {
   }
 
   const stopCurrentPerformance = useCallback(() => {
+    playbackPreparationRequestIdRef.current += 1
+    setIsPreparingPlaybackAudio(false)
     cancelAllNavigationSchedulers()
     cancelPlaybackProgressAnimation()
     clearAspectTimers()
@@ -3414,6 +3709,38 @@ export default function AstrologyCalculator() {
     stopElementBackground()
     stopAll()
   }, [cancelAllNavigationSchedulers, cancelPlaybackProgressAnimation, clearAspectTimers, stopAll, stopBackgroundSound, stopElementBackground])
+
+  const resumeRadialPlayback = async () => {
+    const resumeOffsetMs = Math.max(0, loopElapsedBeforePauseMsRef.current)
+    const playbackPlan = buildNavigationPlaybackPlan("radial")
+    const preparationRequestId = playbackPreparationRequestIdRef.current + 1
+    playbackPreparationRequestIdRef.current = preparationRequestId
+    setIsPreparingPlaybackAudio(true)
+
+    if (playbackPlan) {
+      const preparedPlayback = await prepareOfflinePlayback(playbackPlan.audioOptions)
+      if (playbackPreparationRequestIdRef.current !== preparationRequestId) {
+        return
+      }
+
+      if (preparedPlayback) {
+        setIsPreparingPlaybackAudio(false)
+        setIsPaused(false)
+        setIsLoopRunning(true)
+        await startOfflinePlayback(playbackPlan.audioOptions, resumeOffsetMs / 1000)
+        if (playbackPreparationRequestIdRef.current !== preparationRequestId) {
+          return
+        }
+        beginPointerLoop(resumeOffsetMs, { mutePlanetAudio: true })
+        return
+      }
+    }
+
+    setIsPreparingPlaybackAudio(false)
+    setIsPaused(false)
+    setIsLoopRunning(true)
+    beginPointerLoop(resumeOffsetMs)
+  }
 
   const clearMobileDownloadArm = useCallback(() => {
     if (mobileDownloadArmTimeoutRef.current) {
@@ -3482,14 +3809,16 @@ export default function AstrologyCalculator() {
     if (mode === "radial" && navigationMode === "radial" && isLoopRunning && !isPaused) {
       setIsPaused(true)
       cancelPointerLoop()
-      loopElapsedBeforePauseMsRef.current = Math.max(0, performance.now() - loopStartTimeRef.current)
+      loopElapsedBeforePauseMsRef.current = Math.max(
+        0,
+        getOfflinePlaybackElapsedSec() > 0 ? getOfflinePlaybackElapsedSec() * 1000 : performance.now() - loopStartTimeRef.current,
+      )
+      stopAll()
       return
     }
 
     if (mode === "radial" && navigationMode === "radial" && isPaused) {
-      setIsPaused(false)
-      setIsLoopRunning(true)
-      beginPointerLoop(loopElapsedBeforePauseMsRef.current)
+      void resumeRadialPlayback()
       return
     }
 
@@ -3502,14 +3831,16 @@ export default function AstrologyCalculator() {
     if (mode === "radial" && isLoopRunning && !isPaused) {
       setIsPaused(true)
       cancelPointerLoop()
-      loopElapsedBeforePauseMsRef.current = Math.max(0, performance.now() - loopStartTimeRef.current)
+      loopElapsedBeforePauseMsRef.current = Math.max(
+        0,
+        getOfflinePlaybackElapsedSec() > 0 ? getOfflinePlaybackElapsedSec() * 1000 : performance.now() - loopStartTimeRef.current,
+      )
+      stopAll()
       return
     }
 
     if (mode === "radial" && isPaused) {
-      setIsPaused(false)
-      setIsLoopRunning(true)
-      beginPointerLoop(loopElapsedBeforePauseMsRef.current)
+      void resumeRadialPlayback()
       return
     }
 
@@ -3750,7 +4081,7 @@ export default function AstrologyCalculator() {
   const pointerSynchronizedGlyphFadeMs = pointerOpacityTransitionMs > 0 ? pointerOpacityTransitionMs : pointerPassFadeMs
 
   const shouldShowIdlePointer = showPointer && !isLoopRunning && navigationMode === "radial"
-  const shouldShowChordCenterPointer = showPointer && isLoopRunning && navigationMode === "astral_chord"
+  const shouldShowChordCenterPointer = false
   const shouldShowOrbitPointer =
     showPointer &&
     (isLoopRunning || (!isLoopRunning && navigationMode === "sequential"))
@@ -4224,7 +4555,7 @@ export default function AstrologyCalculator() {
                 >
                   {loadingLanguageHint === "en" ? "ENG" : loadingLanguageHint === "es" ? "SPA" : ""}
                 </div>
-                <div className="flex items-center justify-center gap-2.5">
+                <div className="relative flex items-center justify-center gap-2.5">
                   <button
                     type="button"
                     onClick={() => {
@@ -4281,6 +4612,11 @@ export default function AstrologyCalculator() {
                       <rect x="0.6" y="0.6" width="58.8" height="28.8" stroke="#8A8A8A" strokeWidth="0.6" />
                     </svg>
                   </button>
+                  <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 flex h-4 w-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 bg-black/72 text-white/88 shadow-[0_0_10px_rgba(255,255,255,0.2)] md:h-7 md:w-7">
+                    <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true" className="translate-x-[0.5px] md:h-[12px] md:w-[12px]">
+                      <path d="M2.2 1.4L8 5L2.2 8.6V1.4Z" />
+                    </svg>
+                  </div>
                 </div>
               </div>
               <div className="absolute inset-x-0 bottom-[190px] flex items-center justify-between px-1 md:bottom-3 md:px-0">
@@ -5055,6 +5391,13 @@ export default function AstrologyCalculator() {
           >
             ASTRO.LOG.IO
           </h1>
+          {isPreparingPlaybackAudio && (
+            <div
+              className={`${playbackUiShellClassName} font-mono text-[7px] md:text-[11px] uppercase tracking-[0.22em] text-white/55 text-center`}
+            >
+              {language === "es" ? "Preparando audio..." : "Preparing audio..."}
+            </div>
+          )}
           {horoscopeData && !showSubject && (
             <div className={`${playbackUiShellClassName} fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-30 shrink-0 md:absolute md:right-0 md:bottom-0 md:z-auto`}>
               <div

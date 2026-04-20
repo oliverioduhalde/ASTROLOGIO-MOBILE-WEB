@@ -51,6 +51,13 @@ interface Mp3EncoderInstance {
   flush(): Mp3Chunk
 }
 
+interface PreparedOfflinePlayback {
+  buffer: AudioBuffer
+  durationSec: number
+  renderMs: number
+  fromCache: boolean
+}
+
 interface PlanetData {
   name: string
   ChartPosition: {
@@ -394,6 +401,11 @@ function toUint8Array(chunk: Mp3Chunk): Uint8Array {
   return Uint8Array.from(chunk as ArrayLike<number>, (value) => value & 0xff)
 }
 
+function roundOfflineKeyValue(value: number, digits = 4): number {
+  if (!Number.isFinite(value)) return 0
+  return Number(value.toFixed(digits))
+}
+
 export function usePlanetAudio(
   envelope: AudioEnvelope = { fadeIn: 7, fadeOut: 7, backgroundVolume: 20, aspectsSoundVolume: 11, masterVolume: 20 },
 ) {
@@ -459,6 +471,13 @@ export function usePlanetAudio(
   const fmPadGainRef = useRef<any>(null)
   const bowlSynthRef = useRef<any>(null)
   const bowlGainRef = useRef<any>(null)
+  const offlinePlaybackCacheRef = useRef<Map<string, AudioBuffer>>(new Map())
+  const offlinePlaybackPromiseCacheRef = useRef<Map<string, Promise<AudioBuffer | null>>>(new Map())
+  const activeOfflinePlaybackSourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const activeOfflinePlaybackGainRef = useRef<GainNode | null>(null)
+  const activeOfflinePlaybackStartedAtRef = useRef(0)
+  const activeOfflinePlaybackOffsetSecRef = useRef(0)
+  const activeOfflinePlaybackDurationSecRef = useRef(0)
 
   useEffect(() => {
     backgroundVolumeRef.current = envelope.backgroundVolume ?? 20
@@ -1244,6 +1263,603 @@ export function usePlanetAudio(
     }, FADE_OUT_TIME * 1000)
   }, [])
 
+  const buildOfflinePlaybackCacheKey = useCallback((options: OfflineMp3RenderOptions): string => {
+    return JSON.stringify({
+      audioMode: audioEngineModeRef.current || "samples",
+      durationSec: roundOfflineKeyValue(options.durationSec),
+      masterVolumePercent: roundOfflineKeyValue(options.masterVolumePercent),
+      tuningCents: roundOfflineKeyValue(
+        typeof options.tuningCents === "number" ? options.tuningCents : tuningCentsRef.current,
+      ),
+      modalEnabled: options.modalEnabled ?? modalEnabledRef.current,
+      modalSunSignIndex:
+        typeof options.modalSunSignIndex === "number" ? options.modalSunSignIndex : modalSunSignIndexRef.current,
+      includeBackground: options.includeBackground ?? false,
+      backgroundVolumePercent: roundOfflineKeyValue(options.backgroundVolumePercent ?? backgroundVolumeRef.current),
+      includeElement: options.includeElement ?? false,
+      elementName: options.elementName ?? null,
+      elementVolumePercent: roundOfflineKeyValue(options.elementVolumePercent ?? elementSoundVolumeRef.current),
+      isChordMode: options.isChordMode ?? false,
+      reverbMixPercent: roundOfflineKeyValue(options.reverbMixPercent ?? reverbMixPercentRef.current),
+      synthVolume: roundOfflineKeyValue(synthVolumeRef.current),
+      events: (options.events || []).map((event) => ({
+        planetName: event.planetName.toLowerCase(),
+        angleDeg: roundOfflineKeyValue(event.angleDeg),
+        declinationDeg: roundOfflineKeyValue(event.declinationDeg),
+        startSec: roundOfflineKeyValue(event.startSec),
+        fadeInSec: roundOfflineKeyValue(event.fadeInSec),
+        fadeOutSec: roundOfflineKeyValue(event.fadeOutSec),
+        aspectFadeInSec: roundOfflineKeyValue(event.aspectFadeInSec ?? dynAspectsFadeInRef.current),
+        aspectSustainSec: roundOfflineKeyValue(event.aspectSustainSec ?? dynAspectsSustainRef.current),
+        aspectFadeOutSec: roundOfflineKeyValue(event.aspectFadeOutSec ?? dynAspectsFadeOutRef.current),
+        aspectVolumePercent: roundOfflineKeyValue(event.aspectVolumePercent ?? aspectsSoundVolumeRef.current),
+        aspects: (event.aspects || []).map((aspect) => ({
+          planetName: aspect.planetName.toLowerCase(),
+          angleDeg: roundOfflineKeyValue(aspect.angleDeg),
+          declinationDeg: roundOfflineKeyValue(aspect.declinationDeg),
+          aspectType: aspect.aspectType,
+        })),
+      })),
+    })
+  }, [])
+
+  const mixOfflineBuffers = useCallback(
+    async (buffers: Array<AudioBuffer | null>): Promise<AudioBuffer | null> => {
+      const validBuffers = buffers.filter((buffer): buffer is AudioBuffer => Boolean(buffer))
+      if (validBuffers.length === 0) return null
+
+      await initializeAudio()
+      const ctx = audioContextRef.current
+      if (!ctx) return null
+
+      const sampleRate = validBuffers[0].sampleRate || ctx.sampleRate || 48000
+      const length = validBuffers.reduce((maxLength, buffer) => Math.max(maxLength, buffer.length), 0)
+      const mixedBuffer = ctx.createBuffer(2, length, sampleRate)
+
+      for (let channel = 0; channel < 2; channel += 1) {
+        const output = mixedBuffer.getChannelData(channel)
+        validBuffers.forEach((buffer) => {
+          const sourceChannelIndex = Math.min(channel, buffer.numberOfChannels - 1)
+          const source = buffer.getChannelData(sourceChannelIndex)
+          for (let index = 0; index < source.length; index += 1) {
+            output[index] += source[index]
+          }
+        })
+
+        for (let index = 0; index < output.length; index += 1) {
+          output[index] = Math.max(-1, Math.min(1, output[index]))
+        }
+      }
+
+      return mixedBuffer
+    },
+    [initializeAudio],
+  )
+
+  const stopOfflinePlayback = useCallback(() => {
+    if (activeOfflinePlaybackSourceRef.current) {
+      try {
+        activeOfflinePlaybackSourceRef.current.onended = null
+        activeOfflinePlaybackSourceRef.current.stop()
+      } catch (error) {
+        // ignore repeated stop
+      }
+      try {
+        activeOfflinePlaybackSourceRef.current.disconnect()
+      } catch (error) {
+        // ignore disconnect errors
+      }
+      activeOfflinePlaybackSourceRef.current = null
+    }
+
+    if (activeOfflinePlaybackGainRef.current) {
+      try {
+        activeOfflinePlaybackGainRef.current.disconnect()
+      } catch (error) {
+        // ignore disconnect errors
+      }
+      activeOfflinePlaybackGainRef.current = null
+    }
+
+    activeOfflinePlaybackStartedAtRef.current = 0
+    activeOfflinePlaybackOffsetSecRef.current = 0
+    activeOfflinePlaybackDurationSecRef.current = 0
+  }, [])
+
+  const getOfflinePlaybackElapsedSec = useCallback(() => {
+    const ctx = audioContextRef.current
+    if (!ctx || !activeOfflinePlaybackSourceRef.current) {
+      return activeOfflinePlaybackOffsetSecRef.current
+    }
+
+    const elapsed = activeOfflinePlaybackOffsetSecRef.current + Math.max(0, ctx.currentTime - activeOfflinePlaybackStartedAtRef.current)
+    return Math.min(activeOfflinePlaybackDurationSecRef.current, elapsed)
+  }, [])
+
+  const renderOfflineSampleBuffer = useCallback(
+    async (
+      options: OfflineMp3RenderOptions,
+      renderAudioMode: "samples" | "tibetan_samples",
+      includePlanetEvents = true,
+    ): Promise<AudioBuffer | null> => {
+      const durationSec = Math.max(0.5, options.durationSec)
+      const hasPlanetEvents = includePlanetEvents && Boolean(options.events?.length)
+      const hasAmbientLayers = Boolean(options.includeBackground || (options.includeElement && options.elementName))
+      if (!hasPlanetEvents && !hasAmbientLayers) return null
+
+      try {
+        await initializeAudio()
+        const liveContext = audioContextRef.current
+        if (!liveContext) return null
+
+        const sampleRate = 48000
+        const totalFrames = Math.max(1, Math.ceil(durationSec * sampleRate))
+        const offlineContext = new OfflineAudioContext(2, totalFrames, sampleRate)
+
+        const masterGainNode = offlineContext.createGain()
+        const baseGain = Math.pow(10, 28 / 20)
+        masterGainNode.gain.value = baseGain * Math.max(0, options.masterVolumePercent / 100)
+
+        const dynamicsCompressor = offlineContext.createDynamicsCompressor()
+        dynamicsCompressor.threshold.value = -1
+        dynamicsCompressor.knee.value = 0
+        dynamicsCompressor.ratio.value = 4
+        dynamicsCompressor.attack.value = 0.003
+        dynamicsCompressor.release.value = 0.25
+        masterGainNode.connect(dynamicsCompressor)
+        dynamicsCompressor.connect(offlineContext.destination)
+
+        const isChordMode = options.isChordMode ?? false
+        const reverbDecaySeconds = getReverbDecaySeconds(isChordMode)
+        const fallbackReverbWetMix = getReverbWetMix(
+          isChordMode,
+          reverbMixPercentRef.current,
+          chordReverbMixPercentRef.current,
+        )
+        const reverbWetMix =
+          typeof options.reverbMixPercent === "number"
+            ? Math.max(0, Math.min(1, options.reverbMixPercent / 100))
+            : fallbackReverbWetMix
+        const impulseBuffer = createLowDiffusionReverbImpulse(offlineContext, reverbDecaySeconds)
+        const globalReverbSend = offlineContext.createGain()
+        globalReverbSend.gain.value = 1
+        const globalReverbConvolver = offlineContext.createConvolver()
+        globalReverbConvolver.buffer = impulseBuffer
+        const globalReverbShelf = offlineContext.createBiquadFilter()
+        globalReverbShelf.type = "highshelf"
+        globalReverbShelf.frequency.value = 800
+        globalReverbShelf.gain.value = -6
+        const globalReverbReturn = offlineContext.createGain()
+        globalReverbReturn.gain.value = GLOBAL_REVERB_RETURN_GAIN
+        globalReverbSend.connect(globalReverbConvolver)
+        globalReverbConvolver.connect(globalReverbShelf)
+        globalReverbShelf.connect(globalReverbReturn)
+        globalReverbReturn.connect(masterGainNode)
+
+        const tuningRate = centsToPlaybackRate(
+          typeof options.tuningCents === "number" ? options.tuningCents : tuningCentsRef.current,
+        )
+        const modalEnabled = options.modalEnabled ?? modalEnabledRef.current
+        const modalSunSignIndex =
+          typeof options.modalSunSignIndex === "number"
+            ? options.modalSunSignIndex
+            : modalSunSignIndexRef.current
+
+        let orbitalStarBackgroundBuffer: AudioBuffer | null = null
+        if (options.includeBackground) {
+          orbitalStarBackgroundBuffer = await prepareOrbitalStarBackground(modalSunSignIndex, {
+            modalEnabled,
+            force: false,
+          })
+        }
+
+        const resolveBufferKey = (name: string) =>
+          renderAudioMode === "tibetan_samples" ? getTibetanSampleKey(name) : name.toLowerCase()
+
+        const scheduleSample = (params: {
+          bufferKey: string
+          startSec: number
+          angleDeg: number
+          declinationDeg: number
+          fadeInSec: number
+          sustainSec: number
+          fadeOutSec: number
+          peakGain: number
+          playbackRate: number
+        }) => {
+          const buffer = audioBuffersRef.current[params.bufferKey]
+          if (!buffer) return
+
+          const startTime = Math.max(0, params.startSec)
+          if (startTime >= durationSec) return
+
+          const source = offlineContext.createBufferSource()
+          source.buffer = buffer
+          source.playbackRate.setValueAtTime(Math.max(0.05, params.playbackRate), startTime)
+
+          const gainNode = offlineContext.createGain()
+          const dryGainNode = offlineContext.createGain()
+          const wetSendGainNode = offlineContext.createGain()
+          dryGainNode.gain.value = Math.max(0, 1 - reverbWetMix)
+          wetSendGainNode.gain.value = reverbWetMix
+
+          const panner = offlineContext.createPanner()
+          panner.panningModel = "HRTF"
+          panner.distanceModel = "inverse"
+          panner.refDistance = 1
+          panner.maxDistance = 50
+          panner.rolloffFactor = 1
+          const elevation = params.declinationDeg * 5
+          const position = polarToCartesian3D(params.angleDeg, elevation)
+          if (typeof panner.positionX !== "undefined") {
+            panner.positionX.setValueAtTime(position.x, startTime)
+            panner.positionY.setValueAtTime(position.y, startTime)
+            panner.positionZ.setValueAtTime(position.z, startTime)
+          } else {
+            panner.setPosition(position.x, position.y, position.z)
+          }
+
+          source.connect(gainNode)
+          gainNode.connect(panner)
+          panner.connect(dryGainNode)
+          panner.connect(wetSendGainNode)
+          dryGainNode.connect(masterGainNode)
+          wetSendGainNode.connect(globalReverbSend)
+
+          const startOffsetSec = renderAudioMode === "tibetan_samples" ? 0 : 30
+          const availableDurationSec = Math.max(
+            0,
+            (buffer.duration - startOffsetSec) / Math.max(0.05, params.playbackRate),
+          )
+          if (availableDurationSec <= 0) return
+
+          const fadeInSec = Math.max(0.01, params.fadeInSec)
+          const sustainSec = Math.max(0, params.sustainSec)
+          const fadeOutSec = Math.max(0.01, params.fadeOutSec)
+          const requestedDurationSec = fadeInSec + sustainSec + fadeOutSec
+          const maxRemainingSec = Math.max(0.01, durationSec - startTime)
+          const effectiveDurationSec = Math.min(requestedDurationSec, availableDurationSec, maxRemainingSec)
+          const endTime = startTime + effectiveDurationSec
+          const fadeInEnd = Math.min(endTime, startTime + fadeInSec)
+          const sustainEnd = Math.min(endTime, fadeInEnd + sustainSec)
+
+          gainNode.gain.setValueAtTime(0, startTime)
+          gainNode.gain.linearRampToValueAtTime(params.peakGain, fadeInEnd)
+          gainNode.gain.setValueAtTime(params.peakGain, sustainEnd)
+          gainNode.gain.linearRampToValueAtTime(0, endTime)
+
+          source.start(startTime, startOffsetSec)
+          source.stop(endTime)
+        }
+
+        if (options.includeBackground && orbitalStarBackgroundBuffer) {
+          const backgroundSource = offlineContext.createBufferSource()
+          const backgroundGainNode = offlineContext.createGain()
+          const backgroundTargetGain = Math.max(0, (options.backgroundVolumePercent ?? backgroundVolumeRef.current) / 100)
+          const backgroundFadeInSec = Math.max(0.01, Math.min(ORBITAL_STAR_BACKGROUND_FADE_IN_SEC, durationSec))
+          const backgroundFadeOutSec = Math.max(0.01, Math.min(ORBITAL_STAR_BACKGROUND_FADE_OUT_SEC, durationSec))
+          const backgroundFadeOutStart = Math.max(backgroundFadeInSec, durationSec - backgroundFadeOutSec)
+
+          backgroundSource.buffer = orbitalStarBackgroundBuffer
+          backgroundSource.loop = true
+
+          backgroundGainNode.gain.setValueAtTime(0, 0)
+          backgroundGainNode.gain.linearRampToValueAtTime(backgroundTargetGain, backgroundFadeInSec)
+          backgroundGainNode.gain.setValueAtTime(backgroundTargetGain, backgroundFadeOutStart)
+          backgroundGainNode.gain.linearRampToValueAtTime(0, durationSec)
+
+          backgroundSource.connect(backgroundGainNode)
+          backgroundGainNode.connect(masterGainNode)
+          backgroundSource.start(0)
+          backgroundSource.stop(durationSec)
+        }
+
+        if (options.includeElement && options.elementName) {
+          const elementBuffer = audioBuffersRef.current[options.elementName]
+          if (elementBuffer) {
+            const rulerPlanet = getSignRulerPlanetName(modalSunSignIndex)
+            const elementPlaybackRate =
+              getPlanetPrincipalPlaybackRate(rulerPlanet, modalEnabled, modalSunSignIndex) * tuningRate
+            const elementSource = offlineContext.createBufferSource()
+            const elementGainNode = offlineContext.createGain()
+            elementSource.buffer = elementBuffer
+            elementSource.loop = true
+            elementSource.playbackRate.value = elementPlaybackRate
+            elementGainNode.gain.value = Math.max(0, (options.elementVolumePercent ?? elementSoundVolumeRef.current) / 100)
+            elementSource.connect(elementGainNode)
+            elementGainNode.connect(masterGainNode)
+            elementSource.start(0)
+            elementSource.stop(durationSec)
+          }
+        }
+
+        if (hasPlanetEvents) {
+          for (const event of options.events) {
+            const planetName = event.planetName.toLowerCase()
+            const principalPlaybackRate =
+              getPlanetPrincipalPlaybackRate(planetName, modalEnabled, modalSunSignIndex) * tuningRate
+            const principalPeakGain =
+              getPlanetVolumeMultiplier(planetName) * (renderAudioMode === "tibetan_samples" ? 0.92 : 1)
+
+            scheduleSample({
+              bufferKey: resolveBufferKey(planetName),
+              startSec: event.startSec,
+              angleDeg: event.angleDeg,
+              declinationDeg: event.declinationDeg,
+              fadeInSec: event.fadeInSec,
+              sustainSec: 0,
+              fadeOutSec: event.fadeOutSec,
+              peakGain: principalPeakGain,
+              playbackRate: principalPlaybackRate,
+            })
+
+            const aspectFadeInSec = Math.max(0.01, event.aspectFadeInSec ?? dynAspectsFadeInRef.current)
+            const aspectSustainSec = Math.max(0, event.aspectSustainSec ?? dynAspectsSustainRef.current)
+            const aspectFadeOutSec = Math.max(0.01, event.aspectFadeOutSec ?? dynAspectsFadeOutRef.current)
+            const aspectVolumePercent = Math.max(0, event.aspectVolumePercent ?? aspectsSoundVolumeRef.current)
+
+            for (const aspect of event.aspects || []) {
+              const aspectPlanetName = aspect.planetName.toLowerCase()
+              const aspectSemitoneOffset = ASPECT_SEMITONE_OFFSETS[aspect.aspectType] ?? 0
+              const aspectTransposeRate = Math.pow(2, aspectSemitoneOffset / 12)
+              const aspectPlaybackRate = principalPlaybackRate * aspectTransposeRate
+              const aspectPeakGain =
+                0.33 *
+                (aspectVolumePercent / 100) *
+                getPlanetVolumeMultiplier(aspectPlanetName) *
+                (renderAudioMode === "tibetan_samples" ? 0.9 : 1)
+
+              scheduleSample({
+                bufferKey: resolveBufferKey(aspectPlanetName),
+                startSec: event.startSec,
+                angleDeg: aspect.angleDeg,
+                declinationDeg: aspect.declinationDeg,
+                fadeInSec: aspectFadeInSec,
+                sustainSec: aspectSustainSec,
+                fadeOutSec: aspectFadeOutSec,
+                peakGain: aspectPeakGain,
+                playbackRate: aspectPlaybackRate,
+              })
+            }
+          }
+        }
+
+        return await offlineContext.startRendering()
+      } catch (error) {
+        console.error("[v0] Error rendering offline sample buffer:", error)
+        return null
+      }
+    },
+    [initializeAudio, prepareOrbitalStarBackground],
+  )
+
+  const renderOfflineFmPadBuffer = useCallback(async (options: OfflineMp3RenderOptions): Promise<AudioBuffer | null> => {
+    const durationSec = Math.max(0.5, options.durationSec)
+    if (!options.events || options.events.length === 0) return null
+
+    try {
+      const Tone = toneModuleRef.current || (await import("tone"))
+      toneModuleRef.current = Tone
+
+      const toneBuffer = await Tone.Offline(async () => {
+        const synth = new Tone.PolySynth(Tone.FMSynth, {
+          harmonicity: 1.8,
+          modulationIndex: 6,
+          oscillator: { type: "sine" },
+          envelope: {
+            attack: 0.9,
+            decay: 0.8,
+            sustain: 0.65,
+            release: 3.2,
+          },
+          modulation: { type: "triangle" },
+          modulationEnvelope: {
+            attack: 1.2,
+            decay: 1.0,
+            sustain: 0.55,
+            release: 2.6,
+          },
+        })
+        synth.volume.value = -8
+        ;(synth as any).maxPolyphony = 16
+
+        const filter = new Tone.Filter({ type: "lowpass", frequency: 2200, rolloff: -24 })
+        const chorus = new Tone.Chorus({ frequency: 0.8, delayTime: 2.2, depth: 0.25, wet: 0.22 }).start()
+        const reverb = new Tone.Reverb({ decay: 3, preDelay: 0.008, wet: 0.2 })
+        await reverb.generate()
+        const reverbShelf = new Tone.Filter({ type: "highshelf", frequency: 800, gain: -6 })
+        const gain = new Tone.Gain(getFmPadGainValue(options.masterVolumePercent, synthVolumeRef.current))
+
+        synth.connect(filter)
+        filter.connect(chorus)
+        chorus.connect(reverb)
+        reverb.connect(reverbShelf)
+        reverbShelf.connect(gain)
+        gain.toDestination()
+
+        const tunedRate = centsToPlaybackRate(
+          typeof options.tuningCents === "number" ? options.tuningCents : tuningCentsRef.current,
+        )
+        const pitchShiftFromTuning = 12 * Math.log2(tunedRate)
+        const modalEnabled = options.modalEnabled ?? modalEnabledRef.current
+        const modalSunSignIndex =
+          typeof options.modalSunSignIndex === "number"
+            ? options.modalSunSignIndex
+            : modalSunSignIndexRef.current
+
+        options.events.forEach((event) => {
+          const normalizedPlanetName = event.planetName.toLowerCase()
+          const principalSemitoneOffset = getPlanetPrincipalSemitoneOffset(
+            normalizedPlanetName,
+            modalEnabled,
+            modalSunSignIndex,
+          )
+          const baseMidi =
+            60 +
+            principalSemitoneOffset +
+            DEFAULT_SYSTEM_OCTAVE_SHIFT_SEMITONES +
+            FM_PAD_OCTAVE_SHIFT_SEMITONES +
+            pitchShiftFromTuning
+          const principalDuration = Math.max(0.8, event.fadeInSec + event.fadeOutSec)
+          const principalNote = Tone.Frequency(baseMidi, "midi").toNote()
+          synth.triggerAttackRelease(principalNote, principalDuration, event.startSec)
+
+          const aspectVolume =
+            typeof event.aspectVolumePercent === "number" ? event.aspectVolumePercent : aspectsSoundVolumeRef.current
+          const aspectGainFactor = Math.max(0.1, Math.min(1, aspectVolume / 100))
+          const aspectDuration = Math.max(
+            0.6,
+            (event.aspectFadeInSec ?? dynAspectsFadeInRef.current) +
+              (event.aspectSustainSec ?? dynAspectsSustainRef.current) +
+              (event.aspectFadeOutSec ?? dynAspectsFadeOutRef.current),
+          )
+
+          ;(event.aspects || []).forEach((aspect, aspectIndex) => {
+            const semitoneOffset = ASPECT_SEMITONE_OFFSETS[aspect.aspectType] ?? null
+            if (semitoneOffset === null) return
+
+            const aspectMidi = baseMidi + semitoneOffset
+            const aspectNote = Tone.Frequency(aspectMidi, "midi").toNote()
+            const velocity = Math.max(0.08, Math.min(0.7, 0.45 * aspectGainFactor))
+            synth.triggerAttackRelease(aspectNote, aspectDuration, event.startSec + aspectIndex * 0.03, velocity)
+          })
+        })
+      }, durationSec, 2, 48000)
+
+      return toneBuffer.get() ?? null
+    } catch (error) {
+      console.error("[v0] Error rendering offline FM pad buffer:", error)
+      return null
+    }
+  }, [])
+
+  const prepareOfflinePlayback = useCallback(
+    async (options: OfflineMp3RenderOptions): Promise<PreparedOfflinePlayback | null> => {
+      const hasPlanetEvents = Boolean(options.events?.length)
+      const hasAmbientLayers = Boolean(options.includeBackground || (options.includeElement && options.elementName))
+      if (!hasPlanetEvents && !hasAmbientLayers) return null
+
+      const cacheKey = buildOfflinePlaybackCacheKey(options)
+      const cachedBuffer = offlinePlaybackCacheRef.current.get(cacheKey)
+      if (cachedBuffer) {
+        return {
+          buffer: cachedBuffer,
+          durationSec: cachedBuffer.duration,
+          renderMs: 0,
+          fromCache: true,
+        }
+      }
+
+      const pendingRender = offlinePlaybackPromiseCacheRef.current.get(cacheKey)
+      if (pendingRender) {
+        const startedAt = performance.now()
+        const buffer = await pendingRender
+        if (!buffer) return null
+        return {
+          buffer,
+          durationSec: buffer.duration,
+          renderMs: performance.now() - startedAt,
+          fromCache: false,
+        }
+      }
+
+      const renderStartedAt = performance.now()
+      const renderPromise = (async () => {
+        const audioMode = audioEngineModeRef.current || "samples"
+
+        if (audioMode === "fm_pad") {
+          const [ambientBuffer, synthBuffer] = await Promise.all([
+            renderOfflineSampleBuffer(options, "samples", false),
+            renderOfflineFmPadBuffer(options),
+          ])
+          return await mixOfflineBuffers([ambientBuffer, synthBuffer])
+        }
+
+        if (audioMode === "hybrid") {
+          const [sampleBuffer, synthBuffer] = await Promise.all([
+            renderOfflineSampleBuffer(options, "samples", true),
+            renderOfflineFmPadBuffer(options),
+          ])
+          return await mixOfflineBuffers([sampleBuffer, synthBuffer])
+        }
+
+        if (audioMode === "tibetan_samples") {
+          return await renderOfflineSampleBuffer(options, "tibetan_samples", true)
+        }
+
+        return await renderOfflineSampleBuffer(options, "samples", true)
+      })()
+
+      offlinePlaybackPromiseCacheRef.current.set(cacheKey, renderPromise)
+
+      try {
+        const buffer = await renderPromise
+        if (!buffer) return null
+
+        offlinePlaybackCacheRef.current.set(cacheKey, buffer)
+        return {
+          buffer,
+          durationSec: buffer.duration,
+          renderMs: performance.now() - renderStartedAt,
+          fromCache: false,
+        }
+      } finally {
+        if (offlinePlaybackPromiseCacheRef.current.get(cacheKey) === renderPromise) {
+          offlinePlaybackPromiseCacheRef.current.delete(cacheKey)
+        }
+      }
+    },
+    [buildOfflinePlaybackCacheKey, mixOfflineBuffers, renderOfflineFmPadBuffer, renderOfflineSampleBuffer],
+  )
+
+  const startOfflinePlayback = useCallback(
+    async (options: OfflineMp3RenderOptions, startOffsetSec = 0): Promise<PreparedOfflinePlayback | null> => {
+      await initializeAudio()
+      const ctx = audioContextRef.current
+      if (!ctx) return null
+
+      if (ctx.state === "suspended") {
+        await ctx.resume()
+      }
+
+      const prepared = await prepareOfflinePlayback(options)
+      if (!prepared) return null
+
+      stopOfflinePlayback()
+
+      const safeOffsetSec = Math.max(0, Math.min(startOffsetSec, Math.max(0, prepared.durationSec - 0.05)))
+      const source = ctx.createBufferSource()
+      const gainNode = ctx.createGain()
+      gainNode.gain.value = 1
+      source.buffer = prepared.buffer
+      source.connect(gainNode)
+      gainNode.connect(ctx.destination)
+
+      source.onended = () => {
+        if (activeOfflinePlaybackSourceRef.current === source) {
+          activeOfflinePlaybackSourceRef.current = null
+          activeOfflinePlaybackGainRef.current = null
+          activeOfflinePlaybackStartedAtRef.current = 0
+          activeOfflinePlaybackOffsetSecRef.current = 0
+          activeOfflinePlaybackDurationSecRef.current = 0
+        }
+      }
+
+      activeOfflinePlaybackSourceRef.current = source
+      activeOfflinePlaybackGainRef.current = gainNode
+      activeOfflinePlaybackStartedAtRef.current = ctx.currentTime
+      activeOfflinePlaybackOffsetSecRef.current = safeOffsetSec
+      activeOfflinePlaybackDurationSecRef.current = prepared.durationSec
+
+      source.start(0, safeOffsetSec)
+      return {
+        ...prepared,
+        durationSec: prepared.durationSec,
+      }
+    },
+    [initializeAudio, prepareOfflinePlayback, stopOfflinePlayback],
+  )
+
   const initializeFmPadSynth = useCallback(async () => {
     if (fmPadSynthRef.current && toneModuleRef.current) {
       return
@@ -1791,6 +2407,7 @@ export function usePlanetAudio(
   )
 
   const stopAll = useCallback(() => {
+    stopOfflinePlayback()
     activeTracksRef.current.forEach((track) => {
       try {
         track.source.stop()
@@ -1806,7 +2423,7 @@ export function usePlanetAudio(
     if (bowlSynthRef.current && typeof bowlSynthRef.current.releaseAll === "function") {
       bowlSynthRef.current.releaseAll()
     }
-  }, [])
+  }, [stopOfflinePlayback])
 
   const renderOfflineMp3 = useCallback(
     async (options: OfflineMp3RenderOptions): Promise<Blob | null> => {
@@ -2126,12 +2743,18 @@ export function usePlanetAudio(
       backgroundBufferRef.current = null
       backgroundSignIndexRef.current = null
       globalReverbSendRef.current = null
+      offlinePlaybackCacheRef.current.clear()
+      offlinePlaybackPromiseCacheRef.current.clear()
     }
   }, [stopAll, stopBackgroundSound, stopElementBackground])
 
   return {
     playPlanetSound,
     stopAll,
+    prepareOfflinePlayback,
+    startOfflinePlayback,
+    stopOfflinePlayback,
+    getOfflinePlaybackElapsedSec,
     playBackgroundSound,
     stopBackgroundSound,
     prepareOrbitalStarBackground,
